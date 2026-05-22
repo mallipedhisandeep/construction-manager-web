@@ -6,18 +6,18 @@ import { Lang, ts } from '@/lib/strings'
 
 interface Props { lang: Lang; onToggleLang: () => void }
 
-export default function Nav({ lang, onToggleLang }: Props) {
-  const path = usePathname()
-  const router = useRouter()
+const links = [
+  { href: '/',                icon: '🏠', key: 'dashboard'      as const },
+  { href: '/attendance',      icon: '📅', key: 'attendance'     as const },
+  { href: '/workers',         icon: '👷', key: 'workers'        as const },
+  { href: '/sites',           icon: '🏗️', key: 'sites'          as const },
+  { href: '/private-workers', icon: '🔧', key: 'privateWorkers' as const },
+  { href: '/private-work',    icon: '📋', key: 'privateWork'    as const },
+]
 
-  const links = [
-    { href: '/',                icon: '🏠', key: 'dashboard' as const },
-    { href: '/attendance',      icon: '📅', key: 'attendance' as const },
-    { href: '/workers',         icon: '👷', key: 'workers' as const },
-    { href: '/sites',           icon: '🏗️', key: 'sites' as const },
-    { href: '/private-workers', icon: '🔧', key: 'privateWorkers' as const },
-    { href: '/private-work',    icon: '📋', key: 'privateWork' as const },
-  ]
+export default function Nav({ lang, onToggleLang }: Props) {
+  const path   = usePathname()
+  const router = useRouter()
 
   const signOut = async () => {
     await supabase.auth.signOut()
@@ -27,46 +27,54 @@ export default function Nav({ lang, onToggleLang }: Props) {
 
   return (
     <>
-      {/* Top bar */}
-      <header className="bg-orange-600 text-white sticky top-0 z-50 shadow-md">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <span className="font-bold text-lg">🏗️ {ts(lang,'appTitle')}</span>
-          <div className="flex items-center gap-2">
-            <button onClick={onToggleLang}
-              className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-sm font-bold transition">
-              {lang === 'en' ? 'తె' : 'EN'}
-            </button>
-            <button onClick={signOut}
-              className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-sm transition">
-              {ts(lang,'signOut')}
-            </button>
-          </div>
-        </div>
+      {/* ── Top bar ─────────────────────────────────── */}
+      <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-gradient-to-r from-orange-600 to-orange-500 shadow-lg flex items-center px-4 gap-3">
+        <span className="text-xl font-black text-white tracking-tight">🏗️ {ts(lang,'appTitle')}</span>
+        <div className="flex-1" />
+        <button onClick={onToggleLang}
+          className="bg-white/20 hover:bg-white/30 border border-white/30 text-white text-sm font-bold px-3 py-1 rounded-lg transition">
+          {lang === 'en' ? 'తె' : 'EN'}
+        </button>
+        <button onClick={signOut}
+          className="bg-white/10 hover:bg-white/20 text-white text-sm px-3 py-1 rounded-lg transition hidden md:block">
+          {ts(lang,'signOut')}
+        </button>
       </header>
-      {/* Side nav (desktop) */}
-      <nav className="hidden md:flex fixed left-0 top-14 h-[calc(100vh-56px)] w-52 bg-white shadow-md flex-col py-4 gap-1 z-40">
-        {links.map(l => (
-          <Link key={l.href} href={l.href}
-            className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition rounded-r-lg mr-2
-              ${path === l.href ? 'bg-orange-50 text-orange-600 border-r-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50'}`}>
-            <span className="text-lg">{l.icon}</span>
-            {ts(lang, l.key)}
-          </Link>
-        ))}
-      </nav>
-      {/* Bottom nav (mobile) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-40">
-        <div className="grid grid-cols-6 h-16">
-          {links.map(l => (
+
+      {/* ── Sidebar (desktop) ───────────────────────── */}
+      <nav className="hidden md:flex fixed left-0 top-14 h-[calc(100vh-56px)] w-56 flex-col bg-white border-r border-gray-100 py-4 gap-0.5 shadow-sm z-40 overflow-y-auto">
+        {links.map(l => {
+          const active = path === l.href || (l.href !== '/' && path.startsWith(l.href))
+          return (
             <Link key={l.href} href={l.href}
-              className={`flex flex-col items-center justify-center gap-0.5 text-xs transition
-                ${path === l.href ? 'text-orange-600' : 'text-gray-500'}`}>
-              <span className="text-xl">{l.icon}</span>
-              <span className="text-[9px] font-medium leading-tight text-center px-0.5">
-                {ts(lang, l.key).split(' ')[0]}
-              </span>
+              className={`mx-2 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition
+                ${active ? 'bg-orange-50 text-orange-700 font-semibold' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'}`}>
+              <span className={`text-lg transition ${active ? '' : 'grayscale opacity-70'}`}>{l.icon}</span>
+              {ts(lang, l.key)}
+              {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
             </Link>
-          ))}
+          )
+        })}
+        <div className="flex-1" />
+        <button onClick={signOut}
+          className="mx-2 mt-2 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:bg-red-50 hover:text-red-600 transition md:hidden">
+          🚪 {ts(lang,'signOut')}
+        </button>
+      </nav>
+
+      {/* ── Bottom nav (mobile) ─────────────────────── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-100 shadow-lg z-40 safe-area-pb">
+        <div className="grid grid-cols-6 h-16">
+          {links.map(l => {
+            const active = path === l.href || (l.href !== '/' && path.startsWith(l.href))
+            return (
+              <Link key={l.href} href={l.href}
+                className={`flex flex-col items-center justify-center gap-0.5 transition ${active ? 'text-orange-600' : 'text-gray-400'}`}>
+                <span className={`text-xl transition ${active ? '' : 'grayscale opacity-60'}`}>{l.icon}</span>
+                <span className="text-[9px] font-semibold">{ts(lang, l.key).split(' ')[0]}</span>
+              </Link>
+            )
+          })}
         </div>
       </nav>
     </>
