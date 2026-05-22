@@ -9,7 +9,7 @@ function PrivateWorkPage() {
   const { lang } = useLang()
   const [works, setWorks] = useState<PrivateWork[]>([])
   const [pWorkers, setPWorkers] = useState<PrivateWorker[]>([])
-  const [sites, setSites] = useState<Site[]>([])
+  const [sites, setSites] = useState<Pick<Site,"id"|"site_name">[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('All')
   const [modal, setModal] = useState<'add'|'edit'|null>(null)
