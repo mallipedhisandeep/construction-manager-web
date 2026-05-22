@@ -25,7 +25,7 @@ function AttendancePage() {
   const [day, setDay] = useState(now.getDate())
   const [workers, setWorkers] = useState<Worker[]>([])
   const [attMap, setAttMap] = useState<Record<string, Attendance>>({})
-  const [sites, setSites] = useState<Site[]>([])
+  const [sites, setSites] = useState<Pick<Site,"id"|"site_name">[]>([])
   const [modal, setModal] = useState<Worker|null>(null)
   const [form, setForm] = useState({ shift:'6-6', siteId:'', advance:'', payMode:'Cash' })
   const [saving, setSaving] = useState(false)
