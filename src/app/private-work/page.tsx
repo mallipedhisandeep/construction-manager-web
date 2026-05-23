@@ -14,6 +14,9 @@ function PrivateWorkPage() {
   const [filter, setFilter] = useState('All')
   const [modal, setModal] = useState<'add'|'edit'|null>(null)
   const [form, setForm] = useState<Partial<PrivateWork>>({status:'Active', price_charged:0, amount_paid:0})
+  // Fix 3: store price/paid as strings so the user can fully clear the field (no sticky zero)
+  const [priceStr, setPriceStr] = useState('')
+  const [paidStr,  setPaidStr]  = useState('')
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
 
@@ -35,7 +38,7 @@ function PrivateWorkPage() {
   const totalPending = works.reduce((s, w) => s + (w.price_charged - w.amount_paid), 0)
 
   const save = async () => {
-    if (!form.worker_id || !form.site_id || !form.price_charged) return
+    if (!form.worker_id || !form.site_id) return
     setSaving(true)
     const worker = pWorkers.find(w => w.id === form.worker_id)
     const site = sites.find(s => s.id === form.site_id)
@@ -45,6 +48,8 @@ function PrivateWorkPage() {
       work_type: worker?.work_type ?? '',
       site_name: site?.site_name ?? '',
       work_date: form.work_date ?? new Date().toISOString().split('T')[0],
+      price_charged: parseFloat(priceStr) || 0,
+      amount_paid:   parseFloat(paidStr)  || 0,
     }
     if (modal==='add') await supabase.from('private_work').insert(data)
     else await supabase.from('private_work').update(data).eq('id', form.id!)
@@ -77,7 +82,7 @@ function PrivateWorkPage() {
         ))}
       </div>
 
-      <button onClick={() => { setForm({ status:'Active', price_charged:0, amount_paid:0, work_date: new Date().toISOString().split('T')[0] }); setModal('add') }}
+      <button onClick={() => { setForm({ status:'Active', price_charged:0, amount_paid:0, work_date: new Date().toISOString().split('T')[0] }); setPriceStr(''); setPaidStr(''); setModal('add') }}
         className="w-full mb-4 bg-orange-600 text-white rounded-xl py-3 font-semibold hover:bg-orange-700 flex items-center justify-center gap-2">
         + {ts(lang,'addWork')}
       </button>
@@ -98,7 +103,7 @@ function PrivateWorkPage() {
                 <div className="text-xs text-gray-400">📅 {w.work_date}</div>
               </div>
               <div className="flex gap-1 flex-shrink-0">
-                <button onClick={() => { setForm({...w}); setModal('edit') }} className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg text-sm">✏️</button>
+                <button onClick={() => { setForm({...w}); setPriceStr(w.price_charged?.toString() ?? ''); setPaidStr(w.amount_paid?.toString() ?? ''); setModal('edit') }} className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg text-sm">✏️</button>
                 <button onClick={() => del(w)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg text-sm">🗑️</button>
               </div>
             </div>
@@ -155,13 +160,13 @@ function PrivateWorkPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{ts(lang,'priceCharged')}</label>
-                  <input type="number" value={form.price_charged??''} onChange={e=>setForm({...form,price_charged:+e.target.value})}
-                    className="w-full border rounded-lg px-3 py-2 text-sm" />
+                  <input type="number" inputMode="decimal" value={priceStr} onChange={e=>setPriceStr(e.target.value)}
+                    placeholder="0" className="w-full border rounded-lg px-3 py-2 text-sm" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{ts(lang,'amountPaid')}</label>
-                  <input type="number" value={form.amount_paid??''} onChange={e=>setForm({...form,amount_paid:+e.target.value})}
-                    className="w-full border rounded-lg px-3 py-2 text-sm" />
+                  <input type="number" inputMode="decimal" value={paidStr} onChange={e=>setPaidStr(e.target.value)}
+                    placeholder="0" className="w-full border rounded-lg px-3 py-2 text-sm" />
                 </div>
               </div>
               <div>
