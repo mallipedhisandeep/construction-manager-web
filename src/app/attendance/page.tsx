@@ -32,7 +32,8 @@ function AttendancePage() {
   const [toast, setToast] = useState('')
   const [view, setView] = useState<'day'|'summary'>('day')
   const [summaryWorker, setSummaryWorker] = useState<Worker|null>(null)
-  const [summaryData, setSummaryData] = useState<Attendance[]>([])
+  const [summaryData,    setSummaryData]    = useState<Attendance[]>([])
+  const [openingBalance, setOpeningBalance] = useState(0)
 
   const months = ts(lang,'months') as unknown as string[]
 
@@ -91,11 +92,22 @@ function AttendancePage() {
 
   const openSummary = async (w: Worker) => {
     setSummaryWorker(w)
-    const start = `${year}-${String(month+1).padStart(2,'0')}-01`
-    const end = `${month === 11 ? year+1 : year}-${String(month===11?1:month+2).padStart(2,'0')}-01`
-    const { data } = await supabase.from('attendance').select('*')
+    const start = `\${year}-\${String(month+1).padStart(2,'0')}-01`
+    const end   = `\${month === 11 ? year+1 : year}-\${String(month===11?1:month+2).padStart(2,'0')}-01`
+
+    // Fetch current month records
+    const { data: current } = await supabase.from('attendance').select('*')
       .eq('worker_id', w.id!).gte('date_key', start).lt('date_key', end).order('date_key')
-    setSummaryData(data ?? [])
+    setSummaryData(current ?? [])
+
+    // Fix 4: Carry-forward — fetch ALL records before this month to calculate opening balance
+    const { data: prev } = await supabase.from('attendance').select('wage,advance,attendance_type')
+      .eq('worker_id', w.id!).lt('date_key', start)
+    const prevEarned = prev?.filter(a => a.attendance_type !== 'Absent').reduce((s,a) => s + (a.wage ?? 0), 0) ?? 0
+    const prevAdv    = prev?.reduce((s,a) => s + (a.advance ?? 0), 0) ?? 0
+    // Positive = you owe worker | Negative = worker owes you
+    setOpeningBalance(prevEarned - prevAdv)
+
     setView('summary')
   }
 
@@ -104,6 +116,8 @@ function AttendancePage() {
 
   const totalEarned = summaryData.filter(a => a.attendance_type !== 'Absent').reduce((s,a) => s + a.wage, 0)
   const totalAdv    = summaryData.reduce((s,a) => s + a.advance, 0)
+  // Fix 4: final balance = what was carried forward + earned this month - advance taken this month
+  const finalBalance = openingBalance + totalEarned - totalAdv
 
   return (
     <div className="max-w-3xl mx-auto">
