@@ -104,15 +104,25 @@ function PrivateWorkersPage() {
                 {w.phone && <a href={`tel:${w.phone}`} className="text-xs text-green-600">📞 {w.phone}</a>}
                 <div className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-lg border font-semibold ${balColor}`}>{balLabel}</div>
               </div>
-              <div className="flex gap-1">
-                <button onClick={() => { setSelected(w); setPayForm({amount:'',direction:'dad_to_worker',mode:'Cash',notes:''}); setModal('pay') }}
-                  className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg text-sm">💳</button>
-                <button onClick={async () => { setSelected(w); await loadHist(w.id!); setModal('hist') }}
-                  className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg text-sm">📜</button>
-                <button onClick={() => { setSelected(w); setForm({name:w.name,work_type:w.work_type,phone:w.phone,notes:w.notes??''}); setModal('edit') }}
-                  className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg text-sm">✏️</button>
-                <button onClick={() => del(w)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg text-sm">🗑️</button>
-              </div>
+            </div>
+            {/* Fix 2: 2x2 action grid — easy to tap on mobile */}
+            <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">
+              <button onClick={() => { setSelected(w); setPayForm({amount:'',direction:'dad_to_worker',mode:'Cash',notes:''}); setModal('pay') }}
+                className="flex items-center justify-center gap-1.5 bg-green-50 hover:bg-green-100 text-green-700 text-sm font-semibold py-2.5 rounded-xl transition">
+                💳 Add Payment
+              </button>
+              <button onClick={async () => { setSelected(w); await loadHist(w.id!); setModal('hist') }}
+                className="flex items-center justify-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-semibold py-2.5 rounded-xl transition">
+                📜 History
+              </button>
+              <button onClick={() => { setSelected(w); setForm({name:w.name,work_type:w.work_type,phone:w.phone,notes:w.notes??''}); setModal('edit') }}
+                className="flex items-center justify-center gap-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 text-sm font-semibold py-2.5 rounded-xl transition">
+                ✏️ Edit
+              </button>
+              <button onClick={() => del(w)}
+                className="flex items-center justify-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold py-2.5 rounded-xl transition">
+                🗑️ Delete
+              </button>
             </div>
           </div>
         )
