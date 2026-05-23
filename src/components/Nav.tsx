@@ -35,9 +35,10 @@ export default function Nav({ lang, onToggleLang }: Props) {
           className="bg-white/20 hover:bg-white/30 border border-white/30 text-white text-sm font-bold px-3 py-1 rounded-lg transition">
           {lang === 'en' ? 'తె' : 'EN'}
         </button>
-        <button onClick={signOut}
-          className="bg-white/10 hover:bg-white/20 text-white text-sm px-3 py-1 rounded-lg transition hidden md:block">
-          {ts(lang,'signOut')}
+        <button onClick={signOut} title={ts(lang,'signOut')}
+          className="bg-white/10 hover:bg-white/20 text-white text-sm px-2.5 py-1.5 rounded-lg transition flex items-center gap-1">
+          <span>🚪</span>
+          <span className="hidden md:inline text-sm">{ts(lang,'signOut')}</span>
         </button>
       </header>
 
