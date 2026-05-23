@@ -205,7 +205,7 @@ function SitesPage() {
       {/* Detail modal - FIX 2: cleaner documents tab */}
       {modal==='detail' && selected && (
         <div className="modal-backdrop" onClick={()=>setModal(null)}>
-          <div className="modal-box md:max-w-2xl" onClick={e=>e.stopPropagation()}>
+          <div className="modal-box md:max-w-2xl" style={{maxHeight:'95vh'}} onClick={e=>e.stopPropagation()}>
             <div className="modal-header">
               <div>
                 <h2 className="font-black text-lg">{selected.site_name}</h2>
@@ -248,52 +248,59 @@ function SitesPage() {
                 <button onClick={()=>del(selected)} className="btn-danger w-full py-3">🗑️ Delete Site</button>
               </div>
             ) : (
-              /* FIX 2: Clean Documents tab */
-              <div className="p-5 space-y-6 overflow-y-auto">
+              <div /* Documents tab — clean card-per-section design */ className="divide-y divide-gray-100">
 
-                {/* Agreements */}
-                <div>
+                {/* ── Agreements ── */}
+                <div className="p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                      <span className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-base">📄</span>
-                      Agreements
-                      {agreements.length>0 && <span className="badge-blue">{agreements.length}</span>}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white text-lg">📄</div>
+                      <div>
+                        <p className="font-bold text-gray-800 text-sm">Agreements</p>
+                        <p className="text-xs text-gray-400">{agreements.length} file{agreements.length!==1?'s':''}</p>
+                      </div>
+                    </div>
                     <button onClick={()=>triggerUpload('agreement')} disabled={!!uploading}
-                      className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50">
-                      {uploading==='agreement'?'⏳ Uploading...':'+ Upload'}
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl disabled:opacity-50 transition">
+                      {uploading==='agreement'?'⏳':'+ Upload'}
                     </button>
                   </div>
-                  {agreements.length===0
-                    ? <p className="text-sm text-gray-300 text-center py-3 border-2 border-dashed border-gray-100 rounded-xl">No agreements uploaded yet</p>
-                    : <div className="space-y-2">{agreements.map(f=><FileItem key={f.id} f={f} onDelete={()=>deleteFile('site_agreements',f.id,f.file_path)}/>)}</div>
-                  }
+                  {agreements.length===0 ? (
+                    <div className="bg-blue-50 rounded-xl p-4 text-center border border-blue-100">
+                      <p className="text-sm text-blue-400 font-medium">No agreements yet</p>
+                      <p className="text-xs text-blue-300 mt-1">Tap Upload to add PDF or image</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">{agreements.map(f=><FileItem key={f.id} f={f} onDelete={()=>deleteFile('site_agreements',f.id,f.file_path)}/>)}</div>
+                  )}
                 </div>
 
-                {/* Floor Plans */}
-                <div>
-                  <h3 className="font-bold text-gray-700 flex items-center gap-2 mb-3">
-                    <span className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center text-base">🗺️</span>
-                    Floor Plans
-                    {floorFiles.length>0 && <span className="badge-green">{floorFiles.length}</span>}
-                  </h3>
-                  <div className="space-y-3">
+                {/* ── Floor Plans ── */}
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-9 h-9 bg-green-600 rounded-xl flex items-center justify-center text-white text-lg">🗺️</div>
+                    <div>
+                      <p className="font-bold text-gray-800 text-sm">Floor Plans</p>
+                      <p className="text-xs text-gray-400">{selected.floors_count} floor{selected.floors_count!==1?'s':''} · {floorFiles.length} file{floorFiles.length!==1?'s':''}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
                     {Array.from({length:selected.floors_count},(_,i)=>{
                       const files = floorFiles.filter(f=>f.floor_no===i)
                       return (
-                        <div key={i} className="border border-gray-100 rounded-xl overflow-hidden">
-                          <div className="flex items-center justify-between bg-gray-50 px-4 py-2.5">
-                            <span className="text-sm font-semibold text-gray-600">
+                        <div key={i} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
+                          <div className="flex items-center justify-between px-3 py-2.5 bg-green-50 border-b border-green-100">
+                            <span className="text-sm font-bold text-green-800">
                               {i===0?'🏠 Ground Floor':`🏢 Floor ${i}`}
                             </span>
                             <button onClick={()=>triggerUpload('floor',i)} disabled={!!uploading}
-                              className="text-xs text-orange-600 font-semibold hover:underline disabled:opacity-50">
-                              {uploading==='floor'?'⏳...':'+ Upload'}
+                              className="text-xs bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1 rounded-lg disabled:opacity-50 transition">
+                              {uploading==='floor'?'⏳':'+ Upload'}
                             </button>
                           </div>
                           {files.length===0
-                            ? <p className="text-xs text-gray-300 text-center py-3">No files</p>
-                            : <div className="p-3 space-y-2">{files.map(f=><FileItem key={f.id} f={f} onDelete={()=>deleteFile('site_floor_files',f.id,f.file_path)}/>)}</div>
+                            ? <p className="text-xs text-gray-400 text-center py-3">No files uploaded</p>
+                            : <div className="p-2 space-y-1.5">{files.map(f=><FileItem key={f.id} f={f} onDelete={()=>deleteFile('site_floor_files',f.id,f.file_path)}/>)}</div>
                           }
                         </div>
                       )
@@ -301,23 +308,29 @@ function SitesPage() {
                   </div>
                 </div>
 
-                {/* Elevations */}
-                <div>
+                {/* ── Elevations ── */}
+                <div className="p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                      <span className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center text-base">🖼️</span>
-                      Elevations
-                      {elevations.length>0 && <span className="badge-purple">{elevations.length}</span>}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 bg-purple-600 rounded-xl flex items-center justify-center text-white text-lg">🖼️</div>
+                      <div>
+                        <p className="font-bold text-gray-800 text-sm">Elevations</p>
+                        <p className="text-xs text-gray-400">{elevations.length} file{elevations.length!==1?'s':''}</p>
+                      </div>
+                    </div>
                     <button onClick={()=>triggerUpload('elevation')} disabled={!!uploading}
-                      className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50">
-                      {uploading==='elevation'?'⏳ Uploading...':'+ Upload'}
+                      className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-4 py-2 rounded-xl disabled:opacity-50 transition">
+                      {uploading==='elevation'?'⏳':'+ Upload'}
                     </button>
                   </div>
-                  {elevations.length===0
-                    ? <p className="text-sm text-gray-300 text-center py-3 border-2 border-dashed border-gray-100 rounded-xl">No elevations uploaded yet</p>
-                    : <div className="space-y-2">{elevations.map(f=><FileItem key={f.id} f={f} onDelete={()=>deleteFile('site_elevations',f.id,f.file_path)}/>)}</div>
-                  }
+                  {elevations.length===0 ? (
+                    <div className="bg-purple-50 rounded-xl p-4 text-center border border-purple-100">
+                      <p className="text-sm text-purple-400 font-medium">No elevations yet</p>
+                      <p className="text-xs text-purple-300 mt-1">Tap Upload to add images</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">{elevations.map(f=><FileItem key={f.id} f={f} onDelete={()=>deleteFile('site_elevations',f.id,f.file_path)}/>)}</div>
+                  )}
                 </div>
 
               </div>
