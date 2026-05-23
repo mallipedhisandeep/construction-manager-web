@@ -22,7 +22,7 @@ function WorkersPage() {
   const [modal,  setModal]  = useState<'add'|'edit'|'view'|null>(null)
   const [form,   setForm]   = useState<Worker>(empty())
   const [saving, setSaving] = useState(false)
-  const [toast,  setToast]  = useState('')
+  const [toast,  setToast]  = useState<{msg:string;type:'ok'|'err'}>()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -32,7 +32,7 @@ function WorkersPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
-  const showToast = (m:string) => { setToast(m); setTimeout(()=>setToast(''), 3000) }
+  const showToast = (msg:string,type:'ok'|'err'='ok') => { setToast({msg,type}); setTimeout(()=>setToast(undefined),3500) }
 
   const filtered = workers.filter(w => {
     if (search && !w.name.toLowerCase().includes(search.toLowerCase()) && !w.phone.includes(search)) return false
@@ -45,25 +45,33 @@ function WorkersPage() {
   filtered.forEach(w => { grouped[w.work_type] = [...(grouped[w.work_type]??[]), w] })
 
   const save = async () => {
-    if (!form.name.trim()) { showToast('Name required'); return }
-    if (form.phone.length !== 10) { showToast(ts(lang,'invalidPhone')); return }
+    if (!form.name.trim()) { showToast('Name required','err'); return }
+    if (form.phone.length !== 10) { showToast(ts(lang,'invalidPhone'),'err'); return }
     setSaving(true)
-    if (modal==='add') await supabase.from('workers').insert(form)
-    else await supabase.from('workers').update(form).eq('id', form.id!)
-    setSaving(false); setModal(null); load()
-    showToast(modal==='add' ? ts(lang,'workerAdded') : ts(lang,'workerUpdated'))
+    try {
+      const { error } = modal==='add'
+        ? await supabase.from('workers').insert(form)
+        : await supabase.from('workers').update(form).eq('id', form.id!)
+      if (error) throw error
+      setModal(null); load()
+      showToast(modal==='add' ? ts(lang,'workerAdded') : ts(lang,'workerUpdated'))
+    } catch(e:unknown) {
+      showToast(e instanceof Error ? e.message : 'Save failed','err')
+    } finally { setSaving(false) }
   }
   const del = async (w:Worker) => {
     if (!confirm(ts(lang,'deleteConfirm'))) return
-    await supabase.from('workers').delete().eq('id', w.id!)
-    load()
+    const { error } = await supabase.from('workers').delete().eq('id', w.id!)
+    if (error) { showToast(error.message,'err'); return }
+    setModal(null); load()
+    showToast('Worker deleted')
   }
 
   const rateKey = (s:string) => `rate_${s.replace('-','_')}` as keyof Worker
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
-      {toast && <div className="fixed top-16 right-4 z-50 bg-green-500 text-white text-sm px-4 py-2 rounded-xl shadow-lg">{toast}</div>}
+      {toast && <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.type==='ok'?'bg-green-500':'bg-red-500'}`}>{toast.msg}</div>}
 
       {/* Page header */}
       <div className="bg-white border-b border-gray-100 px-4 pt-5 pb-4 sticky top-14 z-30">
