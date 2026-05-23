@@ -6,7 +6,7 @@ import { ts } from '@/lib/strings'
 import type { Worker } from '@/lib/types'
 
 const SHIFTS   = ['6-6','10-6','6-10','6-2','10-2','2-6']
-const S_LABELS = ['6AM–6PM','10AM–6PM','6AM–10PM','6AM–2PM','10AM–2PM','2PM–6PM']
+const S_LABELS = ['6AM–6PM','10AM–6PM','6AM–9AM','6AM–2PM','10AM–2PM','3PM–6PM']
 const empty = (): Worker => ({ name:'', phone:'', gender:'Male', state:'Telangana', role:'Mason', work_type:'Centring', rate_6_6:0, rate_10_6:0, rate_6_10:0, rate_6_2:0, rate_10_2:0, rate_2_6:0 })
 const stateTag = (s:string) => s==='Telangana'?'badge-green':s==='Andhra'?'badge-blue':'badge-orange'
 
