@@ -3,72 +3,76 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
-import { ts } from '@/lib/strings'
 
 function Dashboard() {
   const { lang } = useLang()
-  const router   = useRouter()
-  const [stats, setStats] = useState({ workers: 0, activeSites: 0, contractors: 0 })
-  const [user, setUser]   = useState('')
+  const router = useRouter()
+  const [stats, setStats] = useState({ workers:0, activeSites:0, contractors:0, suppliers:0 })
+  const [user, setUser] = useState('Admin')
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user?.email?.split('@')[0]?.toUpperCase() ?? 'Admin')
-    })
+    supabase.auth.getUser().then(({ data }) => setUser(data.user?.email?.split('@')[0]?.toUpperCase() ?? 'Admin'))
     Promise.all([
-      supabase.from('workers').select('id',       { count:'exact', head:true }),
-      supabase.from('sites').select('id',         { count:'exact', head:true }).eq('status','Active'),
-      supabase.from('private_workers').select('id',{ count:'exact', head:true }),
-    ]).then(([w,s,p]) => setStats({ workers: w.count??0, activeSites: s.count??0, contractors: p.count??0 }))
+      supabase.from('workers').select('id',{count:'exact',head:true}),
+      supabase.from('sites').select('id',{count:'exact',head:true}).eq('status','Active'),
+      supabase.from('private_workers').select('id',{count:'exact',head:true}),
+      supabase.from('suppliers').select('id',{count:'exact',head:true}),
+    ]).then(([w,s,p,su]) => setStats({ workers:w.count??0, activeSites:s.count??0, contractors:p.count??0, suppliers:su.count??0 }))
   }, [])
 
   const modules = [
-    { key:'attendance'    as const, icon:'📅', href:'/attendance',      bg:'from-orange-500 to-amber-500'   },
-    { key:'workers'       as const, icon:'👷', href:'/workers',         bg:'from-blue-500 to-cyan-500'      },
-    { key:'sites'         as const, icon:'🏗️', href:'/sites',           bg:'from-green-500 to-emerald-500'  },
-    { key:'privateWorkers'as const, icon:'🔧', href:'/private-workers', bg:'from-purple-500 to-violet-500'  },
-    { key:'privateWork'   as const, icon:'📋', href:'/private-work',    bg:'from-teal-500 to-cyan-600'      },
+    { label:'Daily Attendance', emoji:'📅', href:'/attendance', grad:'from-orange-500 to-amber-400' },
+    { label:'Workers',          emoji:'👷', href:'/workers',    grad:'from-blue-500 to-cyan-400' },
+    { label:'Sites',            emoji:'🏗️', href:'/sites',      grad:'from-green-500 to-emerald-400' },
+    { label:'Private Workers',  emoji:'🔧', href:'/private-workers', grad:'from-purple-500 to-violet-400' },
+    { label:'Private Work',     emoji:'📋', href:'/private-work',    grad:'from-teal-500 to-cyan-500' },
+    { label:'Suppliers',        emoji:'🏪', href:'/suppliers',  grad:'from-pink-500 to-rose-400', isNew:true },
+    { label:'Goods Orders',     emoji:'📦', href:'/goods',      grad:'from-amber-500 to-yellow-400', isNew:true },
+    { label:'Money Tracking',   emoji:'💰', href:'/money',      grad:'from-emerald-500 to-green-400', isNew:true },
+    { label:'Reports',          emoji:'📊', href:'/reports',    grad:'from-indigo-500 to-blue-400', isNew:true },
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero banner */}
-      <div className="bg-gradient-to-br from-orange-600 via-orange-500 to-amber-500 pt-8 pb-12 px-5">
-        <p className="text-orange-100 text-sm font-medium">{ts(lang,'welcome')}</p>
-        <h1 className="text-white text-2xl font-black mt-0.5">{user}</h1>
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-3 mt-6">
+    <div className="min-h-screen" style={{background:'linear-gradient(180deg, #f97316 0%, #fed7aa 35%, #f8fafc 55%)'}}>
+      {/* Hero */}
+      <div className="px-5 pt-8 pb-16">
+        <p className="text-orange-100 text-sm font-medium">Welcome back</p>
+        <h1 className="text-white text-2xl font-black tracking-tight mt-0.5">{user}</h1>
+        <div className="grid grid-cols-4 gap-2 mt-5">
           {[
-            { label: ts(lang,'workers'),        val: stats.workers,      icon:'👷' },
-            { label: ts(lang,'activeSites'),    val: stats.activeSites,  icon:'🏗️' },
-            { label: ts(lang,'privateWorkers'), val: stats.contractors,  icon:'🔧' },
+            { v:stats.workers,      l:'Workers',    e:'👷' },
+            { v:stats.activeSites,  l:'Sites',      e:'🏗️' },
+            { v:stats.contractors,  l:'Contractors',e:'🔧' },
+            { v:stats.suppliers,    l:'Suppliers',  e:'🏪' },
           ].map(s => (
-            <div key={s.label} className="bg-white/20 backdrop-blur rounded-2xl p-3 text-white text-center">
-              <div className="text-2xl mb-0.5">{s.icon}</div>
-              <div className="text-2xl font-black">{s.val}</div>
-              <div className="text-xs text-orange-100 leading-tight mt-0.5">{s.label}</div>
+            <div key={s.l} className="bg-white/20 backdrop-blur rounded-2xl p-3 text-center">
+              <div className="text-xl">{s.e}</div>
+              <div className="text-xl font-black text-white">{s.v}</div>
+              <div className="text-[9px] text-orange-100 mt-0.5 leading-tight">{s.l}</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* Module grid */}
-      <div className="px-4 -mt-4">
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 mt-4 px-1">Modules</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pb-24">
-          {modules.map(m => (
-            <button key={m.href} onClick={() => router.push(m.href)}
-              className="card p-5 flex flex-col items-center gap-3 hover:shadow-md active:scale-95 transition-all text-left group">
-              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${m.bg} flex items-center justify-center text-2xl shadow-sm group-hover:scale-110 transition-transform`}>
-                {m.icon}
-              </div>
-              <span className="text-sm font-bold text-gray-700 text-center leading-tight">{ts(lang,m.key)}</span>
-            </button>
-          ))}
+      <div className="px-4 -mt-8 pb-28">
+        <div className="card p-4 mb-4">
+          <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">All Modules</p>
+          <div className="grid grid-cols-3 gap-3">
+            {modules.map(m => (
+              <button key={m.href} onClick={()=>router.push(m.href)}
+                className="flex flex-col items-center gap-2 p-3 rounded-2xl hover:scale-105 active:scale-95 transition-all bg-gray-50 hover:bg-gray-100 relative">
+                {m.isNew && <span className="absolute top-1 right-1 text-[8px] bg-green-500 text-white font-black px-1.5 py-0.5 rounded-full">NEW</span>}
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${m.grad} flex items-center justify-center text-2xl shadow-sm`}>
+                  {m.emoji}
+                </div>
+                <span className="text-xs font-bold text-gray-700 text-center leading-tight">{m.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>
   )
 }
-
 export default function Home() { return <AppShell><Dashboard /></AppShell> }
