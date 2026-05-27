@@ -97,3 +97,64 @@ const te: typeof en = {
 export const strings = { en, te }
 export const t = (lang: Lang, key: keyof typeof en): string | string[] => strings[lang][key]
 export const ts = (lang: Lang, key: keyof typeof en): string => strings[lang][key] as string
+
+// ── NEW MODULE STRINGS ──────────────────────────────────────
+// Append these to the existing `en` and `te` objects manually
+// OR use the exported additions below
+
+export const newStrings = {
+  en: {
+    suppliers: 'Suppliers', addSupplier: 'Add Supplier', editSupplier: 'Edit Supplier',
+    shopName: 'Shop Name', goodsCatalog: 'Goods Catalog', addGoods: 'Add Goods Item',
+    goodsName: 'Goods Name', pricePerUnit: 'Price / Unit', unit: 'Unit',
+    noSuppliers: 'No suppliers added', supplierPayments: 'Supplier Payments',
+    goods: 'Goods Orders', addOrder: 'New Order', noOrders: 'No orders yet',
+    selectSupplier: 'Select Supplier', selectGoods: 'Select Goods',
+    quantity: 'Quantity', totalPrice: 'Total Price', deliveryDate: 'Delivery Date',
+    advancePaid: 'Advance Paid', delivered: 'Delivered', pending: 'Pending',
+    cancelled: 'Cancelled', sitePayments: 'Payments', addPayment: 'Add Payment',
+    received: 'Received from Owner', spent: 'Spent / Paid Out',
+    description: 'Description', paymentDate: 'Date', noPayments: 'No payments yet',
+    money: 'Money Tracking', reports: 'Reports',
+    totalIncome: 'Total Income', totalExpenses: 'Total Expenses',
+    netPosition: 'Net Position', workerWages: 'Worker Wages',
+    workerAdvances: 'Worker Advances', goodsSpend: 'Goods Purchased',
+    supplierPaid: 'Supplier Payments', siteIncome: 'Site Income (Received)',
+    privateWorkerPaid: 'Private Worker Payments',
+    outstanding: 'Outstanding Balances', profitLoss: 'Profit / Loss',
+    invested: 'Total Invested', returned: 'Total Received',
+    perSite: 'Per Site Breakdown', filterMonth: 'Filter by Month',
+    allTime: 'All Time', thisMonth: 'This Month',
+    units: ['bags','tons','pieces','sq.ft','cu.ft','liters','kg','loads','rods','tiles'],
+  },
+  te: {
+    suppliers: 'సరఫరాదారులు', addSupplier: 'సరఫరాదారుని జోడించు', editSupplier: 'సవరించు',
+    shopName: 'దుకాణం పేరు', goodsCatalog: 'వస్తువుల జాబితా', addGoods: 'వస్తువు జోడించు',
+    goodsName: 'వస్తువు పేరు', pricePerUnit: 'ధర / యూనిట్', unit: 'యూనిట్',
+    noSuppliers: 'సరఫరాదారులు లేరు', supplierPayments: 'చెల్లింపులు',
+    goods: 'వస్తువుల ఆర్డర్లు', addOrder: 'కొత్త ఆర్డర్', noOrders: 'ఆర్డర్లు లేవు',
+    selectSupplier: 'సరఫరాదారుని ఎంచుకోండి', selectGoods: 'వస్తువు ఎంచుకోండి',
+    quantity: 'పరిమాణం', totalPrice: 'మొత్తం ధర', deliveryDate: 'డెలివరీ తేదీ',
+    advancePaid: 'అడ్వాన్స్ చెల్లించింది', delivered: 'డెలివరీ అయింది', pending: 'పెండింగ్',
+    cancelled: 'రద్దు చేయబడింది', sitePayments: 'చెల్లింపులు', addPayment: 'చెల్లింపు జోడించు',
+    received: 'యజమాని నుండి వచ్చింది', spent: 'ఖర్చు చేయబడింది',
+    description: 'వివరణ', paymentDate: 'తేదీ', noPayments: 'చెల్లింపులు లేవు',
+    money: 'డబ్బు ట్రాకింగ్', reports: 'నివేదికలు',
+    totalIncome: 'మొత్తం ఆదాయం', totalExpenses: 'మొత్తం ఖర్చులు',
+    netPosition: 'నికర స్థానం', workerWages: 'కార్మికుల వేతనాలు',
+    workerAdvances: 'కార్మికుల అడ్వాన్సులు', goodsSpend: 'వస్తువులు కొన్నవి',
+    supplierPaid: 'సరఫరాదారు చెల్లింపులు', siteIncome: 'సైటు ఆదాయం',
+    privateWorkerPaid: 'ప్రైవేట్ కార్మికుల చెల్లింపులు',
+    outstanding: 'బకాయిలు', profitLoss: 'లాభ నష్టాలు',
+    invested: 'మొత్తం పెట్టుబడి', returned: 'మొత్తం వచ్చింది',
+    perSite: 'సైటు వారీగా', filterMonth: 'నెల వారీగా చూడండి',
+    allTime: 'అన్ని సమయాలు', thisMonth: 'ఈ నెల',
+    units: ['bags','tons','pieces','sq.ft','cu.ft','liters','kg','loads','rods','tiles'],
+  }
+}
+
+export const tn = (lang: Lang, key: keyof typeof newStrings.en): string | string[] =>
+  newStrings[lang][key]
+export const tns = (lang: Lang, key: keyof typeof newStrings.en): string =>
+  newStrings[lang][key] as string
+    
