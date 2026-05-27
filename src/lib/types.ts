@@ -15,6 +15,11 @@ export interface Site {
   start_date?: string; budget: number; floors_count: number
   status: string; notes?: string
 }
+export interface SitePayment {
+  id?: string; site_id: string; amount: number
+  direction: 'received' | 'spent'; description: string
+  mode: string; payment_date: string; created_at?: string
+}
 export interface PrivateWorker {
   id?: string; name: string; work_type: string; phone: string; notes?: string
 }
@@ -26,4 +31,24 @@ export interface PrivateWork {
 export interface PrivateWorkerPayment {
   id?: string; worker_id: string; amount: number; direction: string
   mode: string; date: string; notes?: string; source: string
+}
+export interface Supplier {
+  id?: string; name: string; phone: string; shop_name: string
+  notes?: string; created_at?: string
+}
+export interface SupplierGoods {
+  id?: string; supplier_id: string; goods_name: string
+  price_per_unit: number; unit: string
+}
+export interface SupplierPayment {
+  id?: string; supplier_id: string; amount: number
+  payment_type: 'advance' | 'payment'; mode: string
+  payment_date: string; goods_order_id?: string; notes?: string
+}
+export interface GoodsOrder {
+  id?: string; supplier_id: string; supplier_name: string
+  goods_name: string; unit: string
+  site_id?: string; site_name?: string; delivery_date: string
+  quantity: number; price_per_unit: number; total_price: number
+  advance_paid: number; status: string; notes?: string; created_at?: string
 }
