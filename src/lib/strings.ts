@@ -157,4 +157,3 @@ export const tn = (lang: Lang, key: keyof typeof newStrings.en): string | string
   newStrings[lang][key]
 export const tns = (lang: Lang, key: keyof typeof newStrings.en): string =>
   newStrings[lang][key] as string
-    
