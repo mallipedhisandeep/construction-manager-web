@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
@@ -53,6 +54,13 @@ export default function LoginPage() {
               {loading ? '⏳ Loading...' : 'Sign In / లాగిన్ చేయి'}
             </button>
           </form>
+          {/* FIX: Added signup link */}
+          <p className="text-center text-sm text-gray-500 mt-4">
+            Don&apos;t have an account?{' '}
+            <Link href="/signup" className="text-orange-600 font-semibold hover:underline">
+              Sign Up
+            </Link>
+          </p>
         </div>
       </div>
     </div>
