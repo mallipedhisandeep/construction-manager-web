@@ -120,9 +120,14 @@ function SitesPage() {
 
   const savePayment = async () => {
     if (!pForm.amount || !selected) return
+    // FIX 4: ensure payment_date and description always have values (NOT NULL columns)
     const { error } = await supabase.from('site_payments').insert({
-      site_id:selected.id, amount:parseFloat(pForm.amount)||0, direction:'received',
-      description:pForm.description, mode:pForm.mode, payment_date:pForm.payment_date
+      site_id:    selected.id,
+      amount:     parseFloat(pForm.amount) || 0,
+      direction:  'received',
+      description: pForm.description?.trim() || '',
+      mode:        pForm.mode || 'Cash',
+      payment_date: pForm.payment_date || new Date().toISOString().split('T')[0],
     })
     if (error) { showToast(error.message, false); return }
     setPayModal(false); loadPayments(selected.id); showToast(t('savedOk'))
