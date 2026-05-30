@@ -57,9 +57,16 @@ function SuppliersPage() {
     if (!sForm.name?.trim()) return
     setSaving(true)
     try {
+      // FIX 5: Sanitize payload so NOT NULL columns always have a value
+      const payload = {
+        name:      sForm.name?.trim() ?? '',
+        phone:     sForm.phone?.trim() ?? '',
+        shop_name: sForm.shop_name?.trim() ?? '',
+        notes:     sForm.notes ?? '',
+      }
       const { error } = modal==='supplier' && selected
-        ? await supabase.from('suppliers').update(sForm).eq('id',selected.id)
-        : await supabase.from('suppliers').insert(sForm)
+        ? await supabase.from('suppliers').update(payload).eq('id',selected.id)
+        : await supabase.from('suppliers').insert(payload)
       if (error) throw error
       setModal(null); load(); showToast('Supplier saved!')
     } catch(e:any) { showToast(e.message,false) } finally { setSaving(false) }
