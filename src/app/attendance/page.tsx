@@ -36,6 +36,9 @@ function AttendancePage() {
   const [sumPrevBal, setSumPrevBal] = useState(0)
   const [sumLoading, setSumLoading] = useState(false)
 
+  // FIX: Track which date keys have attendance in the current month view
+  const [markedDays, setMarkedDays] = useState<Record<string, 'full'|'partial'>>({})
+
   const months = ts(lang,'months') as unknown as string[]
   const daysInMonth = new Date(year, month+1, 0).getDate()
   const pad = (n:number) => String(n).padStart(2,'0')
@@ -47,8 +50,35 @@ function AttendancePage() {
   const loadSites    = useCallback(async()=>{ const {data}=await supabase.from('sites').select('id,site_name').eq('status','Active'); setSites(data??[]) },[])
   const loadAtt      = useCallback(async()=>{ const {data}=await supabase.from('attendance').select('*').eq('date_key',dKey); const m:Record<string,Attendance>={}; data?.forEach(a=>{m[a.worker_id]=a}); setAttMap(m) },[dKey])
 
+  // FIX: Load all attendance for the current month to colour the day column
+  const loadMonthMarked = useCallback(async () => {
+    const start = `${year}-${pad(month+1)}-01`
+    const end   = month===11 ? `${year+1}-01-01` : `${year}-${pad(month+2)}-01`
+    const { data } = await supabase
+      .from('attendance')
+      .select('date_key, worker_id')
+      .gte('date_key', start)
+      .lt('date_key', end)
+    if (!data) return
+    // Group by date_key and count unique workers marked
+    const byDay: Record<string, Set<string>> = {}
+    data.forEach(a => {
+      if (!byDay[a.date_key]) byDay[a.date_key] = new Set()
+      byDay[a.date_key].add(a.worker_id)
+    })
+    // Determine full vs partial (need total worker count)
+    const { count: totalWorkers } = await supabase.from('workers').select('id', { count: 'exact', head: true })
+    const total = totalWorkers ?? 0
+    const result: Record<string, 'full'|'partial'> = {}
+    Object.entries(byDay).forEach(([dk, workerSet]) => {
+      result[dk] = (total > 0 && workerSet.size >= total) ? 'full' : 'partial'
+    })
+    setMarkedDays(result)
+  }, [year, month, pad])
+
   useEffect(()=>{ loadWorkers(); loadSites() },[loadWorkers,loadSites])
   useEffect(()=>{ loadAtt() },[loadAtt])
+  useEffect(()=>{ loadMonthMarked() },[loadMonthMarked])
 
   const wage = (w:Worker,s:string) => ({
     '6-6':w.rate_6_6,'10-6':w.rate_10_6,'6-10':w.rate_6_10,
@@ -75,19 +105,39 @@ function AttendancePage() {
     if (!modal) return
     setSaving(true)
     try {
+      const workerWage = wage(modal, form.shift)
+      const advance    = parseFloat(form.advance) || 0
+
+      // FIX: Compute actual running balance instead of always storing 0
+      // Get all previous attendance for this worker to calculate running total
+      const { data: prevAtt } = await supabase
+        .from('attendance')
+        .select('wage, advance, attendance_type')
+        .eq('worker_id', modal.id!)
+        .lt('date_key', dKey)
+      const prevEarned  = prevAtt?.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+(a.wage??0),0) ?? 0
+      const prevAdvance = prevAtt?.reduce((s,a)=>s+(a.advance??0),0) ?? 0
+      const currentWage = form.shift !== 'Absent' ? workerWage : 0
+      const balance_after = (prevEarned + currentWage) - (prevAdvance + advance)
+
       const payload: Attendance = {
-        worker_id:modal.id!, site_id:form.siteId||undefined,
-        date:new Date(year,month,day).toISOString(), date_key:dKey,
-        attendance_type:form.shift, wage:wage(modal,form.shift),
-        advance:parseFloat(form.advance)||0, payment_mode:form.payMode, balance_after:0
+        worker_id: modal.id!, site_id: form.siteId||undefined,
+        date: new Date(year,month,day).toISOString(), date_key: dKey,
+        attendance_type: form.shift, wage: workerWage,
+        advance, payment_mode: form.payMode,
+        balance_after  // FIX: real computed value
       }
       const existing = attMap[modal.id!]
       const {error} = existing?.id
         ? await supabase.from('attendance').update(payload).eq('id',existing.id)
         : await supabase.from('attendance').insert(payload)
       if (error) throw error
-      setModal(null); await loadAtt(); showToast(ts(lang,'savedOk') as string)
-    } catch(e:any) { showToast(e.message,false) } finally { setSaving(false) }
+      setModal(null)
+      await loadAtt()
+      await loadMonthMarked()
+      showToast(ts(lang,'savedOk') as string)
+    } catch(e:unknown) { showToast(e instanceof Error ? e.message : 'Save failed', false) }
+    finally { setSaving(false) }
   }
 
   const grouped: Record<string,Worker[]> = {}
@@ -116,7 +166,7 @@ function AttendancePage() {
           <div className="space-y-2">
             {/* Year + Month row */}
             <div className="flex items-center gap-2">
-              <select value={year} onChange={e=>setYear(+e.target.value)}
+              <select value={year} onChange={e=>{ setYear(+e.target.value) }}
                 className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm font-semibold bg-white focus:ring-2 focus:ring-orange-400 focus:outline-none">
                 {[now.getFullYear()-1, now.getFullYear(), now.getFullYear()+1].map(y=><option key={y} value={y}>{y}</option>)}
               </select>
@@ -211,24 +261,59 @@ function AttendancePage() {
         </div>
       ) : (
         /* ─── DAY VIEW: vertical left nav + worker list ─── */
-        <div className="flex h-[calc(100vh-120px)]">
+        {/* FIX: Changed height calc from 120px to 170px to correctly account for
+            top nav (56px) + sticky date controls bar (~90px) + small buffer */}
+        <div className="flex" style={{ height: 'calc(100vh - 170px)', minHeight: '400px' }}>
 
-          {/* LEFT: vertical day picker */}
+          {/* LEFT: vertical day picker — FIX: colour boxes by marked status */}
           <div className="w-14 bg-white border-r flex-shrink-0 overflow-y-auto">
             <div className="py-2">
               {Array.from({length:daysInMonth},(_,i)=>i+1).map(d=>{
                 const dk = `${year}-${pad(month+1)}-${pad(d)}`
-                const isToday = d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear()
-                const isSel   = d===day
+                const isToday   = d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear()
+                const isSel     = d===day
                 const isWeekend = [0,6].includes(new Date(year,month,d).getDay())
+                const markStatus = markedDays[dk] // 'full' | 'partial' | undefined
+
+                // FIX: Determine background colour for the day box
+                // Priority: selected > full marked (green) > partial marked (amber) > today (orange tint) > default
+                const bgClass = isSel
+                  ? 'bg-orange-600'
+                  : markStatus === 'full'
+                  ? 'bg-green-500'
+                  : markStatus === 'partial'
+                  ? 'bg-amber-400'
+                  : isToday
+                  ? 'bg-orange-100'
+                  : 'hover:bg-gray-50'
+
+                const numColor = isSel
+                  ? 'text-white'
+                  : markStatus
+                  ? 'text-white'
+                  : isToday
+                  ? 'text-orange-700'
+                  : isWeekend
+                  ? 'text-red-400'
+                  : 'text-gray-600'
+
+                const dowColor = isSel
+                  ? 'text-orange-100'
+                  : markStatus
+                  ? 'text-white/70'
+                  : isToday
+                  ? 'text-orange-500'
+                  : isWeekend
+                  ? 'text-red-300'
+                  : 'text-gray-300'
+
                 return (
                   <button key={d} onClick={()=>setDay(d)}
-                    className={`w-full py-3 flex flex-col items-center transition
-                      ${isSel?'bg-orange-600':isToday?'bg-orange-100':'hover:bg-gray-50'}`}>
-                    <span className={`text-xs font-black leading-none ${isSel?'text-white':isToday?'text-orange-700':isWeekend?'text-red-400':'text-gray-600'}`}>
+                    className={`w-full py-3 flex flex-col items-center transition ${bgClass}`}>
+                    <span className={`text-xs font-black leading-none ${numColor}`}>
                       {d}
                     </span>
-                    <span className={`text-[8px] mt-0.5 ${isSel?'text-orange-100':isToday?'text-orange-500':isWeekend?'text-red-300':'text-gray-300'}`}>
+                    <span className={`text-[8px] mt-0.5 ${dowColor}`}>
                       {['S','M','T','W','T','F','S'][new Date(year,month,d).getDay()]}
                     </span>
                   </button>
