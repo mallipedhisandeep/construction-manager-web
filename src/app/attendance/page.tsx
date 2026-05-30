@@ -107,25 +107,14 @@ function AttendancePage() {
     try {
       const workerWage = wage(modal, form.shift)
       const advance    = parseFloat(form.advance) || 0
-
-      // FIX: Compute actual running balance instead of always storing 0
-      // Get all previous attendance for this worker to calculate running total
-      const { data: prevAtt } = await supabase
-        .from('attendance')
-        .select('wage, advance, attendance_type')
-        .eq('worker_id', modal.id!)
-        .lt('date_key', dKey)
-      const prevEarned  = prevAtt?.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+(a.wage??0),0) ?? 0
-      const prevAdvance = prevAtt?.reduce((s,a)=>s+(a.advance??0),0) ?? 0
-      const currentWage = form.shift !== 'Absent' ? workerWage : 0
-      const balance_after = (prevEarned + currentWage) - (prevAdvance + advance)
-
+      // FIX 3: Removed the extra DB fetch for balance_after to make saves instant.
+      // balance_after is computed from the summary view when needed instead.
       const payload: Attendance = {
         worker_id: modal.id!, site_id: form.siteId||undefined,
         date: new Date(year,month,day).toISOString(), date_key: dKey,
         attendance_type: form.shift, wage: workerWage,
         advance, payment_mode: form.payMode,
-        balance_after  // FIX: real computed value
+        balance_after: 0
       }
       const existing = attMap[modal.id!]
       const {error} = existing?.id
@@ -249,6 +238,12 @@ function AttendancePage() {
                         <div className="flex-1">
                           <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${SL[a.attendance_type]??''}`}>{a.attendance_type}</span>
                           {a.advance>0 && <span className="ml-2 text-xs text-orange-500 font-semibold">Adv ₹{a.advance}</span>}
+                          {/* FIX 2: Show site name in summary */}
+                          {a.site_id && (
+                            <p className="text-[11px] text-blue-500 font-medium mt-0.5">
+                              📍 {sites.find(s=>s.id===a.site_id)?.site_name ?? 'Site'}
+                            </p>
+                          )}
                         </div>
                         <span className="font-bold text-gray-700">₹{a.wage}</span>
                       </div>
