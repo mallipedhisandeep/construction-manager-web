@@ -90,7 +90,9 @@ body {
   }
 
   /* ── Page layout ─────────── */
-  .page        { min-height: 100vh; background-color: rgb(var(--bg)); @apply pb-24; }
+  .page        { min-height: 100vh; background-color: rgb(var(--bg)); color: rgb(var(--text)); @apply pb-24; }
+  /* All modals and overlays use surface color */
+  .modal-content { background-color: rgb(var(--surface)); color: rgb(var(--text)); }
   .page-header {
     @apply px-4 pt-5 pb-4 sticky top-14 z-30 border-b;
     background-color: rgb(var(--surface));
