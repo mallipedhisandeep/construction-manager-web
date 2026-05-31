@@ -27,11 +27,13 @@ export default function SignupPage() {
     if (password.length < 6)  { setError('Minimum 6 characters for password'); return }
     setLoading(true)
     try {
-      const { data, error: err } = await supabase.auth.signUp({ email, password })
+      // FIX 1: Use signInWithOtp which ALWAYS sends a numeric OTP code to email
+      // signUp was sending a confirmation link instead of a code
+      const { error: err } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: true }
+      })
       if (err) { setError(err.message); return }
-      // If session returned immediately = email confirm disabled → go straight to app
-      if (data.session) { router.push('/'); return }
-      // OTP sent → show OTP step
       setStep('otp')
       startResendTimer()
     } catch(e: unknown) {
@@ -46,23 +48,14 @@ export default function SignupPage() {
     if (code.length < 6) { setError('Please enter all 6 digits'); return }
     setError(''); setLoading(true)
     try {
-      // Try 'email' type first (works when Supabase sends OTP token)
+      // Verify the OTP — type 'email' works with signInWithOtp
       const { error: err } = await supabase.auth.verifyOtp({
-        email,
-        token: code,
-        type: 'email',
+        email, token: code, type: 'email',
       })
-      if (err) {
-        // Fallback: try 'signup' type
-        const { error: err2 } = await supabase.auth.verifyOtp({
-          email,
-          token: code,
-          type: 'signup',
-        })
-        if (err2) {
-          setError('Wrong OTP or expired. Check email and try again.')
-          return
-        }
+      if (err) { setError('Wrong OTP or expired. Try again.'); return }
+      // After OTP verified, update the password so user can login with email+password later
+      if (password) {
+        await supabase.auth.updateUser({ password })
       }
       router.push('/')
     } catch(e: unknown) {
@@ -75,8 +68,7 @@ export default function SignupPage() {
     if (resendTimer > 0) return
     setError(''); setLoading(true)
     try {
-      // FIX: resend with correct type
-      await supabase.auth.resend({ type: 'signup', email })
+      await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })
       setOtp(['','','','','',''])
       inputRefs.current[0]?.focus()
       startResendTimer()
