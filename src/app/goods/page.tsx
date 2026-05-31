@@ -88,7 +88,7 @@ function GoodsPage() {
       }
       setModal(false); load()
       showToast('Order added!' + (adv>0?' Advance logged to supplier.':''))
-    } catch(e:any) { showToast(e.message, false) } finally { setSaving(false) }
+    } catch(e:unknown) { showToast(e instanceof Error ? e.message : 'Save failed', false) } finally { setSaving(false) }
   }
 
   const updateStatus = async (id:string, status:string) => {
