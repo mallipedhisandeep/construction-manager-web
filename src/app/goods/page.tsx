@@ -31,7 +31,7 @@ function GoodsPage() {
       supabase.from('suppliers').select('*').order('name'),
       supabase.from('sites').select('id,site_name,status').eq('status','Active'),
     ])
-    setOrders(o??[]); setSuppliers(s??[]); setSites(si??[] as any)
+    setOrders(o??[]); setSuppliers(s??[]); setSites((si??[]) as typeof si & [])
     setLoading(false)
   }, [])
 
