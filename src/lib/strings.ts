@@ -45,6 +45,31 @@ const en = {
     'January','February','March','April','May','June',
     'July','August','September','October','November','December'
   ],
+  // Extra UI strings
+  movedToTrash: 'Moved to recycle bin',
+  confirmDelete: 'Are you sure? This cannot be undone.',
+  noData: 'No data available',
+  exportPdf: 'Export PDF',
+  darkMode: 'Dark Mode',
+  language: 'Language',
+  settings: 'Settings',
+  overview: 'Overview',
+  summary: 'Summary',
+  details: 'Details',
+  history: 'History',
+  profit: 'Profit',
+  loss: 'Loss',
+  netBalance: 'Net Balance',
+  allSettledMsg: 'All settled ✓',
+  payWorker: 'Pay worker',
+  workerOwes: 'Worker owes you',
+  wage: 'Wage',
+  site: 'Site',
+  back: 'Back',
+  today: 'Today',
+  week: 'This Week',
+  month: 'This Month',
+  year: 'This Year',
 }
 
 const te: typeof en = {
@@ -92,6 +117,31 @@ const te: typeof en = {
     'జనవరి','ఫిబ్రవరి','మార్చి','ఏప్రిల్','మే','జూన్',
     'జులై','ఆగస్టు','సెప్టెంబర్','అక్టోబర్','నవంబర్','డిసెంబర్'
   ],
+  // Extra UI strings - Telugu
+  movedToTrash: 'చెత్తబుట్టకు తరలించబడింది',
+  confirmDelete: 'ఖచ్చితంగా తొలగించాలా? ఇది రద్దు చేయలేరు.',
+  noData: 'డేటా అందుబాటులో లేదు',
+  exportPdf: 'PDF డౌన్లోడ్',
+  darkMode: 'డార్క్ మోడ్',
+  language: 'భాష',
+  settings: 'సెట్టింగులు',
+  overview: 'అవలోకనం',
+  summary: 'సారాంశం',
+  details: 'వివరాలు',
+  history: 'చరిత్ర',
+  profit: 'లాభం',
+  loss: 'నష్టం',
+  netBalance: 'నికర బాకీ',
+  allSettledMsg: 'అన్నీ క్లియర్ ✓',
+  payWorker: 'కార్మికుడికి చెల్లించు',
+  workerOwes: 'కార్మికుడు ఇవ్వాలి',
+  wage: 'వేతనం',
+  site: 'సైటు',
+  back: 'వెనక్కి',
+  today: 'నేడు',
+  week: 'ఈ వారం',
+  month: 'ఈ నెల',
+  year: 'ఈ సంవత్సరం',
 }
 
 export const strings = { en, te }
@@ -131,6 +181,14 @@ export const newStrings = {
     outstanding:'బకాయిలు', profitLoss:'లాభ నష్టాలు', perSite:'సైటు వారీగా',
     allTime:'అన్ని సమయాలు', thisMonth:'ఈ నెల',
     units:['bags','tons','pieces','sq.ft','cu.ft','liters','kg','loads','rods','tiles','Nos'],
+    // Additional money & reports translations
+    income:'ఆదాయం', expenses:'ఖర్చులు', workers:'కార్మికులు',
+    sites:'సైట్లు', contractors:'కాంట్రాక్టర్లు', suppliers:'సరఫరాదారులు',
+    goods:'వస్తువులు', period:'కాలం', filter:'వడపోత',
+    cash:'నగదు', online:'ఆన్‌లైన్', cheque:'చెక్కు',
+    owedToYou:'మీకు రావాలి', youOwe:'మీరు ఇవ్వాలి',
+    noRecords:'రికార్డులు లేవు', addRecord:'రికార్డు జోడించు',
+    workerSummary:'కార్మికుడి సారాంశం', siteSummary:'సైటు సారాంశం',
   }
 }
 export type NewKey = keyof typeof newStrings.en
