@@ -56,7 +56,7 @@ function GoodsPage() {
   }
 
   const save = async () => {
-    if (!form.supplier_id||!form.goods_name||!form.delivery_date) { showToast('Please fill required fields','err' as any); return }
+    if (!form.supplier_id||!form.goods_name||!form.delivery_date) { showToast('Please fill required fields', false); return }
     setSaving(true)
     const sup = suppliers.find(s=>s.id===form.supplier_id)
     const site = sites.find(s=>s.id===form.site_id)
