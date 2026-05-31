@@ -1,4 +1,3 @@
-
 'use client'
 // OAuth callback handler — Supabase redirects here after Google login
 import { useEffect } from 'react'
