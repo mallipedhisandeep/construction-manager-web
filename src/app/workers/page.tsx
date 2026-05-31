@@ -26,7 +26,7 @@ function WorkersPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase.from('workers').select('*').order('name')
+    const { data } = await supabase.from('workers').select('*').is('deleted_at', null).order('name')
     setWorkers(data ?? [])
     setLoading(false)
   }, [])
@@ -61,10 +61,11 @@ function WorkersPage() {
   }
   const del = async (w:Worker) => {
     if (!confirm(ts(lang,'deleteConfirm'))) return
-    const { error } = await supabase.from('workers').delete().eq('id', w.id!)
+    // Soft delete — moves to recycle bin instead of permanent delete
+    const { error } = await supabase.from('workers').update({ deleted_at: new Date().toISOString() }).eq('id', w.id!)
     if (error) { showToast(error.message,'err'); return }
     setModal(null); load()
-    showToast('Worker deleted')
+    showToast('Moved to recycle bin 🗑️')
   }
 
   const rateKey = (s:string) => `rate_${s.replace('-','_')}` as keyof Worker
