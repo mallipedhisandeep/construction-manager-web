@@ -127,12 +127,10 @@ function TrashPage() {
 // helps user understand if they haven't run the SQL yet
 function RecycleBinHelp() {
   return (
-    <div className="mt-6 p-4 rounded-2xl border-2 border-dashed" style={{borderColor:'rgb(var(--border))'}}>
-      <p className="text-xs font-bold mb-1" style={{color:'rgb(var(--muted))'}}>ℹ️ Recycle Bin is empty</p>
-      <p className="text-xs" style={{color:'rgb(var(--muted))'}}>
-        Deleted workers, sites, suppliers and contractors will appear here.
-        Make sure you have run <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded text-orange-600">supabase_recycle_bin.sql</code> in Supabase SQL Editor once.
-      </p>
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="text-5xl mb-4">🗑️</div>
+      <p className="font-bold text-gray-500 dark:text-gray-400">Recycle Bin is Empty</p>
+      <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Deleted workers, sites, suppliers and contractors will appear here</p>
     </div>
   )
 }
