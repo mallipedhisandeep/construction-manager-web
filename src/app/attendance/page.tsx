@@ -147,11 +147,11 @@ function AttendancePage() {
   const finalBal = sumPrevBal + earned - advTot
 
   return (
-    <div className="min-h-screen pb-24" style={{backgroundColor:"rgb(var(--bg))"}}">
+    <div className="min-h-screen pb-24" style={{backgroundColor:"rgb(var(--bg))"}}>
       {toast && <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.ok?'bg-green-500':'bg-red-500'}`}>{toast.msg}</div>}
 
       {/* ─── Top controls bar ─── */}
-      <div className="border-b sticky top-14 z-30 px-4 py-3" style={{backgroundColor:"rgb(var(--surface))"}}">
+      <div className="border-b sticky top-14 z-30 px-4 py-3" style={{backgroundColor:"rgb(var(--surface))"}}>
         {view==='summary' ? (
           <div className="flex items-center gap-3">
             <button onClick={()=>setView('day')} className="text-orange-600 font-bold text-sm">← Back</button>
@@ -200,15 +200,15 @@ function AttendancePage() {
           ) : (
             <>
               <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-2xl border p-3 text-center shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}">
+                <div className="rounded-2xl border p-3 text-center shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}>
                   <p className="text-2xl font-black text-blue-600">{sumRecords.filter(a=>a.attendance_type!=='Absent').length}</p>
                   <p className="text-xs text-gray-400 mt-0.5">Days</p>
                 </div>
-                <div className="rounded-2xl border p-3 text-center shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}">
+                <div className="rounded-2xl border p-3 text-center shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}>
                   <p className="text-2xl font-black text-green-600">₹{earned.toFixed(0)}</p>
                   <p className="text-xs text-gray-400 mt-0.5">Earned</p>
                 </div>
-                <div className="rounded-2xl border p-3 text-center shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}">
+                <div className="rounded-2xl border p-3 text-center shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}>
                   <p className="text-2xl font-black text-orange-500">₹{advTot.toFixed(0)}</p>
                   <p className="text-xs text-gray-400 mt-0.5">Advance</p>
                 </div>
@@ -240,7 +240,7 @@ function AttendancePage() {
                     const d = a.date_key?.split('-')[2]
                     const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(a.date_key+'T00:00:00').getDay()]
                     return (
-                      <div key={a.id} className="border rounded-xl flex items-center gap-3 px-4 py-3 shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}">
+                      <div key={a.id} className="border rounded-xl flex items-center gap-3 px-4 py-3 shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}>
                         <div className={`w-12 h-12 ${SC[a.attendance_type]??'bg-gray-400'} rounded-xl flex flex-col items-center justify-center text-white flex-shrink-0`}>
                           <span className="font-black text-sm leading-tight">{d}</span>
                           <span className="text-[9px] opacity-80">{dow}</span>
@@ -268,7 +268,7 @@ function AttendancePage() {
         <div className="flex" style={{ height: 'calc(100vh - 170px)', minHeight: '400px' }}>
 
           {/* LEFT: vertical day picker — FIX: colour boxes by marked status */}
-          <div className="w-14 border-r flex-shrink-0 overflow-y-auto" style={{backgroundColor:"rgb(var(--surface))"}}">
+          <div className="w-14 border-r flex-shrink-0 overflow-y-auto" style={{backgroundColor:"rgb(var(--surface))"}}>
             <div className="py-2">
               {Array.from({length:daysInMonth},(_,i)=>i+1).map(d=>{
                 const dk = `${year}-${pad(month+1)}-${pad(d)}`
@@ -335,7 +335,7 @@ function AttendancePage() {
               <div className="p-3 pb-20">
                 {Object.entries(grouped).map(([wt,list])=>(
                   <div key={wt} className="mb-4">
-                    <div className="flex items-center gap-2 mb-2 sticky top-0 py-1" style={{backgroundColor:"rgb(var(--bg))"}}">
+                    <div className="flex items-center gap-2 mb-2 sticky top-0 py-1" style={{backgroundColor:"rgb(var(--bg))"}}>
                       <div className="w-1 h-4 bg-orange-500 rounded"/>
                       <span className="text-sm font-black text-gray-700">{wt}</span>
                       <span className="text-xs text-gray-400 ml-1">
@@ -346,7 +346,7 @@ function AttendancePage() {
                       const att = attMap[w.id!]
                       const col = att ? (SC[att.attendance_type]??'bg-gray-400') : null
                       return (
-                        <div key={w.id} className="border rounded-xl mb-2 flex items-center gap-2.5 p-2.5 shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}">
+                        <div key={w.id} className="border rounded-xl mb-2 flex items-center gap-2.5 p-2.5 shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}>
                           <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 ${col??'bg-gray-100'} ${col?'text-white':'text-gray-400'}`}>
                             {w.name[0]?.toUpperCase()}
                           </div>
