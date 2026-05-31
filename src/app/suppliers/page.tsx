@@ -26,7 +26,7 @@ function SuppliersPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase.from('suppliers').select('*').order('name')
+    const { data } = await supabase.from('suppliers').select('*').is('deleted_at', null).order('name')
     if (!data) { setLoading(false); return }
     const withBal = await Promise.all(data.map(async (sup) => {
       const [{ data:pays }, { data:orders }, { count:gc }] = await Promise.all([
@@ -108,9 +108,11 @@ function SuppliersPage() {
     if (selected) await loadDetail(selected); load()
   }
   const delSup = async () => {
-    if (!selected||!confirm('Delete supplier and all related data?')) return
-    await supabase.from('suppliers').delete().eq('id',selected.id)
+    if (!selected||!confirm('Move supplier to recycle bin?')) return
+    // Soft delete — moves to recycle bin
+    await supabase.from('suppliers').update({ deleted_at: new Date().toISOString() }).eq('id', selected.id)
     setView('list'); load()
+    showToast('Moved to recycle bin 🗑️', false)
   }
 
   const bal = selected?.balance ?? 0
