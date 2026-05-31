@@ -71,11 +71,11 @@ function WorkersPage() {
   const rateKey = (s:string) => `rate_${s.replace('-','_')}` as keyof Worker
 
   return (
-    <div className="min-h-screen pb-24" style={{backgroundColor:"rgb(var(--bg))"}}">
+    <div className="min-h-screen pb-24" style={{backgroundColor:"rgb(var(--bg))"}}>
       {toast && <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.type==='ok'?'bg-green-500':'bg-red-500'}`}>{toast.msg}</div>}
 
       {/* Page header */}
-      <div className="border-b border-gray-100 px-4 pt-5 pb-4 sticky top-14 z-30" style={{backgroundColor:"rgb(var(--surface))"}}">
+      <div className="border-b border-gray-100 px-4 pt-5 pb-4 sticky top-14 z-30" style={{backgroundColor:"rgb(var(--surface))"}}>
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black text-gray-800">{ts(lang,'workers')}</h1>
           <button onClick={() => { setForm(empty()); setModal('add') }} className="btn-primary text-sm">
