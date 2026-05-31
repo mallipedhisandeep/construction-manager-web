@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
+import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
 import type { Worker } from '@/lib/types'
 
@@ -15,7 +16,6 @@ function WorkersPage() {
   const [workers, setWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(true)
   const [search,  setSearch]  = useState('')
-  // FIX 1: null = "All" — one unified All for each filter
   const [fType,  setFType]  = useState<string|null>(null)
   const [fState, setFState] = useState<string|null>(null)
   const [fRole,  setFRole]  = useState<string|null>(null)
@@ -49,8 +49,10 @@ function WorkersPage() {
     if (form.phone.length !== 10) { showToast(ts(lang,'invalidPhone'),'err'); return }
     setSaving(true)
     try {
+      // ── FIX: stamp user_id on every insert ──
+      const userId = await uid()
       const { error } = modal==='add'
-        ? await supabase.from('workers').insert(form)
+        ? await supabase.from('workers').insert({ ...form, user_id: userId })
         : await supabase.from('workers').update(form).eq('id', form.id!)
       if (error) throw error
       setModal(null); load()
@@ -61,7 +63,6 @@ function WorkersPage() {
   }
   const del = async (w:Worker) => {
     if (!confirm(ts(lang,'deleteConfirm'))) return
-    // Soft delete — moves to recycle bin instead of permanent delete
     const { error } = await supabase.from('workers').update({ deleted_at: new Date().toISOString() }).eq('id', w.id!)
     if (error) { showToast(error.message,'err'); return }
     setModal(null); load()
@@ -74,7 +75,6 @@ function WorkersPage() {
     <div className="min-h-screen pb-24" style={{backgroundColor:"rgb(var(--bg))"}}>
       {toast && <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.type==='ok'?'bg-green-500':'bg-red-500'}`}>{toast.msg}</div>}
 
-      {/* Page header */}
       <div className="border-b border-gray-100 px-4 pt-5 pb-4 sticky top-14 z-30" style={{backgroundColor:"rgb(var(--surface))"}}>
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black text-gray-800">{ts(lang,'workers')}</h1>
@@ -82,10 +82,8 @@ function WorkersPage() {
             + {ts(lang,'addWorker')}
           </button>
         </div>
-        {/* Search */}
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={ts(lang,'search')}
           className="input mb-3" />
-        {/* FIX 1 — Filters with labels, null = All */}
         <div className="space-y-2">
           <FilterRow label={ts(lang,'workType')} opts={[null,'Centring','Brickwork']} labels={['All','Centring','Brickwork']} value={fType} onChange={setFType} />
           <FilterRow label={ts(lang,'state')}    opts={[null,'Telangana','Andhra','Bihar']} labels={['All','Telangana','Andhra','Bihar']} value={fState} onChange={setFState} />
@@ -130,7 +128,6 @@ function WorkersPage() {
         ))}
       </div>
 
-      {/* Add / Edit modal */}
       {(modal==='add'||modal==='edit') && (
         <div className="modal-backdrop" onClick={() => setModal(null)}>
           <div className="modal-box" onClick={e=>e.stopPropagation()}>
@@ -179,7 +176,6 @@ function WorkersPage() {
         </div>
       )}
 
-      {/* View modal */}
       {modal==='view' && (
         <div className="modal-backdrop" onClick={()=>setModal(null)}>
           <div className="modal-box" onClick={e=>e.stopPropagation()}>
@@ -273,3 +269,4 @@ const Empty = ({msg,icon}:{msg:string;icon:string}) => (
 )
 
 export default function Workers() { return <AppShell><WorkersPage /></AppShell> }
+
