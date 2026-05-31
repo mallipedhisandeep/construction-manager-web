@@ -46,8 +46,8 @@ function AttendancePage() {
 
   const showToast = (msg:string, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(undefined),3000) }
 
-  const loadWorkers  = useCallback(async()=>{ const {data}=await supabase.from('workers').select('*').order('work_type').order('state').order('name'); setWorkers(data??[]) },[])
-  const loadSites    = useCallback(async()=>{ const {data}=await supabase.from('sites').select('id,site_name').eq('status','Active'); setSites(data??[]) },[])
+  const loadWorkers  = useCallback(async()=>{ const {data}=await supabase.from('workers').select('*').is('deleted_at',null).order('work_type').order('state').order('name'); setWorkers(data??[]) },[])
+  const loadSites    = useCallback(async()=>{ const {data}=await supabase.from('sites').select('id,site_name').is('deleted_at',null); setSites(data??[]) },[])
   const loadAtt      = useCallback(async()=>{ const {data}=await supabase.from('attendance').select('*').eq('date_key',dKey); const m:Record<string,Attendance>={}; data?.forEach(a=>{m[a.worker_id]=a}); setAttMap(m) },[dKey])
 
   // FIX: Load all attendance for the current month to colour the day column
@@ -67,7 +67,7 @@ function AttendancePage() {
       byDay[a.date_key].add(a.worker_id)
     })
     // Determine full vs partial (need total worker count)
-    const { count: totalWorkers } = await supabase.from('workers').select('id', { count: 'exact', head: true })
+    const { count: totalWorkers } = await supabase.from('workers').select('id', { count: 'exact', head: true }).is('deleted_at', null)
     const total = totalWorkers ?? 0
     const result: Record<string, 'full'|'partial'> = {}
     Object.entries(byDay).forEach(([dk, workerSet]) => {
