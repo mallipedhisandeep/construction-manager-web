@@ -9,7 +9,7 @@ interface WorkerReport { id:string; name:string; daysWorked:number; totalEarned:
 // Skeleton card for loading state
 function SkeletonCard({ rows=2 }: { rows?: number }) {
   return (
-    <div className="bg-white border rounded-2xl p-4 shadow-sm animate-pulse">
+    <div className="border rounded-2xl p-4 shadow-sm animate-pulse" style={{backgroundColor:"rgb(var(--surface))"}}>  
       <div className="h-4 bg-gray-200 rounded w-2/3 mb-3"/>
       {Array.from({length:rows}).map((_,i)=>(
         <div key={i} className="h-3 bg-gray-100 rounded w-full mb-2"/>
