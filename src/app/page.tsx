@@ -26,10 +26,10 @@ function Dashboard() {
     { label:'Sites',            emoji:'🏗️', href:'/sites',      grad:'from-green-500 to-emerald-400' },
     { label:'Private Workers',  emoji:'🔧', href:'/private-workers', grad:'from-purple-500 to-violet-400' },
     { label:'Private Work',     emoji:'📋', href:'/private-work',    grad:'from-teal-500 to-cyan-500' },
-    { label:'Suppliers',        emoji:'🏪', href:'/suppliers',  grad:'from-pink-500 to-rose-400', isNew:true },
-    { label:'Goods Orders',     emoji:'📦', href:'/goods',      grad:'from-amber-500 to-yellow-400', isNew:true },
-    { label:'Money Tracking',   emoji:'💰', href:'/money',      grad:'from-emerald-500 to-green-400', isNew:true },
-    { label:'Reports',          emoji:'📊', href:'/reports',    grad:'from-indigo-500 to-blue-400', isNew:true },
+    { label:'Suppliers',        emoji:'🏪', href:'/suppliers',  grad:'from-pink-500 to-rose-400' },
+    { label:'Goods Orders',     emoji:'📦', href:'/goods',      grad:'from-amber-500 to-yellow-400' },
+    { label:'Money Tracking',   emoji:'💰', href:'/money',      grad:'from-emerald-500 to-green-400' },
+    { label:'Reports',          emoji:'📊', href:'/reports',    grad:'from-indigo-500 to-blue-400' },
   ]
 
   return (
@@ -62,7 +62,6 @@ function Dashboard() {
             {modules.map(m => (
               <button key={m.href} onClick={()=>router.push(m.href)}
                 className="flex flex-col items-center gap-2 p-3 rounded-2xl hover:scale-105 active:scale-95 transition-all bg-gray-50 hover:bg-gray-100 relative">
-                {m.isNew && <span className="absolute top-1 right-1 text-[8px] bg-green-500 text-white font-black px-1.5 py-0.5 rounded-full">NEW</span>}
                 <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${m.grad} flex items-center justify-center text-2xl shadow-sm`}>
                   {m.emoji}
                 </div>
