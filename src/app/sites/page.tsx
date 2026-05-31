@@ -37,7 +37,7 @@ function SitesPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase.from('sites').select('*').order('site_name')
+    const { data, error } = await supabase.from('sites').select('*').is('deleted_at', null).order('site_name')
     if (error) showToast(error.message, false)
     setSites((data??[]) as SiteDetail[])
     setLoading(false)
@@ -114,8 +114,10 @@ function SitesPage() {
 
   const del = async (s:SiteDetail) => {
     if (!confirm(t('deleteConfirm'))) return
-    await supabase.from('sites').delete().eq('id',s.id)
+    // Soft delete — moves to recycle bin
+    await supabase.from('sites').update({ deleted_at: new Date().toISOString() }).eq('id', s.id)
     setModal(null); load()
+    showToast('Moved to recycle bin 🗑️', false)
   }
 
   const savePayment = async () => {
