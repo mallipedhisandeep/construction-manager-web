@@ -76,7 +76,7 @@ function PrivateWorkPage() {
       <div className="flex gap-2 mb-4">
         {['All','Active','Completed'].map(f => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition ${filter===f?'bg-orange-600 text-white border-orange-600':'bg-white text-gray-600 border-gray-200'}`}>
+            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition ${filter===f?'bg-orange-600 text-white border-orange-600':'text-gray-600 border-gray-200'}`} style={filter!==f?{backgroundColor:'rgb(var(--surface))'}:{}}>
             {f}
           </button>
         ))}
@@ -92,7 +92,7 @@ function PrivateWorkPage() {
        filtered.map(w => {
         const bal = w.price_charged - w.amount_paid
         return (
-          <div key={w.id} className="bg-white border rounded-xl shadow-sm mb-3 p-4">
+          <div key={w.id} className="border rounded-xl shadow-sm mb-3 p-4" style={{backgroundColor:"rgb(var(--surface))"}}>
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -130,8 +130,8 @@ function PrivateWorkPage() {
 
       {modal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center p-0 md:p-4" onClick={() => setModal(null)}>
-          <div className="bg-white w-full md:max-w-md rounded-t-2xl md:rounded-2xl max-h-[90vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
-            <div className="sticky top-0 bg-white border-b px-5 py-4 flex justify-between">
+          <div className="w-full md:max-w-md rounded-t-2xl md:rounded-2xl max-h-[90vh] overflow-y-auto" style={{backgroundColor:"rgb(var(--surface))"}} onClick={e=>e.stopPropagation()}>
+            <div className="sticky top-0 border-b px-5 py-4 flex justify-between" style={{backgroundColor:"rgb(var(--surface))"}}>
               <h2 className="font-bold text-lg">{modal==='add'?ts(lang,'addWork'):'Edit Work'}</h2>
               <button onClick={() => setModal(null)} className="text-gray-400 text-xl">✕</button>
             </div>
