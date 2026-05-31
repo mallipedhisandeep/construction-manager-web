@@ -6,6 +6,16 @@ import { ts } from '@/lib/strings'
 import type { Worker, Attendance, Site } from '@/lib/types'
 
 const SHIFTS = ['6-6','10-6','6-10','6-2','10-2','2-6','Absent']
+// FIX 4: Human readable shift labels matching workers page
+const SHIFT_LABELS: Record<string,string> = {
+  '6-6':  '6AM–6PM',
+  '10-6': '10AM–6PM',
+  '6-10': '6AM–9AM',
+  '6-2':  '6AM–2PM',
+  '10-2': '10AM–2PM',
+  '2-6':  '3PM–6PM',
+  'Absent': 'Absent',
+}
 const SC: Record<string,string> = {
   '6-6':'bg-green-600','10-6':'bg-teal-600','6-10':'bg-blue-600',
   '6-2':'bg-indigo-600','10-2':'bg-purple-600','2-6':'bg-cyan-600','Absent':'bg-red-500'
@@ -137,16 +147,16 @@ function AttendancePage() {
   const finalBal = sumPrevBal + earned - advTot
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
+    <div className="min-h-screen pb-24" style={{backgroundColor:"rgb(var(--bg))"}}">
       {toast && <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.ok?'bg-green-500':'bg-red-500'}`}>{toast.msg}</div>}
 
       {/* ─── Top controls bar ─── */}
-      <div className="bg-white border-b sticky top-14 z-30 px-4 py-3">
+      <div className="border-b sticky top-14 z-30 px-4 py-3" style={{backgroundColor:"rgb(var(--surface))"}}">
         {view==='summary' ? (
           <div className="flex items-center gap-3">
             <button onClick={()=>setView('day')} className="text-orange-600 font-bold text-sm">← Back</button>
             <div className="flex-1">
-              <p className="font-black text-gray-800">{sumWorker?.name}</p>
+              <p className="font-black" style={{color:"rgb(var(--text))"}}>{sumWorker?.name}</p>
               <p className="text-xs text-gray-400">{months[month]} {year} — Summary</p>
             </div>
             {sumLoading && <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin"/>}
@@ -156,7 +166,7 @@ function AttendancePage() {
             {/* Year + Month row */}
             <div className="flex items-center gap-2">
               <select value={year} onChange={e=>{ setYear(+e.target.value) }}
-                className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm font-semibold bg-white focus:ring-2 focus:ring-orange-400 focus:outline-none">
+                className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm font-semibold focus:ring-2 focus:ring-orange-400 focus:outline-none">
                 {[now.getFullYear()-1, now.getFullYear(), now.getFullYear()+1].map(y=><option key={y} value={y}>{y}</option>)}
               </select>
               <div className="flex overflow-x-auto gap-1 flex-1 pb-0.5">
@@ -190,15 +200,15 @@ function AttendancePage() {
           ) : (
             <>
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white rounded-2xl border p-3 text-center shadow-sm">
+                <div className="rounded-2xl border p-3 text-center shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}">
                   <p className="text-2xl font-black text-blue-600">{sumRecords.filter(a=>a.attendance_type!=='Absent').length}</p>
                   <p className="text-xs text-gray-400 mt-0.5">Days</p>
                 </div>
-                <div className="bg-white rounded-2xl border p-3 text-center shadow-sm">
+                <div className="rounded-2xl border p-3 text-center shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}">
                   <p className="text-2xl font-black text-green-600">₹{earned.toFixed(0)}</p>
                   <p className="text-xs text-gray-400 mt-0.5">Earned</p>
                 </div>
-                <div className="bg-white rounded-2xl border p-3 text-center shadow-sm">
+                <div className="rounded-2xl border p-3 text-center shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}">
                   <p className="text-2xl font-black text-orange-500">₹{advTot.toFixed(0)}</p>
                   <p className="text-xs text-gray-400 mt-0.5">Advance</p>
                 </div>
@@ -230,13 +240,13 @@ function AttendancePage() {
                     const d = a.date_key?.split('-')[2]
                     const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(a.date_key+'T00:00:00').getDay()]
                     return (
-                      <div key={a.id} className="bg-white border rounded-xl flex items-center gap-3 px-4 py-3 shadow-sm">
+                      <div key={a.id} className="border rounded-xl flex items-center gap-3 px-4 py-3 shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}">
                         <div className={`w-12 h-12 ${SC[a.attendance_type]??'bg-gray-400'} rounded-xl flex flex-col items-center justify-center text-white flex-shrink-0`}>
                           <span className="font-black text-sm leading-tight">{d}</span>
                           <span className="text-[9px] opacity-80">{dow}</span>
                         </div>
                         <div className="flex-1">
-                          <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${SL[a.attendance_type]??''}`}>{a.attendance_type}</span>
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${SL[a.attendance_type]??''}`}>{SHIFT_LABELS[a.attendance_type] ?? a.attendance_type}</span>
                           {a.advance>0 && <span className="ml-2 text-xs text-orange-500 font-semibold">Adv ₹{a.advance}</span>}
                           {/* FIX 2: Show site name in summary */}
                           {a.site_id && (
@@ -258,7 +268,7 @@ function AttendancePage() {
         <div className="flex" style={{ height: 'calc(100vh - 170px)', minHeight: '400px' }}>
 
           {/* LEFT: vertical day picker — FIX: colour boxes by marked status */}
-          <div className="w-14 bg-white border-r flex-shrink-0 overflow-y-auto">
+          <div className="w-14 border-r flex-shrink-0 overflow-y-auto" style={{backgroundColor:"rgb(var(--surface))"}}">
             <div className="py-2">
               {Array.from({length:daysInMonth},(_,i)=>i+1).map(d=>{
                 const dk = `${year}-${pad(month+1)}-${pad(d)}`
@@ -325,7 +335,7 @@ function AttendancePage() {
               <div className="p-3 pb-20">
                 {Object.entries(grouped).map(([wt,list])=>(
                   <div key={wt} className="mb-4">
-                    <div className="flex items-center gap-2 mb-2 sticky top-0 bg-slate-50 py-1">
+                    <div className="flex items-center gap-2 mb-2 sticky top-0 py-1" style={{backgroundColor:"rgb(var(--bg))"}}">
                       <div className="w-1 h-4 bg-orange-500 rounded"/>
                       <span className="text-sm font-black text-gray-700">{wt}</span>
                       <span className="text-xs text-gray-400 ml-1">
@@ -336,7 +346,7 @@ function AttendancePage() {
                       const att = attMap[w.id!]
                       const col = att ? (SC[att.attendance_type]??'bg-gray-400') : null
                       return (
-                        <div key={w.id} className="bg-white border rounded-xl mb-2 flex items-center gap-2.5 p-2.5 shadow-sm">
+                        <div key={w.id} className="border rounded-xl mb-2 flex items-center gap-2.5 p-2.5 shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}">
                           <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 ${col??'bg-gray-100'} ${col?'text-white':'text-gray-400'}`}>
                             {w.name[0]?.toUpperCase()}
                           </div>
@@ -344,7 +354,7 @@ function AttendancePage() {
                             <p className="font-bold text-sm text-gray-800 truncate">{w.name}</p>
                             {att ? (
                               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold border ${SL[att.attendance_type]??''}`}>{att.attendance_type}</span>
+                                <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold border ${SL[att.attendance_type]??''}`}>{SHIFT_LABELS[att.attendance_type] ?? att.attendance_type}</span>
                                 {att.advance>0 && <span className="text-[11px] text-orange-500 font-medium">₹{att.advance} adv</span>}
                               </div>
                             ) : (
@@ -375,7 +385,7 @@ function AttendancePage() {
       {/* ─── Mark attendance modal ─── */}
       {modal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end justify-center" onClick={()=>setModal(null)}>
-          <div className="bg-white w-full max-w-lg rounded-t-3xl p-5 shadow-2xl" onClick={e=>e.stopPropagation()}>
+          <div className="w-full max-w-lg rounded-t-3xl p-5 shadow-2xl" style={{backgroundColor:"rgb(var(--surface))",color:"rgb(var(--text))"}} onClick={e=>e.stopPropagation()}>
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="font-black text-lg">{modal.name}</h3>
@@ -388,8 +398,8 @@ function AttendancePage() {
             <div className="grid grid-cols-4 gap-2 mb-4">
               {SHIFTS.map(s=>(
                 <button key={s} onClick={()=>setForm({...form,shift:s})}
-                  className={`py-2.5 rounded-xl text-sm font-bold border-2 transition ${form.shift===s?`${SC[s]} text-white border-transparent`:'bg-gray-50 text-gray-600 border-gray-100 hover:border-gray-200'}`}>
-                  {s}
+                  className={`py-2.5 rounded-xl text-xs font-bold border-2 transition ${form.shift===s?`${SC[s]} text-white border-transparent`:'bg-opacity-0 text-gray-600 border-gray-200 hover:border-orange-300'}`}>
+                  {SHIFT_LABELS[s] ?? s}
                 </button>
               ))}
             </div>
