@@ -97,6 +97,8 @@ body {
     border-color: rgb(var(--border));
   }
   .section-header { @apply text-xs font-black uppercase tracking-widest mb-3; color: rgb(var(--muted)); }
+  /* section-title: used in workers page for group headers and modal section labels */
+  .section-title  { @apply flex items-center gap-2 text-xs font-black uppercase tracking-widest mb-2; color: rgb(var(--muted)); }
   .divider { border-color: rgb(var(--border)); @apply border-t; }
 
   /* ── Skeleton loading ────── */

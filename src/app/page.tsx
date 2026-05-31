@@ -13,10 +13,10 @@ function Dashboard() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user?.email?.split('@')[0]?.toUpperCase() ?? 'Admin'))
     Promise.all([
-      supabase.from('workers').select('id',{count:'exact',head:true}),
-      supabase.from('sites').select('id',{count:'exact',head:true}).eq('status','Active'),
-      supabase.from('private_workers').select('id',{count:'exact',head:true}),
-      supabase.from('suppliers').select('id',{count:'exact',head:true}),
+      supabase.from('workers').select('id',{count:'exact',head:true}).is('deleted_at',null),
+      supabase.from('sites').select('id',{count:'exact',head:true}).eq('status','Active').is('deleted_at',null),
+      supabase.from('private_workers').select('id',{count:'exact',head:true}).is('deleted_at',null),
+      supabase.from('suppliers').select('id',{count:'exact',head:true}).is('deleted_at',null),
     ]).then(([w,s,p,su]) => setStats({ workers:w.count??0, activeSites:s.count??0, contractors:p.count??0, suppliers:su.count??0 }))
   }, [])
 
