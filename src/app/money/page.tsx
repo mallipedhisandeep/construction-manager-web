@@ -75,25 +75,26 @@ function MoneyPage() {
       setData({ siteIncome, workerWages, workerAdvances, goodsSpend, supplierPaid:supplierPaid, privateWorkerPaid:pwOut, siteSpend, workerBalance, supplierBalance, privateWorkerBalance })
 
       // Per-site breakdown
+      // Fix: compute per-site breakdown from already-fetched data — no extra DB calls
       if (siteList) {
-        const perSite = await Promise.all(siteList.map(async (site) => {
-          const [{ data:sAtt },{ data:sGoods },{ data:sPay }] = await Promise.all([
-            supabase.from('attendance').select('wage').eq('site_id',site.id).neq('attendance_type','Absent'),
-            supabase.from('goods_orders').select('total_price').eq('site_id',site.id).neq('status','Cancelled'),
-            supabase.from('site_payments').select('amount,direction').eq('site_id',site.id),
-          ])
-          const income = sPay?.filter(p=>p.direction==='received').reduce((s,p)=>s+p.amount,0)??0
-          const workerCost = sAtt?.reduce((s,a)=>s+a.wage,0)??0
-          const goodsCost  = sGoods?.reduce((s,o)=>s+o.total_price,0)??0
+        const [{ data:allAttSite },{ data:allGoodsSite },{ data:allSitePay }] = await Promise.all([
+          supabase.from('attendance').select('wage,site_id').neq('attendance_type','Absent'),
+          supabase.from('goods_orders').select('total_price,site_id').neq('status','Cancelled'),
+          supabase.from('site_payments').select('amount,direction,site_id'),
+        ])
+        const perSite = siteList.map(site => {
+          const income     = allSitePay?.filter(p=>p.site_id===site.id&&p.direction==='received').reduce((s,p)=>s+p.amount,0)??0
+          const workerCost = allAttSite?.filter(a=>a.site_id===site.id).reduce((s,a)=>s+a.wage,0)??0
+          const goodsCost  = allGoodsSite?.filter(g=>g.site_id===site.id).reduce((s,o)=>s+o.total_price,0)??0
           return { id:site.id, name:site.site_name, income, workerCost, goodsCost, net:income-workerCost-goodsCost }
-        }))
+        })
         setSites(perSite.filter(s=>s.income+s.workerCost+s.goodsCost>0))
       }
     } catch(e) { console.error(e) }
     finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [period])
+  useEffect(() => { load() }, [period]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <AppShell><div className="flex justify-center items-center h-64"><div className="animate-spin w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full"/></div></AppShell>
   if (!data) return <AppShell><div className="text-center p-8 text-gray-400">No data available</div></AppShell>
