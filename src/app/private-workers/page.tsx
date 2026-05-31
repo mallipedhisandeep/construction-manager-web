@@ -32,7 +32,7 @@ function PrivateWorkersPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase.from('private_workers').select('*').order('name')
+    const { data } = await supabase.from('private_workers').select('*').is('deleted_at', null).order('name')
     if (!data) { setLoading(false); return }
     const withBal = await Promise.all(data.map(async w => ({ ...w, balance: await getBalance(w.id) })))
     setWorkers(withBal)
@@ -73,7 +73,9 @@ function PrivateWorkersPage() {
 
   const del = async (w: PrivateWorker) => {
     if (!confirm(ts(lang,'deleteConfirm'))) return
-    await supabase.from('private_workers').delete().eq('id', w.id!)
+    // Soft delete — moves to recycle bin
+    await supabase.from('private_workers').update({ deleted_at: new Date().toISOString() }).eq('id', w.id!)
+    showToast('Moved to recycle bin 🗑️')
     load()
   }
 
