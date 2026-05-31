@@ -269,4 +269,3 @@ const Empty = ({msg,icon}:{msg:string;icon:string}) => (
 )
 
 export default function Workers() { return <AppShell><WorkersPage /></AppShell> }
-
