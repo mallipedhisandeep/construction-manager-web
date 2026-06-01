@@ -85,7 +85,7 @@ function MoneyPage() {
 
   useEffect(() => { load() }, [period]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full"/></div>
+  if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full"/></div>
   if (!data) return <div className="text-center p-8" style={{color:'rgb(var(--muted))'}}>{te?'డేటా లేదు':'No data available'}</div>
 
   const totalExpenses = data.workerWages + data.goodsSpend + data.siteSpend + data.privateWorkerPaid
@@ -129,7 +129,7 @@ function MoneyPage() {
             <p className="section-header">📉 {te?'ఖర్చులు':'Expenses'}</p>
             <div className="card">
               <Row emoji="👷" label={te?'కార్మికుల వేతనాలు':'Worker Wages'} val={data.workerWages} color="text-red-500"/>
-              <Row emoji="💵" label={te?'అడ్వాన్సులు ఇచ్చాము':'Worker Advances Given'} val={data.workerAdvances} color="text-orange-500"/>
+              <Row emoji="💵" label={te?'అడ్వాన్సులు ఇచ్చాము':'Worker Advances Given'} val={data.workerAdvances} color="text-amber-400"/>
               <Row emoji="📦" label={te?'వస్తువులు కొన్నవి':'Goods Purchased'} val={data.goodsSpend} color="text-red-500"/>
               <Row emoji="🏪" label={te?'సరఫరాదారు చెల్లింపులు':'Supplier Payments'} val={data.supplierPaid} color="text-red-500"/>
               <Row emoji="🔧" label={te?'ప్రైవేట్ కార్మికుల చెల్లింపులు':'Private Worker Payments'} val={data.privateWorkerPaid} color="text-red-500"/>
