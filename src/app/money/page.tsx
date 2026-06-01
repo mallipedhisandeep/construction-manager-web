@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 
@@ -21,7 +21,7 @@ function MoneyPage() {
   const now = new Date()
   const monthStart = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
       const dateFilter = period==='month' ? monthStart : '2000-01-01'
@@ -34,7 +34,7 @@ function MoneyPage() {
         supabase.from('goods_orders').select('total_price,advance_paid').neq('status','Cancelled').gte('delivery_date', dateFilter),
         supabase.from('supplier_payments').select('amount').gte('payment_date', dateFilter),
         supabase.from('private_worker_payments').select('amount,direction').gte('created_at', dateFilter),
-        supabase.from('sites').select('id,site_name'),
+        supabase.from('sites').select('id,site_name').is('deleted_at', null),
       ])
       const workerWages    = attData?.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+a.wage,0)??0
       const workerAdvances = attData?.reduce((s,a)=>s+a.advance,0)??0
@@ -83,7 +83,10 @@ function MoneyPage() {
     finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [period]) // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period])
+
+  useEffect(() => { load() }, [load])
 
   if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full"/></div>
   if (!data) return <div className="text-center p-8" style={{color:'rgb(var(--muted))'}}>{te?'డేటా లేదు':'No data available'}</div>
