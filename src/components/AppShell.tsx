@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, createContext, useContext, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Nav from './Nav'
 import type { Lang } from '@/lib/strings'
@@ -8,9 +8,9 @@ import type { Lang } from '@/lib/strings'
 type Theme = 'light' | 'dark'
 
 interface AppCtx {
-  lang:    Lang
-  setLang: (l: Lang)  => void
-  theme:   Theme
+  lang: Lang
+  setLang: (l: Lang) => void
+  theme: Theme
   toggleTheme: () => void
 }
 
@@ -22,13 +22,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [lang,  setLangState]  = useState<Lang>('en')
   const [theme, setThemeState] = useState<Theme>('dark')
   const [ready, setReady]      = useState(false)
-  const router = useRouter()
+  const router   = useRouter()
+  const pathname = usePathname()
 
+  // Apply saved theme immediately
   useEffect(() => {
     const savedLang  = localStorage.getItem('lang')
     const savedTheme = localStorage.getItem('theme') as Theme | null
-    if (savedLang  === 'en' || savedLang  === 'te') setLangState(savedLang)
-    // Default to dark theme matching the app icon
+    if (savedLang === 'en' || savedLang === 'te') setLangState(savedLang)
     const t = savedTheme ?? 'dark'
     setThemeState(t)
     document.documentElement.classList.toggle('dark', t === 'dark')
@@ -38,11 +39,37 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
 
+  // Auth guard — listen for session changes in real time
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push('/login')
-      else setReady(true)
+    let mounted = true
+
+    const checkAndRoute = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!mounted) return
+      if (session) {
+        setReady(true)
+      } else {
+        router.replace('/login')
+      }
+    }
+
+    checkAndRoute()
+
+    // Also subscribe to auth events (handles session restored after OAuth redirect)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return
+      if (session) {
+        setReady(true)
+      } else {
+        setReady(false)
+        router.replace('/login')
+      }
     })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [router])
 
   const setLang = useCallback((l: Lang) => {
@@ -59,23 +86,40 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!ready) return (
     <div className="flex items-center justify-center min-h-screen" style={{background:'rgb(10,14,22)'}}>
-      <div className="flex flex-col items-center gap-4">
-        {/* Logo circle matching app icon style */}
-        <div className="relative w-20 h-20 rounded-full flex items-center justify-center"
-          style={{background:'linear-gradient(135deg,#0f1828,#1a2540)',border:'2px solid rgba(212,140,40,0.4)',boxShadow:'0 0 30px rgba(212,140,40,0.2)'}}>
-          <div style={{fontSize:'2rem',lineHeight:1}}>🏗️</div>
-          {/* Spinning ring */}
-          <div className="absolute inset-0 rounded-full border-2 border-transparent animate-spin"
-            style={{borderTopColor:'#d48c28',borderRightColor:'rgba(212,140,40,0.3)'}}/>
+      <div className="flex flex-col items-center gap-5">
+        <div className="relative w-24 h-24 rounded-full flex items-center justify-center"
+          style={{
+            background:'linear-gradient(135deg,#0f1828,#1a2540)',
+            border:'2px solid rgba(212,140,40,0.35)',
+            boxShadow:'0 0 40px rgba(212,140,40,0.15), inset 0 0 20px rgba(0,0,0,0.5)'
+          }}>
+          {/* App icon inside loader circle */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon-192.png" alt="CM" width={52} height={52} style={{borderRadius:'12px',objectFit:'contain'}} />
+          {/* Spinning gold ring */}
+          <div className="absolute inset-0 rounded-full border-[3px] border-transparent animate-spin"
+            style={{borderTopColor:'#d48c28',borderRightColor:'rgba(212,140,40,0.2)'}}/>
         </div>
-        <p className="text-sm font-medium tracking-widest uppercase" style={{color:'rgba(212,140,40,0.8)'}}>Loading...</p>
+        <div className="flex flex-col items-center gap-1">
+          <p className="text-sm font-bold tracking-[0.2em] uppercase" style={{color:'rgba(212,140,40,0.9)'}}>
+            Loading
+          </p>
+          <p className="text-xs" style={{color:'rgba(255,255,255,0.3)'}}>
+            లోడవుతోంది...
+          </p>
+        </div>
       </div>
     </div>
   )
 
   return (
     <Ctx.Provider value={{ lang, setLang, theme, toggleTheme }}>
-      <Nav lang={lang} onToggleLang={()=>setLang(lang==='en'?'te':'en')} theme={theme} onToggleTheme={toggleTheme} />
+      <Nav
+        lang={lang}
+        onToggleLang={() => setLang(lang === 'en' ? 'te' : 'en')}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
       <main className="md:ml-56 pt-14">{children}</main>
     </Ctx.Provider>
   )
