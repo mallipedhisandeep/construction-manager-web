@@ -21,6 +21,7 @@ function MoneyPage() {
   const now = new Date()
   const monthStart = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -81,9 +82,6 @@ function MoneyPage() {
       }
     } catch(e) { console.error(e) }
     finally { setLoading(false) }
-  }
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period])
 
   useEffect(() => { load() }, [load])
