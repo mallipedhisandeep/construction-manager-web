@@ -22,13 +22,13 @@ const en = {
   paymentMode: 'Payment Mode', siteWorked: 'Site', notMarked: 'Not Marked',
   monthly: 'Monthly Summary', totalEarned: 'Earned', totalAdvance: 'Advance',
   balance: 'Balance', toGive: 'Pay Worker', toReceive: 'Worker Owes',
-  settled: 'Settled ✓', openingBal: 'Carry Forward', daysWorked: 'Days Worked',
+  settled: 'Settled', openingBal: 'Carry Forward', daysWorked: 'Days Worked',
   addContractor: 'Add Contractor', noContractors: 'No contractors',
   owedToWorker: 'We Owe', workerOwesYou: 'They Owe',
   addPayment: 'Add Payment', paymentHistory: 'Payment History',
-  direction: 'Direction', youToWorker: 'You → Worker', workerToYou: 'Worker → You',
-  addWork: 'Add Work', noWork: 'No work entries', priceCharged: 'Price Charged (₹)',
-  amountPaid: 'Amount Paid (₹)', pending: 'Pending', allSettled: 'All Settled ✓',
+  direction: 'Direction', youToWorker: 'You to Worker', workerToYou: 'Worker to You',
+  addWork: 'Add Work', noWork: 'No work entries', priceCharged: 'Price Charged (Rs)',
+  amountPaid: 'Amount Paid (Rs)', pending: 'Pending', allSettled: 'All Settled',
   workerAdded: 'Worker added!', workerUpdated: 'Worker updated!',
   siteAdded: 'Site added!', siteUpdated: 'Site updated!', savedOk: 'Saved!',
   required: 'Required', invalidPhone: 'Enter 10-digit number',
@@ -41,45 +41,25 @@ const en = {
   suppliers: 'Suppliers', goods: 'Goods Orders', money: 'Money', reports: 'Reports',
   trash: 'Recycle Bin', restore: 'Restore', deletePermanent: 'Delete Forever',
   noTrash: 'Recycle bin is empty', trashNote: 'Items deleted in last 30 days',
-  months: [
-    'January','February','March','April','May','June',
-    'July','August','September','October','November','December'
-  ],
-  // Extra UI strings
   movedToTrash: 'Moved to recycle bin',
   confirmDelete: 'Are you sure? This cannot be undone.',
-  noData: 'No data available',
-  exportPdf: 'Export PDF',
-  darkMode: 'Dark Mode',
-  language: 'Language',
-  settings: 'Settings',
-  overview: 'Overview',
-  summary: 'Summary',
-  details: 'Details',
-  history: 'History',
-  profit: 'Profit',
-  loss: 'Loss',
-  netBalance: 'Net Balance',
-  allSettledMsg: 'All settled ✓',
-  payWorker: 'Pay worker',
-  workerOwes: 'Worker owes you',
-  wage: 'Wage',
-  site: 'Site',
-  back: 'Back',
-  today: 'Today',
-  week: 'This Week',
-  month: 'This Month',
-  year: 'This Year',
+  noData: 'No data available', exportPdf: 'Export PDF', darkMode: 'Dark Mode',
+  language: 'Language', settings: 'Settings', overview: 'Overview',
+  summary: 'Summary', details: 'Details', history: 'History',
+  profit: 'Profit', loss: 'Loss', netBalance: 'Net Balance',
+  allSettledMsg: 'All settled', payWorker: 'Pay worker',
+  workerOwes: 'Worker owes you', wage: 'Wage', site: 'Site', back: 'Back',
+  today: 'Today', week: 'This Week', month: 'This Month', year: 'This Year',
 }
 
 const te: typeof en = {
   appTitle: 'నిర్మాణ మేనేజర్', signIn: 'లాగిన్', signOut: 'లాగ్అవుట్',
-  email: 'ఇమెయిల్', password: 'పాస్‌వర్డ్', welcome: 'తిరిగి స్వాగతం',
-  dashboard: 'డాష్‌బోర్డ్', workers: 'కార్మికులు', attendance: 'రోజువారీ హాజరు',
+  email: 'ఇమెయిల్', password: 'పాస్వర్డ్', welcome: 'తిరిగి స్వాగతం',
+  dashboard: 'డాష్బోర్డ్', workers: 'కార్మికులు', attendance: 'రోజువారీ హాజరు',
   sites: 'సైట్లు', privateWorkers: 'ప్రైవేట్ కార్మికులు', privateWork: 'ప్రైవేట్ పని',
   activeSites: 'చురుకైన సైట్లు', addWorker: 'కార్మికుని జోడించు', editWorker: 'కార్మికుని సవరించు',
   name: 'పూర్తి పేరు', phone: 'మొబైల్ నంబర్', gender: 'లింగం', state: 'రాష్ట్రం',
-  role: 'పాత్ర', workType: 'పని రకం', wageRates: 'వేతన రేట్లు (₹)',
+  role: 'పాత్ర', workType: 'పని రకం', wageRates: 'వేతన రేట్లు (రూ)',
   notes: 'గమనికలు', save: 'సేవ్ చేయి', cancel: 'రద్దు', edit: 'సవరించు', delete: 'తొలగించు',
   add: 'జోడించు', search: 'వెతకండి...', male: 'పురుషుడు', female: 'స్త్రీ',
   mason: 'మేస్త్రీ', helper: 'హెల్పర్', centring: 'సెంట్రింగ్', brickwork: 'ఇటుక పని',
@@ -87,68 +67,56 @@ const te: typeof en = {
   allStates: 'అన్నీ', allTypes: 'అన్నీ', allRoles: 'అన్నీ',
   noWorkers: 'కార్మికులు కనుగొనబడలేదు', addSite: 'సైటు జోడించు',
   siteName: 'సైటు పేరు', location: 'లొకేషన్', ownerName: 'యజమాని పేరు',
-  ownerPhone: 'యజమాని ఫోన్', budget: 'బడ్జెట్ (₹)', floors: 'అంతస్తులు',
+  ownerPhone: 'యజమాని ఫోన్', budget: 'బడ్జెట్ (రూ)', floors: 'అంతస్తులు',
   startDate: 'ప్రారంభ తేదీ', status: 'స్థితి', active: 'చురుకు', completed: 'పూర్తి',
   noSites: 'సైట్లు కనుగొనబడలేదు', markAttendance: 'హాజరు గుర్తించు',
-  shift: 'షిఫ్ట్', absent: 'గైర్హాజరు', advance: 'అడ్వాన్స్ (₹)',
+  shift: 'షిఫ్ట్', absent: 'గైర్హాజరు', advance: 'అడ్వాన్స్ (రూ)',
   paymentMode: 'చెల్లింపు పద్ధతి', siteWorked: 'సైటు', notMarked: 'గుర్తించబడలేదు',
   monthly: 'నెలవారీ సారాంశం', totalEarned: 'సంపాదించినది', totalAdvance: 'అడ్వాన్స్',
   balance: 'బాకీ', toGive: 'కార్మికుడికి ఇవ్వాలి', toReceive: 'కార్మికుడు ఇవ్వాలి',
-  settled: 'క్లియర్ ✓', openingBal: 'కేరీ ఫార్వర్డ్', daysWorked: 'పని రోజులు',
+  settled: 'క్లియర్', openingBal: 'కేరీ ఫార్వర్డ్', daysWorked: 'పని రోజులు',
   addContractor: 'కాంట్రాక్టర్ జోడించు', noContractors: 'కాంట్రాక్టర్లు లేరు',
   owedToWorker: 'మేము ఇవ్వాలి', workerOwesYou: 'వారు ఇవ్వాలి',
   addPayment: 'చెల్లింపు జోడించు', paymentHistory: 'చెల్లింపు చరిత్ర',
-  direction: 'దిశ', youToWorker: 'మీరు → కార్మికుడు', workerToYou: 'కార్మికుడు → మీరు',
-  addWork: 'పని జోడించు', noWork: 'పని వివరాలు లేవు', priceCharged: 'వసూలు ధర (₹)',
-  amountPaid: 'చెల్లింపు మొత్తం (₹)', pending: 'పెండింగ్', allSettled: 'అన్నీ క్లియర్ ✓',
+  direction: 'దిశ', youToWorker: 'మీరు కార్మికుడికి', workerToYou: 'కార్మికుడు మీకు',
+  addWork: 'పని జోడించు', noWork: 'పని వివరాలు లేవు', priceCharged: 'వసూలు ధర (రూ)',
+  amountPaid: 'చెల్లింపు మొత్తం (రూ)', pending: 'పెండింగ్', allSettled: 'అన్నీ క్లియర్',
   workerAdded: 'కార్మికుడు జోడించబడ్డారు!', workerUpdated: 'కార్మికుడు అప్డేట్ అయ్యారు!',
   siteAdded: 'సైటు జోడించబడింది!', siteUpdated: 'సైటు అప్డేట్ అయింది!', savedOk: 'సేవ్ అయింది!',
   required: 'అవసరం', invalidPhone: '10 అంకెల నంబర్ నమోదు చేయండి',
   errorLoading: 'లోపం సంభవించింది', deleteConfirm: 'ఖచ్చితంగా తొలగించాలా?',
   personalInfo: 'వ్యక్తిగత వివరాలు', selectSite: 'సైటు ఎంచుకోండి',
   selectWorker: 'కార్మికుని ఎంచుకోండి', date: 'తేదీ',
-  cash: 'నగదు', online: 'ఆన్‌లైన్', none: 'ఏదీ కాదు',
+  cash: 'నగదు', online: 'ఆన్లైన్', none: 'ఏదీ కాదు',
   loading: 'లోడ్ అవుతోంది...', refresh: 'రిఫ్రెష్', close: 'మూసివేయి',
   charged: 'వసూలు', paid: 'చెల్లింపు', due: 'బాకీ', totalPending: 'మొత్తం పెండింగ్',
   suppliers: 'సరఫరాదారులు', goods: 'వస్తువుల ఆర్డర్లు', money: 'డబ్బు', reports: 'నివేదికలు',
   trash: 'చెత్తబుట్ట', restore: 'పునరుద్ధరించు', deletePermanent: 'శాశ్వతంగా తొలగించు',
   noTrash: 'చెత్తబుట్ట ఖాళీగా ఉంది', trashNote: 'గత 30 రోజుల్లో తొలగించబడిన వస్తువులు',
-  months: [
-    'జనవరి','ఫిబ్రవరి','మార్చి','ఏప్రిల్','మే','జూన్',
-    'జులై','ఆగస్టు','సెప్టెంబర్','అక్టోబర్','నవంబర్','డిసెంబర్'
-  ],
-  // Extra UI strings - Telugu
   movedToTrash: 'చెత్తబుట్టకు తరలించబడింది',
   confirmDelete: 'ఖచ్చితంగా తొలగించాలా? ఇది రద్దు చేయలేరు.',
-  noData: 'డేటా అందుబాటులో లేదు',
-  exportPdf: 'PDF డౌన్లోడ్',
-  darkMode: 'డార్క్ మోడ్',
-  language: 'భాష',
-  settings: 'సెట్టింగులు',
-  overview: 'అవలోకనం',
-  summary: 'సారాంశం',
-  details: 'వివరాలు',
-  history: 'చరిత్ర',
-  profit: 'లాభం',
-  loss: 'నష్టం',
-  netBalance: 'నికర బాకీ',
-  allSettledMsg: 'అన్నీ క్లియర్ ✓',
-  payWorker: 'కార్మికుడికి చెల్లించు',
-  workerOwes: 'కార్మికుడు ఇవ్వాలి',
-  wage: 'వేతనం',
-  site: 'సైటు',
-  back: 'వెనక్కి',
-  today: 'నేడు',
-  week: 'ఈ వారం',
-  month: 'ఈ నెల',
-  year: 'ఈ సంవత్సరం',
+  noData: 'డేటా అందుబాటులో లేదు', exportPdf: 'PDF డౌన్లోడ్', darkMode: 'డార్క్ మోడ్',
+  language: 'భాష', settings: 'సెట్టింగులు', overview: 'అవలోకనం',
+  summary: 'సారాంశం', details: 'వివరాలు', history: 'చరిత్ర',
+  profit: 'లాభం', loss: 'నష్టం', netBalance: 'నికర బాకీ',
+  allSettledMsg: 'అన్నీ క్లియర్', payWorker: 'కార్మికుడికి చెల్లించు',
+  workerOwes: 'కార్మికుడు ఇవ్వాలి', wage: 'వేతనం', site: 'సైటు', back: 'వెనక్కి',
+  today: 'నేడు', week: 'ఈ వారం', month: 'ఈ నెల', year: 'ఈ సంవత్సరం',
+}
+
+// Month names kept separate so ts() never returns string[]
+export const MONTHS: Record<Lang, string[]> = {
+  en: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+  te: ['జనవరి','ఫిబ్రవరి','మార్చి','ఏప్రిల్','మే','జూన్','జులై','ఆగస్టు','సెప్టెంబర్','అక్టోబర్','నవంబర్','డిసెంబర్'],
 }
 
 export const strings = { en, te }
-export const ts  = (lang: Lang, key: keyof typeof en): string | string[] => strings[lang][key]
+
+// Always returns string — no more string|string[] ambiguity
+export const ts  = (lang: Lang, key: keyof typeof en): string => strings[lang][key] as string
 export const tss = (lang: Lang, key: keyof typeof en): string => strings[lang][key] as string
 
-// New module strings
+// Module-specific strings
 export const newStrings = {
   en: {
     addSupplier:'Add Supplier', editSupplier:'Edit Supplier', shopName:'Shop Name',
@@ -181,16 +149,15 @@ export const newStrings = {
     outstanding:'బకాయిలు', profitLoss:'లాభ నష్టాలు', perSite:'సైటు వారీగా',
     allTime:'అన్ని సమయాలు', thisMonth:'ఈ నెల',
     units:['bags','tons','pieces','sq.ft','cu.ft','liters','kg','loads','rods','tiles','Nos'],
-    // Additional money & reports translations
     income:'ఆదాయం', expenses:'ఖర్చులు', workers:'కార్మికులు',
     sites:'సైట్లు', contractors:'కాంట్రాక్టర్లు', suppliers:'సరఫరాదారులు',
     goods:'వస్తువులు', period:'కాలం', filter:'వడపోత',
-    cash:'నగదు', online:'ఆన్‌లైన్', cheque:'చెక్కు',
+    cash:'నగదు', online:'ఆన్లైన్', cheque:'చెక్కు',
     owedToYou:'మీకు రావాలి', youOwe:'మీరు ఇవ్వాలి',
     noRecords:'రికార్డులు లేవు', addRecord:'రికార్డు జోడించు',
     workerSummary:'కార్మికుడి సారాంశం', siteSummary:'సైటు సారాంశం',
   }
 }
 export type NewKey = keyof typeof newStrings.en
-export const tns = (lang: Lang, key: NewKey): string | string[] => newStrings[lang][key]
+export const tns  = (lang: Lang, key: NewKey): string => newStrings[lang][key] as string
 export const tnss = (lang: Lang, key: NewKey): string => newStrings[lang][key] as string
