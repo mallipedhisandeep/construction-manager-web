@@ -115,7 +115,7 @@ function GoodsPage() {
 
       <div className="page-header">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-black text-gray-800">📦 Goods Orders</h1>
+          <h1 className="text-xl font-black dark:text-slate-100 text-gray-800">📦 Goods Orders</h1>
           <button onClick={()=>{ setForm({status:'Pending',delivery_date:new Date().toISOString().split('T')[0],priceStr:'',qtyStr:'',advStr:''}); setCatalog([]); setModal(true) }}
             className="btn-primary btn-sm">+ New Order</button>
         </div>
@@ -135,21 +135,21 @@ function GoodsPage() {
 
       <div className="px-4 pt-4">
         {loading ? <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full"/></div>
-        : filtered.length===0 ? <div className="text-center py-16"><div className="text-5xl mb-2 opacity-20">📦</div><p className="text-gray-400">No {filter==='All'?'':filter.toLowerCase()+' '}orders</p></div>
+        : filtered.length===0 ? <div className="text-center py-16"><div className="text-5xl mb-2 opacity-20">📦</div><p className="dark:text-slate-500 text-gray-400">No {filter==='All'?'':filter.toLowerCase()+' '}orders</p></div>
         : filtered.map(o=>(
           <div key={o.id} className="card mb-3 overflow-hidden">
             <div className="p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-gray-800">{o.goods_name}</span>
+                    <span className="font-bold dark:text-slate-100 text-gray-800">{o.goods_name}</span>
                     <span className={STATUS_STYLE[o.status]??'badge-gray'}>{o.status}</span>
                   </div>
-                  <p className="text-sm text-gray-500 mt-0.5">🏪 {o.supplier_name}{o.site_name?` · 🏗️ ${o.site_name}`:''}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">📅 {o.delivery_date} · {o.quantity} {o.unit}</p>
+                  <p className="text-sm dark:text-slate-400 text-gray-500 mt-0.5">🏪 {o.supplier_name}{o.site_name?` · 🏗️ ${o.site_name}`:''}</p>
+                  <p className="text-xs dark:text-slate-500 text-gray-400 mt-0.5">📅 {o.delivery_date} · {o.quantity} {o.unit}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="font-black text-gray-800">₹{o.total_price.toFixed(0)}</p>
+                  <p className="font-black dark:text-slate-100 text-gray-800">₹{o.total_price.toFixed(0)}</p>
                   {o.advance_paid>0 && <p className="text-xs text-green-600">Adv ₹{o.advance_paid}</p>}
                   {o.total_price-o.advance_paid>0 && <p className="text-xs text-orange-500">Due ₹{(o.total_price-o.advance_paid).toFixed(0)}</p>}
                 </div>
@@ -158,7 +158,7 @@ function GoodsPage() {
             <div className="border-t border-gray-50 flex">
               {o.status==='Pending' && <button onClick={()=>updateStatus(o.id!,'Delivered')} className="flex-1 py-2 text-xs font-bold text-green-600 hover:bg-green-50 transition">✓ Mark Delivered</button>}
               {o.status==='Pending' && <div className="w-px bg-gray-100"/>}
-              {o.status!=='Cancelled' && <button onClick={()=>updateStatus(o.id!,'Cancelled')} className="flex-1 py-2 text-xs font-bold text-gray-400 hover:bg-gray-50 transition">✕ Cancel</button>}
+              {o.status!=='Cancelled' && <button onClick={()=>updateStatus(o.id!,'Cancelled')} className="flex-1 py-2 text-xs font-bold dark:text-slate-500 text-gray-400 hover:dark:bg-slate-800 bg-gray-50 transition">✕ Cancel</button>}
               <div className="w-px bg-gray-100"/>
               <button onClick={()=>delOrder(o.id!)} className="px-4 py-2 text-xs font-bold text-red-400 hover:bg-red-50 transition">🗑️</button>
             </div>
@@ -211,7 +211,7 @@ function GoodsPage() {
                 <div><label className="label">Price / Unit ₹</label><input type="number" inputMode="decimal" value={form.priceStr??''} onChange={e=>setForm(f=>({...f,priceStr:e.target.value}))} className="input" placeholder="0"/></div>
                 <div className="bg-orange-50 rounded-xl p-3 flex flex-col justify-center"><p className="text-xs text-orange-500 font-bold uppercase tracking-wide">Total</p><p className="text-lg font-black text-orange-700">₹{calcTotal().toFixed(0)}</p></div>
               </div>
-              <div><label className="label">Advance Paid ₹ <span className="text-gray-400 font-normal">(auto-added to supplier history)</span></label>
+              <div><label className="label">Advance Paid ₹ <span className="dark:text-slate-500 text-gray-400 font-normal">(auto-added to supplier history)</span></label>
                 <input type="number" inputMode="decimal" value={form.advStr??''} onChange={e=>setForm(f=>({...f,advStr:e.target.value}))} className="input" placeholder="0"/>
               </div>
               <div><label className="label">Delivery Date *</label><input type="date" value={form.delivery_date??''} onChange={e=>setForm(f=>({...f,delivery_date:e.target.value}))} className="input"/></div>
