@@ -94,7 +94,7 @@ function PrivateWorkersPage() {
       {toast && <div className="fixed top-16 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm">{toast}</div>}
 
       <button onClick={() => { setForm({name:'',work_type:'',phone:'',notes:''}); setModal('add') }}
-        className="w-full mb-4 bg-orange-600 text-white rounded-xl py-3 font-semibold hover:bg-orange-700 flex items-center justify-center gap-2">
+        className="w-full mb-4 bg-amber-600 text-white rounded-xl py-3 font-semibold hover:bg-amber-600 flex items-center justify-center gap-2">
         + {ts(lang,'addContractor')}
       </button>
 
@@ -127,7 +127,7 @@ function PrivateWorkersPage() {
                 📜 History
               </button>
               <button onClick={() => { setSelected(w); setForm({name:w.name,work_type:w.work_type,phone:w.phone,notes:w.notes??''}); setModal('edit') }}
-                className="flex items-center justify-center gap-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 text-sm font-semibold py-2.5 rounded-xl transition">
+                className="flex items-center justify-center gap-1.5 bg-slate-800/50 hover:bg-amber-900/30 text-amber-400 text-sm font-semibold py-2.5 rounded-xl transition">
                 ✏️ Edit
               </button>
               <button onClick={() => del(w)}
@@ -160,7 +160,7 @@ function PrivateWorkersPage() {
             <div className="flex gap-2">
               {[['dad_to_worker',ts(lang,'youToWorker')],['worker_to_dad',ts(lang,'workerToYou')]].map(([v,l]) => (
                 <button key={v} onClick={() => setPayForm({...payForm,direction:v})}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition ${payForm.direction===v?'bg-orange-600 text-white border-orange-600':'dark:bg-slate-800 bg-gray-50 dark:border-slate-600 border-gray-200'}`}>{l}</button>
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition ${payForm.direction===v?'bg-amber-600 text-white border-amber-500':'dark:bg-slate-800 bg-gray-50 dark:border-slate-600 border-gray-200'}`}>{l}</button>
               ))}
             </div>
           </div>
@@ -220,7 +220,7 @@ const Overlay = ({ title, onClose, children }: { title:string; onClose:()=>void;
 )
 
 const Btn = ({ onClick, saving, children }: { onClick:()=>void; saving:boolean; children:React.ReactNode }) => (
-  <button onClick={onClick} disabled={saving} className="w-full bg-orange-600 text-white rounded-xl py-3 font-semibold disabled:opacity-50">
+  <button onClick={onClick} disabled={saving} className="w-full bg-amber-600 text-white rounded-xl py-3 font-semibold disabled:opacity-50">
     {saving?'⏳...':children}
   </button>
 )
