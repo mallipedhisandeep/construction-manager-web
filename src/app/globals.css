@@ -129,3 +129,29 @@ body {
   background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
   background-size: 200% 100%;
 }
+
+/* ── Dark mode: comprehensive input/select/textarea theming ── */
+.dark input, .dark select, .dark textarea {
+  background-color: rgb(var(--surface));
+  color: rgb(var(--text));
+  border-color: rgb(var(--border));
+}
+.dark input::placeholder, .dark textarea::placeholder {
+  color: rgb(var(--muted));
+}
+/* ── Dark mode: fix divide-y color ── */
+.dark .divide-y > * + * {
+  border-color: rgb(var(--border));
+}
+/* ── Dark mode: attendance shift label colors fix ── */
+.dark .bg-green-50.border-green-200 { background-color: rgba(21,128,61,0.2) !important; border-color: rgba(21,128,61,0.4) !important; }
+.dark .bg-teal-50.border-teal-200   { background-color: rgba(15,118,110,0.2) !important; border-color: rgba(15,118,110,0.4) !important; }
+.dark .bg-blue-50.border-blue-200   { background-color: rgba(29,78,216,0.2) !important; border-color: rgba(29,78,216,0.4) !important; }
+.dark .bg-red-50.border-red-200     { background-color: rgba(185,28,28,0.2) !important; border-color: rgba(185,28,28,0.4) !important; }
+.dark .bg-orange-50 { background-color: rgba(194,65,12,0.15) !important; }
+.dark .bg-amber-50  { background-color: rgba(180,83,9,0.15) !important; }
+/* ── Dark mode: skeleton shimmer fix ── */
+.dark .bg-gray-200 { background-color: rgb(51,65,85) !important; }
+.dark .bg-gray-100 { background-color: rgb(30,41,59) !important; }
+/* ── Dark mode: modal backdrop ── */
+.dark .modal-backdrop { background-color: rgba(0,0,0,0.7); }
