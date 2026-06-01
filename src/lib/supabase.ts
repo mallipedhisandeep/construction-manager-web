@@ -5,16 +5,16 @@ const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-anon-key'
 
 export const supabase = createClient(url, key, {
   auth: {
-    // 'implicit' flow: Supabase returns tokens in the URL hash (#access_token=...)
-    // directly to the browser. The JS client picks them up via detectSessionInUrl.
-    // This works WITHOUT @supabase/ssr or server-side cookie handling.
+    // 'pkce' flow: Supabase stores a code_verifier in localStorage when the
+    // OAuth redirect begins. Google sends back a ?code= to /auth/callback.
+    // route.ts forwards that code to /auth/confirm (a client-side page).
+    // The browser-side Supabase client calls exchangeCodeForSession(code),
+    // which works because the verifier is available in localStorage.
     //
-    // 'pkce' flow was the previous setting — it sends a ?code= to route.ts, which
-    // then needs to call exchangeCodeForSession using the SAME client that started
-    // the flow (to verify the code_verifier). A server route.ts can't do this
-    // because the verifier is in the browser's localStorage, not the server.
-    // Result: exchangeCodeForSession always failed → ?error=auth_failed.
-    flowType: 'implicit',
+    // 'implicit' flow was broken: Google has deprecated returning tokens in
+    // the URL hash. It always sends ?code= now, but with implicit flow no
+    // PKCE verifier is stored, so exchangeCodeForSession fails every time.
+    flowType: 'pkce',
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
