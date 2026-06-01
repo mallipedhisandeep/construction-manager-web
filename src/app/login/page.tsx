@@ -26,32 +26,22 @@ export default function LoginPage() {
         backgroundRepeat: 'no-repeat',
       }}
     >
-      {/* Dark overlay for readability */}
-      <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.45)' }} />
+      {/* Dark overlay */}
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.85) 100%)' }} />
 
-      {/* Logo + Brand */}
-      <div className="relative z-10 flex flex-col items-center mb-10">
-        <h1 className="text-4xl font-black text-white tracking-tight drop-shadow-lg">CONSTRUCTION</h1>
-        <div className="flex items-center gap-3 mt-1">
-          <div className="h-0.5 w-8 bg-orange-500"/>
-          <span className="text-orange-400 font-black text-lg tracking-widest">MANAGER</span>
-          <div className="h-0.5 w-8 bg-orange-500"/>
-        </div>
-        <p className="text-orange-300/80 text-sm mt-1 font-medium">నిర్మాణ మేనేజర్</p>
-      </div>
-
-      {/* Login card */}
+      {/* Login card at bottom */}
       <div className="relative z-10 w-full max-w-sm px-5">
         {error && (
           <div className="bg-red-900/50 border border-red-500/50 text-red-300 rounded-2xl px-4 py-3 text-sm mb-4 text-center">
             {error}
           </div>
         )}
+
         <button
           onClick={signInWithGoogle}
           disabled={loading}
           className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-800 font-bold rounded-2xl py-4 text-base shadow-2xl transition active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{boxShadow:'0 0 40px rgba(249,115,22,0.4)'}}
+          style={{boxShadow:'0 0 40px rgba(249,115,22,0.35)'}}
         >
           {loading ? (
             <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"/>
@@ -63,9 +53,10 @@ export default function LoginPage() {
               <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
             </svg>
           )}
-          <span>{loading ? 'Google లోకి వెళ్తున్నారు...' : 'Continue with Google'}</span>
+          <span>{loading ? 'Signing in...' : 'Continue with Google'}</span>
         </button>
-        <p className="text-center text-orange-300/70 text-xs mt-4 font-medium">
+
+        <p className="text-center text-white/50 text-xs mt-4 font-medium">
           Google తో కొనసాగించండి
         </p>
       </div>
