@@ -77,7 +77,7 @@ function PrivateWorkPage() {
       <div className="flex gap-2 mb-4">
         {['All','Active','Completed'].map(f => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition ${filter===f?'bg-orange-600 text-white border-orange-600':'text-gray-600 border-gray-200'}`} style={filter!==f?{backgroundColor:'rgb(var(--surface))'}:{}}>
+            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition ${filter===f?'bg-orange-600 text-white border-orange-600':'dark:text-slate-300 text-gray-600 dark:border-slate-600 border-gray-200'}`} style={filter!==f?{backgroundColor:'rgb(var(--surface))'}:{}}>
             {f}
           </button>
         ))}
@@ -88,8 +88,8 @@ function PrivateWorkPage() {
         + {ts(lang,'addWork')}
       </button>
 
-      {loading ? <div className="text-center py-10 text-gray-400">{ts(lang,'loading')}</div> :
-       filtered.length === 0 ? <div className="text-center py-10 text-gray-400">{ts(lang,'noWork')}</div> :
+      {loading ? <div className="text-center py-10 dark:text-slate-500 text-gray-400">{ts(lang,'loading')}</div> :
+       filtered.length === 0 ? <div className="text-center py-10 dark:text-slate-500 text-gray-400">{ts(lang,'noWork')}</div> :
        filtered.map(w => {
         const bal = w.price_charged - w.amount_paid
         return (
@@ -97,11 +97,11 @@ function PrivateWorkPage() {
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-gray-800">{w.worker_name}</span>
+                  <span className="font-bold [text-gray-800_not_used]dark:text-slate-100 text-gray-800">{w.worker_name}</span>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${w.status==='Active'?'bg-green-100 text-green-700':'bg-blue-100 text-blue-700'}`}>{w.status}</span>
                 </div>
-                <div className="text-sm text-gray-500 mt-0.5">🔧 {w.work_type} · 📍 {w.site_name}</div>
-                <div className="text-xs text-gray-400">📅 {w.work_date}</div>
+                <div className="text-sm dark:text-slate-400 text-gray-500 mt-0.5">🔧 {w.work_type} · 📍 {w.site_name}</div>
+                <div className="text-xs dark:text-slate-500 text-gray-400">📅 {w.work_date}</div>
               </div>
               <div className="flex gap-1 flex-shrink-0">
                 <button onClick={() => { setForm({...w}); setPriceStr(w.price_charged?.toString() ?? ''); setPaidStr(w.amount_paid?.toString() ?? ''); setModal('edit') }} className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg text-sm">✏️</button>
@@ -134,11 +134,11 @@ function PrivateWorkPage() {
           <div className="w-full md:max-w-md rounded-t-2xl md:rounded-2xl max-h-[90vh] overflow-y-auto" style={{backgroundColor:"rgb(var(--surface))"}} onClick={e=>e.stopPropagation()}>
             <div className="sticky top-0 border-b px-5 py-4 flex justify-between" style={{backgroundColor:"rgb(var(--surface))"}}>
               <h2 className="font-bold text-lg">{modal==='add'?ts(lang,'addWork'):'Edit Work'}</h2>
-              <button onClick={() => setModal(null)} className="text-gray-400 text-xl">✕</button>
+              <button onClick={() => setModal(null)} className="dark:text-slate-500 text-gray-400 text-xl">✕</button>
             </div>
             <div className="p-5 space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{ts(lang,'selectWorker')}</label>
+                <label className="block text-sm font-medium dark:text-slate-200 text-gray-700 mb-1">{ts(lang,'selectWorker')}</label>
                 <select value={form.worker_id??''} onChange={e=>setForm({...form,worker_id:e.target.value})}
                   className="w-full border rounded-lg px-3 py-2 text-sm">
                   <option value="">— Select —</option>
@@ -146,7 +146,7 @@ function PrivateWorkPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{ts(lang,'selectSite')}</label>
+                <label className="block text-sm font-medium dark:text-slate-200 text-gray-700 mb-1">{ts(lang,'selectSite')}</label>
                 <select value={form.site_id??''} onChange={e=>setForm({...form,site_id:e.target.value})}
                   className="w-full border rounded-lg px-3 py-2 text-sm">
                   <option value="">— Select —</option>
@@ -154,33 +154,33 @@ function PrivateWorkPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{ts(lang,'date')}</label>
+                <label className="block text-sm font-medium dark:text-slate-200 text-gray-700 mb-1">{ts(lang,'date')}</label>
                 <input type="date" value={form.work_date??''} onChange={e=>setForm({...form,work_date:e.target.value})}
                   className="w-full border rounded-lg px-3 py-2 text-sm" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{ts(lang,'priceCharged')}</label>
+                  <label className="block text-sm font-medium dark:text-slate-200 text-gray-700 mb-1">{ts(lang,'priceCharged')}</label>
                   <input type="number" inputMode="decimal" value={priceStr} onChange={e=>setPriceStr(e.target.value)}
                     placeholder="0" className="w-full border rounded-lg px-3 py-2 text-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{ts(lang,'amountPaid')}</label>
+                  <label className="block text-sm font-medium dark:text-slate-200 text-gray-700 mb-1">{ts(lang,'amountPaid')}</label>
                   <input type="number" inputMode="decimal" value={paidStr} onChange={e=>setPaidStr(e.target.value)}
                     placeholder="0" className="w-full border rounded-lg px-3 py-2 text-sm" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{ts(lang,'status')}</label>
+                <label className="block text-sm font-medium dark:text-slate-200 text-gray-700 mb-1">{ts(lang,'status')}</label>
                 <div className="flex gap-2">
                   {['Active','Completed'].map(s => (
                     <button key={s} onClick={() => setForm({...form,status:s})}
-                      className={`flex-1 py-2 rounded-lg text-sm font-medium border ${form.status===s?'bg-orange-600 text-white border-orange-600':'bg-gray-50 border-gray-200'}`}>{s}</button>
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium border ${form.status===s?'bg-orange-600 text-white border-orange-600':'dark:bg-slate-800 bg-gray-50 dark:border-slate-600 border-gray-200'}`}>{s}</button>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{ts(lang,'notes')}</label>
+                <label className="block text-sm font-medium dark:text-slate-200 text-gray-700 mb-1">{ts(lang,'notes')}</label>
                 <textarea rows={2} value={form.notes??''} onChange={e=>setForm({...form,notes:e.target.value})}
                   className="w-full border rounded-lg px-3 py-2 text-sm resize-none" />
               </div>
