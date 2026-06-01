@@ -97,14 +97,14 @@ function WorkersPage() {
          Object.entries(grouped).map(([wt, list]) => (
           <div key={wt} className="mb-5">
             <div className="section-title">
-              <div className="w-1 h-3 rounded bg-orange-500 inline-block" />
+              <div className="w-1 h-3 rounded bg-amber-500 inline-block" />
               {wt}
               <span className="badge-orange">{list.length}</span>
             </div>
             {list.map(w => (
               <div key={w.id} className="card mb-2 overflow-hidden hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3 p-4">
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-orange-100 to-orange-50 border border-orange-100 flex items-center justify-center text-orange-700 font-black text-lg flex-shrink-0">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-700 to-orange-50 border border-orange-100 flex items-center justify-center text-amber-400 font-black text-lg flex-shrink-0">
                     {w.name[0]?.toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -118,7 +118,7 @@ function WorkersPage() {
                   <div className="flex gap-0.5">
                     {w.phone && <a href={`tel:${w.phone}`} className="p-2 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl transition">📞</a>}
                     <button onClick={() => { setForm({...w}); setModal('view') }}  className="p-2 text-blue-400 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20  rounded-xl transition">👁️</button>
-                    <button onClick={() => { setForm({...w}); setModal('edit') }}  className="p-2 text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-xl transition">✏️</button>
+                    <button onClick={() => { setForm({...w}); setModal('edit') }}  className="p-2 text-amber-400 hover:bg-slate-800/50 dark:hover:bg-orange-900/20 rounded-xl transition">✏️</button>
                     <button onClick={() => del(w)}                                 className="p-2 text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20    rounded-xl transition">🗑️</button>
                   </div>
                 </div>
@@ -181,7 +181,7 @@ function WorkersPage() {
           <div className="modal-box" onClick={e=>e.stopPropagation()}>
             <div className="modal-header">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-orange-100 flex items-center justify-center text-orange-700 font-black">{form.name[0]}</div>
+                <div className="w-10 h-10 rounded-2xl bg-amber-900/30 flex items-center justify-center text-amber-400 font-black">{form.name[0]}</div>
                 <div>
                   <h2 className="font-black text-lg leading-tight">{form.name}</h2>
                   <p className="text-sm dark:text-slate-500 text-gray-400">{form.work_type} · {form.state}</p>
@@ -209,7 +209,7 @@ function WorkersPage() {
                   {SHIFTS.map((s,i) => (
                     <div key={s} className="flex justify-between items-center rounded-xl px-3 py-2" style={{background:"rgb(var(--bg))"}}>
                       <span className="text-sm dark:text-slate-400 text-gray-500">{S_LABELS[i]}</span>
-                      <span className="font-bold text-orange-600">₹{((form as unknown) as Record<string, number>)[rateKey(s)]||0}</span>
+                      <span className="font-bold text-amber-500">₹{((form as unknown) as Record<string, number>)[rateKey(s)]||0}</span>
                     </div>
                   ))}
                 </div>
@@ -260,7 +260,7 @@ const FS = ({ label,value,opts,labels,onChange }:
     </select>
   </div>
 )
-const Spinner = () => <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full" /></div>
+const Spinner = () => <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-3 border-amber-400 border-t-transparent rounded-full" /></div>
 const Empty = ({msg,icon}:{msg:string;icon:string}) => (
   <div className="text-center py-16">
     <div className="text-5xl mb-3 opacity-30">{icon}</div>
