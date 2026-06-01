@@ -139,7 +139,7 @@ function SuppliersPage() {
           </div>
           <div className="px-4 pt-4">
             {loading
-              ? <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full"/></div>
+              ? <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full"/></div>
               : suppliers.length===0
                 ? <div className="text-center py-16"><div className="text-5xl mb-2 opacity-20">🏪</div><p className="dark:text-slate-500 text-gray-400">{te?'సరఫరాదారులు లేరు':'No suppliers yet'}</p></div>
                 : suppliers.map(sup => {
@@ -174,14 +174,14 @@ function SuppliersPage() {
         <>
           <div className="page-header">
             <div className="flex items-center gap-3">
-              <button onClick={()=>setView('list')} className="text-orange-600 font-bold text-sm">← {te?'వెనక్కి':'Back'}</button>
+              <button onClick={()=>setView('list')} className="text-amber-500 font-bold text-sm">← {te?'వెనక్కి':'Back'}</button>
               <div className="flex-1 min-w-0">
                 <p className="font-black dark:text-slate-100 text-gray-800 truncate">{selected.name}</p>
                 {selected.shop_name && <p className="text-xs dark:text-slate-500 text-gray-400">{selected.shop_name}</p>}
               </div>
               <div className="flex gap-1">
                 {selected.phone && <a href={`tel:${selected.phone}`} className="p-2 bg-green-50 text-green-600 rounded-xl text-sm">📞</a>}
-                <button onClick={()=>{ setSForm({...selected}); setModal('supplier') }} className="p-2 bg-orange-50 text-orange-600 rounded-xl">✏️</button>
+                <button onClick={()=>{ setSForm({...selected}); setModal('supplier') }} className="p-2 bg-amber-900/20 text-amber-400 rounded-xl">✏️</button>
                 <button onClick={delSup} className="p-2 bg-red-50 text-red-500 rounded-xl">🗑️</button>
               </div>
             </div>
@@ -204,7 +204,7 @@ function SuppliersPage() {
                 ['payments', te?'💳 చెల్లింపు చరిత్ర':'💳 Payment History'],
               ] as const).map(([t,l])=>(
                 <button key={t} onClick={()=>setTab(t)}
-                  className={`flex-1 py-2.5 text-sm font-bold border-b-2 transition ${tab===t?'text-orange-600 border-orange-500':'dark:text-slate-500 text-gray-400 border-transparent'}`}>{l}</button>
+                  className={`flex-1 py-2.5 text-sm font-bold border-b-2 transition ${tab===t?'text-amber-500 border-amber-500':'dark:text-slate-500 text-gray-400 border-transparent'}`}>{l}</button>
               ))}
             </div>
             {tab==='goods' ? (
@@ -326,7 +326,7 @@ function SuppliersPage() {
                 <div className="flex gap-2">
                   {(['payment','advance'] as const).map(t=>(
                     <button key={t} onClick={()=>setPForm({...pForm,payment_type:t})}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition ${pForm.payment_type===t?'bg-orange-600 text-white border-orange-600':'dark:bg-slate-800 bg-gray-50 dark:border-slate-600 border-gray-200 dark:text-slate-300 text-gray-600'}`}>
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition ${pForm.payment_type===t?'bg-amber-600 text-white border-amber-600':'dark:bg-slate-800 bg-gray-50 dark:border-slate-600 border-gray-200 dark:text-slate-300 text-gray-600'}`}>
                       {t==='advance'?(te?'🔶 అడ్వాన్స్':'🔶 Advance'):(te?'💳 సాధారణ చెల్లింపు':'💳 Regular Payment')}
                     </button>
                   ))}
