@@ -168,7 +168,7 @@ function SitesPage() {
 
       <div className="px-4 pt-4">
         {loading ? (
-          <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full"/></div>
+          <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full"/></div>
         ) : filtered.length===0 ? (
           <div className="text-center py-16"><div className="text-5xl mb-3 opacity-20">🏗️</div><p style={{color:'rgb(var(--muted))'}}>No sites</p></div>
         ) : filtered.map(s=>(
@@ -257,7 +257,7 @@ function SitesPage() {
             <div className="flex border-b" style={{borderColor:'rgb(var(--border))'}}>
               {([['info','📋 Info'],['docs','📁 Docs'],['payments','💰 Payments']] as const).map(([tt,l])=>(
                 <button key={tt} onClick={()=>setTab(tt)}
-                  className={`flex-1 py-2.5 text-sm font-bold border-b-2 transition ${tab===tt?'text-orange-600 dark:text-orange-400 border-orange-500':'border-transparent'}`}
+                  className={`flex-1 py-2.5 text-sm font-bold border-b-2 transition ${tab===tt?'text-amber-500 dark:text-amber-400 border-amber-400':'border-transparent'}`}
                   style={{color: tab===tt ? undefined : 'rgb(var(--muted))'}}>
                   {l}
                 </button>
