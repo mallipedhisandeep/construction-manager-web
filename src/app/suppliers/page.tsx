@@ -130,13 +130,13 @@ function SuppliersPage() {
         <>
           <div className="page-header">
             <div className="flex items-center justify-between">
-              <h1 className="text-xl font-black text-gray-800">🏪 Suppliers</h1>
+              <h1 className="text-xl font-black dark:text-slate-100 text-gray-800">🏪 Suppliers</h1>
               <button onClick={()=>{ setSForm({}); setSelected(null); setModal('supplier') }} className="btn-primary btn-sm">+ Add Supplier</button>
             </div>
           </div>
           <div className="px-4 pt-4">
             {loading ? <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full"/></div>
-            : suppliers.length===0 ? <div className="text-center py-16"><div className="text-5xl mb-2 opacity-20">🏪</div><p className="text-gray-400">No suppliers yet</p></div>
+            : suppliers.length===0 ? <div className="text-center py-16"><div className="text-5xl mb-2 opacity-20">🏪</div><p className="dark:text-slate-500 text-gray-400">No suppliers yet</p></div>
             : suppliers.map(sup => {
               const b = sup.balance??0
               return (
@@ -144,14 +144,14 @@ function SuppliersPage() {
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-400 rounded-2xl flex items-center justify-center text-white font-black text-xl flex-shrink-0">{sup.name[0]}</div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-800">{sup.name}</p>
-                      {sup.shop_name && <p className="text-xs text-gray-400">🏪 {sup.shop_name}</p>}
+                      <p className="font-bold dark:text-slate-100 text-gray-800">{sup.name}</p>
+                      {sup.shop_name && <p className="text-xs dark:text-slate-500 text-gray-400">🏪 {sup.shop_name}</p>}
                       <div className="flex gap-2 mt-1 flex-wrap items-center">
                         {sup.phone && <span className="text-xs text-green-600 font-medium">📞 {sup.phone}</span>}
                         <span className="badge-gray">{sup.goodsCount} goods</span>
                       </div>
                     </div>
-                    <div className={`text-xs font-bold px-2.5 py-1.5 rounded-xl ${b>0?'bg-red-50 text-red-600':b<0?'bg-green-50 text-green-700':'bg-gray-100 text-gray-500'}`}>
+                    <div className={`text-xs font-bold px-2.5 py-1.5 rounded-xl ${b>0?'bg-red-50 text-red-600':b<0?'bg-green-50 text-green-700':'bg-gray-100 dark:text-slate-400 text-gray-500'}`}>
                       {b===0?'✓ Settled':b>0?`We Owe ₹${b.toFixed(0)}`:`Advance ₹${Math.abs(b).toFixed(0)}`}
                     </div>
                   </div>
@@ -166,8 +166,8 @@ function SuppliersPage() {
             <div className="flex items-center gap-3">
               <button onClick={()=>setView('list')} className="text-orange-600 font-bold text-sm">← Back</button>
               <div className="flex-1 min-w-0">
-                <p className="font-black text-gray-800 truncate">{selected.name}</p>
-                {selected.shop_name && <p className="text-xs text-gray-400">{selected.shop_name}</p>}
+                <p className="font-black dark:text-slate-100 text-gray-800 truncate">{selected.name}</p>
+                {selected.shop_name && <p className="text-xs dark:text-slate-500 text-gray-400">{selected.shop_name}</p>}
               </div>
               <div className="flex gap-1">
                 {selected.phone && <a href={`tel:${selected.phone}`} className="p-2 bg-green-50 text-green-600 rounded-xl text-sm">📞</a>}
@@ -177,27 +177,27 @@ function SuppliersPage() {
             </div>
           </div>
           <div className="px-4 pt-3">
-            <div className={`rounded-2xl p-4 mb-4 border-2 ${bal>0?'bg-red-50 border-red-200':bal<0?'bg-green-50 border-green-200':'bg-gray-50 border-gray-200'}`}>
-              <p className="text-xs font-black text-gray-400 uppercase tracking-wide mb-1">Balance</p>
-              <p className={`text-2xl font-black ${bal>0?'text-red-600':bal<0?'text-green-700':'text-gray-400'}`}>₹{Math.abs(bal).toFixed(0)}</p>
-              <p className="text-sm text-gray-500 mt-0.5">{bal===0?'All settled ✓':bal>0?'We owe supplier':'Supplier owes us'}</p>
+            <div className={`rounded-2xl p-4 mb-4 border-2 ${bal>0?'bg-red-50 border-red-200':bal<0?'bg-green-50 border-green-200':'dark:bg-slate-800 bg-gray-50 dark:border-slate-600 border-gray-200'}`}>
+              <p className="text-xs font-black dark:text-slate-500 text-gray-400 uppercase tracking-wide mb-1">Balance</p>
+              <p className={`text-2xl font-black ${bal>0?'text-red-600':bal<0?'text-green-700':'dark:text-slate-500 text-gray-400'}`}>₹{Math.abs(bal).toFixed(0)}</p>
+              <p className="text-sm dark:text-slate-400 text-gray-500 mt-0.5">{bal===0?'All settled ✓':bal>0?'We owe supplier':'Supplier owes us'}</p>
             </div>
-            <div className="flex border-b border-gray-100 mb-4">
+            <div className="flex border-b dark:border-slate-700 border-gray-100 mb-4">
               {([['goods','📦 Goods Catalog'],['payments','💳 Payment History']] as const).map(([t,l])=>(
                 <button key={t} onClick={()=>setTab(t)}
-                  className={`flex-1 py-2.5 text-sm font-bold border-b-2 transition ${tab===t?'text-orange-600 border-orange-500':'text-gray-400 border-transparent'}`}>{l}</button>
+                  className={`flex-1 py-2.5 text-sm font-bold border-b-2 transition ${tab===t?'text-orange-600 border-orange-500':'dark:text-slate-500 text-gray-400 border-transparent'}`}>{l}</button>
               ))}
             </div>
             {tab==='goods' ? (
               <>
                 <button onClick={()=>{ setGForm({unit:'bags'}); setModal('goods') }} className="btn-primary w-full mb-3">+ Add Goods Item</button>
-                {goods.length===0 ? <div className="text-center py-10 text-gray-400"><p className="text-4xl mb-2 opacity-30">📦</p><p>No goods in catalog</p></div>
+                {goods.length===0 ? <div className="text-center py-10 dark:text-slate-500 text-gray-400"><p className="text-4xl mb-2 opacity-30">📦</p><p>No goods in catalog</p></div>
                 : goods.map(g=>(
                   <div key={g.id} className="card mb-2 p-4 flex items-center gap-3">
                     <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">📦</div>
                     <div className="flex-1">
-                      <p className="font-bold text-gray-800">{g.goods_name}</p>
-                      <p className="text-sm text-gray-500">₹{g.price_per_unit} per {g.unit}</p>
+                      <p className="font-bold dark:text-slate-100 text-gray-800">{g.goods_name}</p>
+                      <p className="text-sm dark:text-slate-400 text-gray-500">₹{g.price_per_unit} per {g.unit}</p>
                     </div>
                     <button onClick={()=>delGoods(g.id!)} className="text-red-300 hover:text-red-500 p-1.5 hover:bg-red-50 rounded-lg">🗑️</button>
                   </div>
@@ -208,10 +208,10 @@ function SuppliersPage() {
                 <button onClick={()=>{ setPForm({payment_type:'payment',mode:'Cash',payment_date:new Date().toISOString().split('T')[0]}); setModal('payment') }}
                   className="btn-green w-full mb-3">+ Add Payment</button>
                 <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="card p-3 text-center"><p className="text-lg font-black text-red-600">₹{bal>0?bal.toFixed(0):'0'}</p><p className="text-xs text-gray-400">Still Owe</p></div>
-                  <div className="card p-3 text-center"><p className="text-lg font-black text-green-600">₹{payments.reduce((s,p)=>s+p.amount,0).toFixed(0)}</p><p className="text-xs text-gray-400">Total Paid</p></div>
+                  <div className="card p-3 text-center"><p className="text-lg font-black text-red-600">₹{bal>0?bal.toFixed(0):'0'}</p><p className="text-xs dark:text-slate-500 text-gray-400">Still Owe</p></div>
+                  <div className="card p-3 text-center"><p className="text-lg font-black text-green-600">₹{payments.reduce((s,p)=>s+p.amount,0).toFixed(0)}</p><p className="text-xs dark:text-slate-500 text-gray-400">Total Paid</p></div>
                 </div>
-                {payments.length===0 ? <div className="text-center py-10 text-gray-400"><p className="text-4xl mb-2 opacity-30">💳</p><p>No payments yet</p></div>
+                {payments.length===0 ? <div className="text-center py-10 dark:text-slate-500 text-gray-400"><p className="text-4xl mb-2 opacity-30">💳</p><p>No payments yet</p></div>
                 : payments.map(p=>(
                   <div key={p.id} className="card mb-2 p-3 flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${p.payment_type==='advance'?'bg-amber-100':'bg-green-100'}`}>
@@ -219,11 +219,11 @@ function SuppliersPage() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-gray-800">₹{p.amount}</span>
+                        <span className="font-bold dark:text-slate-100 text-gray-800">₹{p.amount}</span>
                         <span className={p.payment_type==='advance'?'badge-amber':'badge-green'}>{p.payment_type}</span>
                         <span className="badge-gray">{p.mode}</span>
                       </div>
-                      <p className="text-xs text-gray-400 mt-0.5">{p.payment_date}{p.notes?` · ${p.notes}`:''}</p>
+                      <p className="text-xs dark:text-slate-500 text-gray-400 mt-0.5">{p.payment_date}{p.notes?` · ${p.notes}`:''}</p>
                     </div>
                     <button onClick={()=>delPayment(p.id!)} className="text-red-300 hover:text-red-500 text-sm p-1.5">🗑️</button>
                   </div>
@@ -280,7 +280,7 @@ function SuppliersPage() {
                 <div className="flex gap-2">
                   {(['payment','advance'] as const).map(t=>(
                     <button key={t} onClick={()=>setPForm({...pForm,payment_type:t})}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition ${pForm.payment_type===t?'bg-orange-600 text-white border-orange-600':'bg-gray-50 border-gray-200 text-gray-600'}`}>
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition ${pForm.payment_type===t?'bg-orange-600 text-white border-orange-600':'dark:bg-slate-800 bg-gray-50 dark:border-slate-600 border-gray-200 dark:text-slate-300 text-gray-600'}`}>
                       {t==='advance'?'🔶 Advance':'💳 Regular Payment'}
                     </button>
                   ))}
