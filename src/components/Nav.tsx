@@ -86,22 +86,22 @@ export default function Nav({ lang, onToggleLang, theme, onToggleTheme }: Props)
       <nav className="hidden md:flex fixed left-0 top-14 h-[calc(100vh-56px)] w-56 flex-col py-3 z-40 overflow-y-auto border-r"
         style={{background:'rgb(var(--surface))',borderColor:'rgb(var(--border))'}}>
         <div className="px-3 space-y-0.5">
-          <p className="text-[10px] font-black uppercase tracking-widest px-2 mb-2 mt-1" style={{color:'rgb(var(--muted))'}}>Main</p>
+          <p className="text-[10px] font-black uppercase tracking-widest px-2 mb-2 mt-1" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'ముఖ్యమైనవి':'Main'}</p>
           {mainLinks.map(l => (
             <Link key={l.href} href={l.href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition
-                ${active(l.href) ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
+                ${active(l.href) ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 dark:hover:bg-slate-800/50'}`}
               style={{color: active(l.href) ? undefined : 'rgb(var(--muted))'}}>
               <span className="text-base">{l.emoji}</span>
               <span>{label(l,lang)}</span>
               {active(l.href) && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500"/>}
             </Link>
           ))}
-          <p className="text-[10px] font-black uppercase tracking-widest px-2 mb-2 mt-4" style={{color:'rgb(var(--muted))'}}>Operations</p>
+          <p className="text-[10px] font-black uppercase tracking-widest px-2 mb-2 mt-4" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'కార్యకలాపాలు':'Operations'}</p>
           {moreLinks.map(l => (
             <Link key={l.href} href={l.href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition
-                ${active(l.href) ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
+                ${active(l.href) ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 dark:hover:bg-slate-800/50'}`}
               style={{color: active(l.href) ? undefined : 'rgb(var(--muted))'}}>
               <span className="text-base">{l.emoji}</span>
               <span>{label(l,lang)}</span>
