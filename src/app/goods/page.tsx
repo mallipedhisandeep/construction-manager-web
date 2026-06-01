@@ -141,7 +141,7 @@ function GoodsPage() {
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="bg-red-50 rounded-xl p-2 text-center"><p className="font-black text-red-600 text-sm">₹{totalSpend.toFixed(0)}</p><p className="text-[10px] text-red-400">{te?'మొత్తం ఆర్డర్':'Total Ordered'}</p></div>
             <div className="bg-green-50 rounded-xl p-2 text-center"><p className="font-black text-green-600 text-sm">₹{totalAdv.toFixed(0)}</p><p className="text-[10px] text-green-400">{te?'అడ్వాన్స్ చెల్లింపు':'Advance Paid'}</p></div>
-            <div className="bg-orange-50 rounded-xl p-2 text-center"><p className="font-black text-orange-600 text-sm">₹{(totalSpend-totalAdv).toFixed(0)}</p><p className="text-[10px] text-orange-400">{te?'బాకీ':'Balance Due'}</p></div>
+            <div className="bg-slate-800/50 rounded-xl p-2 text-center"><p className="font-black text-amber-500 text-sm">₹{(totalSpend-totalAdv).toFixed(0)}</p><p className="text-[10px] text-amber-400">{te?'బాకీ':'Balance Due'}</p></div>
           </div>
         )}
         <div className="flex gap-2 overflow-x-auto">
@@ -153,7 +153,7 @@ function GoodsPage() {
 
       <div className="px-4 pt-4">
         {loading
-          ? <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full"/></div>
+          ? <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full"/></div>
           : filtered.length===0
             ? <div className="text-center py-16"><div className="text-5xl mb-2 opacity-20">📦</div><p className="dark:text-slate-500 text-gray-400">{te?'ఆర్డర్లు లేవు':'No orders'}</p></div>
             : filtered.map(o=>(
@@ -171,7 +171,7 @@ function GoodsPage() {
                     <div className="text-right flex-shrink-0">
                       <p className="font-black dark:text-slate-100 text-gray-800">₹{o.total_price.toFixed(0)}</p>
                       {o.advance_paid>0 && <p className="text-xs text-green-600">{te?'అడ్వాన్స్':'Adv'} ₹{o.advance_paid}</p>}
-                      {o.total_price-o.advance_paid>0 && <p className="text-xs text-orange-500">{te?'బాకీ':'Due'} ₹{(o.total_price-o.advance_paid).toFixed(0)}</p>}
+                      {o.total_price-o.advance_paid>0 && <p className="text-xs text-amber-400">{te?'బాకీ':'Due'} ₹{(o.total_price-o.advance_paid).toFixed(0)}</p>}
                     </div>
                   </div>
                 </div>
@@ -233,9 +233,9 @@ function GoodsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="label">{te?'ధర / యూనిట్ ₹':'Price / Unit ₹'}</label><input type="number" inputMode="decimal" value={form.priceStr??''} onChange={e=>setForm(f=>({...f,priceStr:e.target.value}))} className="input" placeholder="0"/></div>
-                <div className="bg-orange-50 rounded-xl p-3 flex flex-col justify-center">
-                  <p className="text-xs text-orange-500 font-bold uppercase tracking-wide">{te?'మొత్తం':'Total'}</p>
-                  <p className="text-lg font-black text-orange-700">₹{calcTotal().toFixed(0)}</p>
+                <div className="bg-slate-800/50 rounded-xl p-3 flex flex-col justify-center">
+                  <p className="text-xs text-amber-400 font-bold uppercase tracking-wide">{te?'మొత్తం':'Total'}</p>
+                  <p className="text-lg font-black text-amber-400">₹{calcTotal().toFixed(0)}</p>
                 </div>
               </div>
               <div>
