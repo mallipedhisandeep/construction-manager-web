@@ -1,46 +1,30 @@
 'use client'
-// OAuth callback handler — Supabase redirects here after Google login
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 export default function AuthCallback() {
   const router = useRouter()
-
   useEffect(() => {
-    // Supabase JS client auto-processes the token from the URL.
-    // We just wait for the session to be ready, then navigate home.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        subscription.unsubscribe()
-        router.replace('/')
-      }
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) router.replace('/')
+      else router.replace('/login')
     })
-
-    // Also handle case where session already exists (page refresh)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        subscription.unsubscribe()
-        router.replace('/')
-      }
-    })
-
-    // Timeout fallback — if something goes wrong, go to login
-    const t = setTimeout(() => {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        router.replace(session ? '/' : '/login')
-      })
-    }, 5000)
-
-    return () => { subscription.unsubscribe(); clearTimeout(t) }
   }, [router])
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-orange-600 to-orange-100">
-      <div className="text-center">
-        <div className="w-14 h-14 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-white font-semibold text-lg">Signing you in...</p>
-        <p className="text-orange-100 text-sm mt-1">లాగిన్ అవుతోంది...</p>
+    <div className="min-h-screen flex flex-col items-center justify-center"
+      style={{background:'linear-gradient(160deg, #0a0e16 0%, #111827 100%)'}}>
+      <div className="flex flex-col items-center gap-4">
+        <div className="relative w-16 h-16 rounded-full flex items-center justify-center"
+          style={{background:'rgba(212,140,40,0.1)',border:'2px solid rgba(212,140,40,0.3)'}}>
+          <span style={{fontSize:'1.8rem'}}>🏗️</span>
+          <div className="absolute inset-0 rounded-full border-2 border-transparent animate-spin"
+            style={{borderTopColor:'#d48c28',borderRightColor:'rgba(212,140,40,0.3)'}}/>
+        </div>
+        <p className="text-sm font-medium tracking-widest uppercase" style={{color:'rgba(212,140,40,0.8)'}}>
+          లాగిన్ అవుతోంది...
+        </p>
       </div>
     </div>
   )
