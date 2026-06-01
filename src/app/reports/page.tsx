@@ -119,7 +119,7 @@ function ReportsPage() {
             .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; }
             .card .val { font-size: 22px; font-weight: 900; }
             .card .lbl { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-            .green { color: #16a34a; } .red { color: #dc2626; } .orange { color: #ea580c; } .blue { color: #2563eb; }
+            .green { color: #16a34a; } .red { color: #dc2626; } .orange { color: #d48c28; } .blue { color: #2563eb; }
             table { width: 100%; border-collapse: collapse; font-size: 13px; }
             th { text-align: left; padding: 8px; border-bottom: 2px solid #e2e8f0; font-size: 11px; color: #64748b; text-transform: uppercase; }
             td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
@@ -226,7 +226,7 @@ function ReportsPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="card p-4 text-center"><p className="text-lg font-black text-blue-600">₹{(overview.totalBudget/100000).toFixed(1)}L</p><p className="text-xs dark:text-slate-500 text-gray-400">{te?'మొత్తం బడ్జెట్':'Total Budget'}</p></div>
                     <div className="card p-4 text-center"><p className="text-lg font-black text-green-600">₹{overview.totalReceived.toFixed(0)}</p><p className="text-xs dark:text-slate-500 text-gray-400">{te?'స్వీకరించబడింది':'Received'}</p></div>
-                    <div className="card p-4 text-center"><p className="text-lg font-black text-orange-600">₹{overview.totalWorkerSpend.toFixed(0)}</p><p className="text-xs dark:text-slate-500 text-gray-400">{te?'కార్మికుల వేతనాలు':'Worker Cost'}</p></div>
+                    <div className="card p-4 text-center"><p className="text-lg font-black text-amber-500">₹{overview.totalWorkerSpend.toFixed(0)}</p><p className="text-xs dark:text-slate-500 text-gray-400">{te?'కార్మికుల వేతనాలు':'Worker Cost'}</p></div>
                     <div className="card p-4 text-center"><p className="text-lg font-black text-red-500">₹{overview.totalGoodsSpend.toFixed(0)}</p><p className="text-xs dark:text-slate-500 text-gray-400">{te?'వస్తువుల ఖర్చు':'Goods Cost'}</p></div>
                   </div>
                   <div className="card p-4">
@@ -239,7 +239,7 @@ function ReportsPage() {
                       return (
                         <div key={l} className="mb-3">
                           <div className="flex justify-between text-sm mb-1"><span className="dark:text-slate-300 text-gray-600">{l}</span><span className="font-bold">₹{v.toFixed(0)} ({pct}%)</span></div>
-                          <div className="h-2 bg-gray-100 rounded-full"><div className="h-2 bg-orange-500 rounded-full" style={{width:`${pct}%`}}/></div>
+                          <div className="h-2 bg-gray-100 rounded-full"><div className="h-2 bg-amber-500 rounded-full" style={{width:`${pct}%`}}/></div>
                         </div>
                       )
                     })}
@@ -277,7 +277,7 @@ function ReportsPage() {
                     {s.budget>0 && (
                       <div className="mt-3">
                         <div className="flex justify-between text-xs dark:text-slate-500 text-gray-400 mb-1"><span>{te?'బడ్జెట్ వాడుక':'Budget used'}</span><span>{Math.round(spend/s.budget*100)}%</span></div>
-                        <div className="h-1.5 bg-gray-100 rounded-full"><div className={`h-1.5 rounded-full ${spend/s.budget>0.9?'bg-red-500':spend/s.budget>0.7?'bg-orange-500':'bg-green-500'}`} style={{width:`${Math.min(100,Math.round(spend/s.budget*100))}%`}}/></div>
+                        <div className="h-1.5 bg-gray-100 rounded-full"><div className={`h-1.5 rounded-full ${spend/s.budget>0.9?'bg-red-500':spend/s.budget>0.7?'bg-amber-500':'bg-green-500'}`} style={{width:`${Math.min(100,Math.round(spend/s.budget*100))}%`}}/></div>
                       </div>
                     )}
                   </div>
@@ -293,7 +293,7 @@ function ReportsPage() {
                workerReports.length===0 ? <div className="text-center py-16 dark:text-slate-500 text-gray-400">{te?'హాజరు డేటా లేదు':'No attendance data'}</div>
                : workerReports.map(w=>(
                 <div key={w.id} className="card p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-orange-100 rounded-2xl flex items-center justify-center font-black text-orange-600 flex-shrink-0">{w.name[0]}</div>
+                  <div className="w-10 h-10 bg-amber-900/30 rounded-2xl flex items-center justify-center font-black text-amber-500 flex-shrink-0">{w.name[0]}</div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold dark:text-slate-100 text-gray-800">{w.name}</p>
                     <p className="text-xs dark:text-slate-500 text-gray-400">{w.daysWorked} {te?'రోజులు':'days'} · {te?'సంపాదించినది':'Earned'} ₹{w.totalEarned} · {te?'అడ్వాన్స్':'Adv'} ₹{w.totalAdv}</p>
@@ -319,7 +319,7 @@ function ReportsPage() {
                     <p className="font-bold dark:text-slate-200 text-gray-700 mb-4">{te?'మీరు ఇవ్వాల్సినవి':'What You Owe'}</p>
                     <div className="space-y-3">
                       {[
-                        { l: te?'కార్మికుల వేతనాలు':'Workers (wages due)',       v:outstanding.workers,        e:'👷', c:'text-orange-600' },
+                        { l: te?'కార్మికుల వేతనాలు':'Workers (wages due)',       v:outstanding.workers,        e:'👷', c:'text-amber-500' },
                         { l: te?'సరఫరాదారు బిల్లులు':'Suppliers (goods bill due)', v:outstanding.suppliers,      e:'🏪', c:'text-red-500'    },
                         { l: te?'ప్రైవేట్ కాంట్రాక్టర్లు':'Private Contractors',   v:outstanding.privateWorkers, e:'🔧', c:'text-purple-600' },
                       ].map(({l,v,e,c})=>(
