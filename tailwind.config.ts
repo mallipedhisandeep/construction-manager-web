@@ -4,14 +4,18 @@ const config: Config = {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        display: ['Syne', 'system-ui', 'sans-serif'],
+        body: ['DM Sans', 'system-ui', 'sans-serif'],
+      },
       colors: {
-        brand: {
+        accent: {
           DEFAULT: '#d48c28',
           light: '#f0b040',
           dark: '#9a6010',
-          steel: '#1a2540',
         }
-      }
+      },
+      borderWidth: { '3': '3px' },
     }
   },
   plugins: [],
