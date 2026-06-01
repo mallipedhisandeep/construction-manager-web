@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
-import AppShell from '@/components/AppShell'
+import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 
 interface SiteReport   { id:string; name:string; budget:number; received:number; workerCost:number; goodsCost:number; status:string }
@@ -19,6 +19,8 @@ function SkeletonCard({ rows=2 }: { rows?: number }) {
 }
 
 function ReportsPage() {
+  const { lang } = useLang()
+  const te = lang === 'te'
   const [siteReports,   setSiteReports]   = useState<SiteReport[]>([])
   const [workerReports, setWorkerReports] = useState<WorkerReport[]>([])
   const [tab,     setTab]     = useState<'overview'|'sites'|'workers'|'outstanding'>('overview')
@@ -143,7 +145,7 @@ function ReportsPage() {
           <div class="hero">
             <div>Net Profit / Loss (All Time)</div>
             <div class="big">₹${Math.abs(overview.netPL).toFixed(0)}</div>
-            <div class="sub">${overview.netPL>=0?'You are in profit 🎉':'You are at a loss ⚠️'}</div>
+            <div class="sub">${overview.netPL>=0?'{te?'లాభంలో ఉన్నారు 🎉':'You are in profit 🎉'}':'{te?'నష్టంలో ఉన్నారు ⚠️':'You are at a loss ⚠️'}'}</div>
           </div>
 
           <div class="grid">
@@ -193,15 +195,15 @@ function ReportsPage() {
       <div className="page">
         <div className="page-header">
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-xl font-black text-gray-800">📊 Reports</h1>
+            <h1 className="text-xl font-black dark:text-slate-100 text-gray-800">📊 Reports</h1>
             {/* FIX: PDF/Print export button */}
             <button onClick={handlePrint}
-              className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-3 py-2 rounded-xl transition">
+              className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 dark:text-slate-200 text-gray-700 text-sm font-semibold px-3 py-2 rounded-xl transition">
               🖨️ Export PDF
             </button>
           </div>
           <div className="flex gap-2 overflow-x-auto">
-            {([['overview','Overview'],['sites','Sites'],['workers','Workers'],['outstanding','Outstanding']] as const).map(([t,l])=>(
+            {([['overview',{te?'అవలోకనం':'Overview'}],['sites',{te?'సైట్లు':'Sites'}],['workers',{te?'కార్మికులు':'Workers'}],['outstanding',{te?'బకాయిలు':'Outstanding'}]] as const).map(([t,l])=>(
               <button key={t} onClick={()=>setTab(t)} className={`chip flex-shrink-0 ${tab===t?'chip-active':'chip-idle'}`}>{l}</button>
             ))}
           </div>
@@ -223,21 +225,21 @@ function ReportsPage() {
                   <div className={`rounded-2xl p-5 text-center ${overview.netPL>=0?'bg-gradient-to-br from-green-500 to-emerald-600':'bg-gradient-to-br from-red-500 to-red-600'}`}>
                     <p className="text-white/70 text-xs font-bold uppercase tracking-wide">Net Profit / Loss (All Time)</p>
                     <p className="text-white text-4xl font-black mt-1">₹{Math.abs(overview.netPL).toFixed(0)}</p>
-                    <p className="text-white/80 text-sm mt-1">{overview.netPL>=0?'You are in profit 🎉':'You are at a loss ⚠️'}</p>
+                    <p className="text-white/80 text-sm mt-1">{overview.netPL>=0?'{te?'లాభంలో ఉన్నారు 🎉':'You are in profit 🎉'}':'{te?'నష్టంలో ఉన్నారు ⚠️':'You are at a loss ⚠️'}'}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="card p-4 text-center"><p className="text-lg font-black text-blue-600">₹{(overview.totalBudget/100000).toFixed(1)}L</p><p className="text-xs text-gray-400">Total Budget</p></div>
-                    <div className="card p-4 text-center"><p className="text-lg font-black text-green-600">₹{overview.totalReceived.toFixed(0)}</p><p className="text-xs text-gray-400">Received</p></div>
-                    <div className="card p-4 text-center"><p className="text-lg font-black text-orange-600">₹{overview.totalWorkerSpend.toFixed(0)}</p><p className="text-xs text-gray-400">Worker Cost</p></div>
-                    <div className="card p-4 text-center"><p className="text-lg font-black text-red-500">₹{overview.totalGoodsSpend.toFixed(0)}</p><p className="text-xs text-gray-400">Goods Cost</p></div>
+                    <div className="card p-4 text-center"><p className="text-lg font-black text-blue-600">₹{(overview.totalBudget/100000).toFixed(1)}L</p><p className="text-xs dark:text-slate-500 text-gray-400">Total Budget</p></div>
+                    <div className="card p-4 text-center"><p className="text-lg font-black text-green-600">₹{overview.totalReceived.toFixed(0)}</p><p className="text-xs dark:text-slate-500 text-gray-400">Received</p></div>
+                    <div className="card p-4 text-center"><p className="text-lg font-black text-orange-600">₹{overview.totalWorkerSpend.toFixed(0)}</p><p className="text-xs dark:text-slate-500 text-gray-400">Worker Cost</p></div>
+                    <div className="card p-4 text-center"><p className="text-lg font-black text-red-500">₹{overview.totalGoodsSpend.toFixed(0)}</p><p className="text-xs dark:text-slate-500 text-gray-400">Goods Cost</p></div>
                   </div>
                   <div className="card p-4">
-                    <p className="font-bold text-gray-700 mb-3">Expense Breakdown</p>
+                    <p className="font-bold dark:text-slate-200 text-gray-700 mb-3">Expense Breakdown</p>
                     {([['Worker Wages',overview.totalWorkerSpend],['Goods & Materials',overview.totalGoodsSpend]] as [string,number][]).map(([l,v])=>{
                       const pct = overview.totalSpend>0?Math.round(v/overview.totalSpend*100):0
                       return (
                         <div key={l} className="mb-3">
-                          <div className="flex justify-between text-sm mb-1"><span className="text-gray-600">{l}</span><span className="font-bold">₹{v.toFixed(0)} ({pct}%)</span></div>
+                          <div className="flex justify-between text-sm mb-1"><span className="dark:text-slate-300 text-gray-600">{l}</span><span className="font-bold">₹{v.toFixed(0)} ({pct}%)</span></div>
                           <div className="h-2 bg-gray-100 rounded-full"><div className="h-2 bg-orange-500 rounded-full" style={{width:`${pct}%`}}/></div>
                         </div>
                       )
@@ -252,15 +254,15 @@ function ReportsPage() {
           {tab==='sites' && (
             <div className="space-y-3">
               {loading ? [0,1,2].map(i=><SkeletonCard key={i} rows={3}/>) :
-               siteReports.length===0 ? <div className="text-center py-16 text-gray-400">No site data</div>
+               siteReports.length===0 ? <div className="text-center py-16 dark:text-slate-500 text-gray-400">No site data</div>
                : siteReports.map(s=>{
                 const spend = s.workerCost + s.goodsCost
                 const netPL = s.received - spend
                 return (
                   <div key={s.id} className="card p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <div><p className="font-bold text-gray-800">{s.name}</p><span className={s.status==='Active'?'badge-green':'badge-blue'}>{s.status}</span></div>
-                      <div className="text-right"><p className={`font-black ${netPL>=0?'text-green-600':'text-red-500'}`}>₹{Math.abs(netPL).toFixed(0)}</p><p className="text-xs text-gray-400">{netPL>=0?'Profit':'Loss'}</p></div>
+                      <div><p className="font-bold dark:text-slate-100 text-gray-800">{s.name}</p><span className={s.status==='Active'?'badge-green':'badge-blue'}>{s.status}</span></div>
+                      <div className="text-right"><p className={`font-black ${netPL>=0?'text-green-600':'text-red-500'}`}>₹{Math.abs(netPL).toFixed(0)}</p><p className="text-xs dark:text-slate-500 text-gray-400">{netPL>=0?{te?'లాభం':'Profit'}:{te?'నష్టం':'Loss'}}</p></div>
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-center text-xs">
                       <div className="bg-blue-50 rounded-lg p-2"><p className="font-bold text-blue-600">₹{(s.budget/100000).toFixed(1)}L</p><p className="text-blue-400">Budget</p></div>
@@ -269,7 +271,7 @@ function ReportsPage() {
                     </div>
                     {s.budget>0 && (
                       <div className="mt-3">
-                        <div className="flex justify-between text-xs text-gray-400 mb-1"><span>Budget used</span><span>{Math.round(spend/s.budget*100)}%</span></div>
+                        <div className="flex justify-between text-xs dark:text-slate-500 text-gray-400 mb-1"><span>Budget used</span><span>{Math.round(spend/s.budget*100)}%</span></div>
                         <div className="h-1.5 bg-gray-100 rounded-full"><div className={`h-1.5 rounded-full ${spend/s.budget>0.9?'bg-red-500':spend/s.budget>0.7?'bg-orange-500':'bg-green-500'}`} style={{width:`${Math.min(100,Math.round(spend/s.budget*100))}%`}}/></div>
                       </div>
                     )}
@@ -283,17 +285,17 @@ function ReportsPage() {
           {tab==='workers' && (
             <div className="space-y-2">
               {loading ? [0,1,2,3].map(i=><SkeletonCard key={i}/>) :
-               workerReports.length===0 ? <div className="text-center py-16 text-gray-400">No attendance data</div>
+               workerReports.length===0 ? <div className="text-center py-16 dark:text-slate-500 text-gray-400">No attendance data</div>
                : workerReports.map(w=>(
                 <div key={w.id} className="card p-4 flex items-center gap-3">
                   <div className="w-10 h-10 bg-orange-100 rounded-2xl flex items-center justify-center font-black text-orange-600 flex-shrink-0">{w.name[0]}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-800">{w.name}</p>
-                    <p className="text-xs text-gray-400">{w.daysWorked} days · Earned ₹{w.totalEarned} · Adv ₹{w.totalAdv}</p>
+                    <p className="font-bold dark:text-slate-100 text-gray-800">{w.name}</p>
+                    <p className="text-xs dark:text-slate-500 text-gray-400">{w.daysWorked} days · Earned ₹{w.totalEarned} · Adv ₹{w.totalAdv}</p>
                   </div>
                   <div className="text-right">
-                    <p className={`font-black text-sm ${w.balance>0?'text-red-500':w.balance<0?'text-green-600':'text-gray-400'}`}>₹{Math.abs(w.balance).toFixed(0)}</p>
-                    <p className="text-[10px] text-gray-400">{w.balance>0?'Owe':'Advance'}</p>
+                    <p className={`font-black text-sm ${w.balance>0?'text-red-500':w.balance<0?'text-green-600':'dark:text-slate-500 text-gray-400'}`}>₹{Math.abs(w.balance).toFixed(0)}</p>
+                    <p className="text-[10px] dark:text-slate-500 text-gray-400">{w.balance>0?{te?'ఇవ్వాలి':'Owe'}:{te?'అడ్వాన్స్':'Advance'}}</p>
                   </div>
                 </div>
               ))}
@@ -306,7 +308,7 @@ function ReportsPage() {
               {loading ? [0,1].map(i=><SkeletonCard key={i} rows={3}/>) : (
                 <>
                   <div className="card p-5">
-                    <p className="font-bold text-gray-700 mb-4">What You Owe</p>
+                    <p className="font-bold dark:text-slate-200 text-gray-700 mb-4">What You Owe</p>
                     <div className="space-y-3">
                       {[
                         { l:'Workers (wages due)',      v:outstanding.workers,        e:'👷', c:'text-orange-600' },
@@ -315,19 +317,19 @@ function ReportsPage() {
                       ].map(({l,v,e,c})=>(
                         <div key={l} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
                           <span className="text-xl">{e}</span>
-                          <div className="flex-1"><p className="text-sm text-gray-600">{l}</p></div>
+                          <div className="flex-1"><p className="text-sm dark:text-slate-300 text-gray-600">{l}</p></div>
                           <p className={`font-black ${c}`}>₹{v.toFixed(0)}</p>
                         </div>
                       ))}
                     </div>
-                    <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between">
-                      <span className="font-black text-gray-700">Total Outstanding</span>
+                    <div className="mt-4 pt-3 border-t dark:border-slate-700 border-gray-100 flex justify-between">
+                      <span className="font-black dark:text-slate-200 text-gray-700">Total Outstanding</span>
                       <span className="font-black text-red-600">₹{(outstanding.workers+outstanding.suppliers+outstanding.privateWorkers).toFixed(0)}</span>
                     </div>
                   </div>
                   <div className="card p-4 flex items-center gap-3">
                     <span className="text-3xl">🏗️</span>
-                    <div><p className="font-bold text-gray-800">{outstanding.sitesPending} Active Sites</p><p className="text-sm text-gray-500">Currently under construction</p></div>
+                    <div><p className="font-bold dark:text-slate-100 text-gray-800">{outstanding.sitesPending} Active Sites</p><p className="text-sm dark:text-slate-400 text-gray-500">Currently under construction</p></div>
                   </div>
                 </>
               )}
