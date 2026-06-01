@@ -21,11 +21,17 @@ function LoginInner() {
     setLoading(true)
     setError('')
     try {
+      // IMPORTANT: Do NOT use skipBrowserRedirect or a popup.
+      // On Android PWA, the OAuth flow MUST do a full page redirect (same tab).
+      // This keeps the PKCE code_verifier in localStorage accessible when
+      // Google redirects back to /auth/callback in the same browser context.
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: { access_type: 'offline', prompt: 'consent' },
+          // Remove access_type + prompt — these are not needed for basic
+          // Google OAuth and can cause issues with some Supabase configurations.
+          // Add them back only if you specifically need a refresh token.
         },
       })
       if (error) { setError(error.message); setLoading(false) }
