@@ -110,7 +110,7 @@ function PrivateWorkersPage() {
               <div className="w-11 h-11 bg-purple-100 rounded-full flex items-center justify-center text-purple-700 font-bold text-lg flex-shrink-0">{w.name[0]}</div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold [text-gray-800_not_used]dark:text-slate-100 text-gray-800">{w.name}</span>
+                  <span className="font-bold ">{w.name}</span>
                   <span className="text-xs dark:text-slate-400 text-gray-500">{w.work_type}</span>
                 </div>
                 {w.phone && <a href={`tel:${w.phone}`} className="text-xs text-green-600">📞 {w.phone}</a>}
@@ -210,7 +210,7 @@ function PrivateWorkersPage() {
 const Overlay = ({ title, onClose, children }: { title:string; onClose:()=>void; children:React.ReactNode }) => (
   <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center p-0 md:p-4" onClick={onClose}>
     <div className="dark:bg-slate-800 bg-white w-full md:max-w-md rounded-t-2xl md:rounded-2xl max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
-      <div className="sticky top-0 bg-white border-b px-5 py-4 flex justify-between">
+      <div className="sticky top-0 border-b px-5 py-4 flex justify-between" style={{backgroundColor:'rgb(var(--surface))'}}>
         <h2 className="font-bold text-base">{title}</h2>
         <button onClick={onClose} className="dark:text-slate-500 text-gray-400 text-xl">✕</button>
       </div>
