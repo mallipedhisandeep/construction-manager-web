@@ -158,9 +158,9 @@ function MoneyPage() {
                 <div key={s.id} className="card mb-2 p-4">
                   <p className="font-bold mb-2" style={{color:'rgb(var(--text))'}}>{s.name}</p>
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="bg-green-50 dark:bg-green-900/30 rounded-xl p-2"><p className="text-sm font-black text-green-600">₹{s.income.toFixed(0)}</p><p className="text-[10px] text-green-400">{te?'వచ్చింది':'Received'}</p></div>
+                    <div className="bg-green-50 dark:bg-green-900/30  rounded-xl p-2"><p className="text-sm font-black text-green-600">₹{s.income.toFixed(0)}</p><p className="text-[10px] text-green-400">{te?'వచ్చింది':'Received'}</p></div>
                     <div className="bg-red-50 dark:bg-red-900/30 rounded-xl p-2"><p className="text-sm font-black text-red-500">₹{(s.workerCost+s.goodsCost).toFixed(0)}</p><p className="text-[10px] text-red-400">{te?'ఖర్చు':'Spent'}</p></div>
-                    <div className={`rounded-xl p-2 ${s.net>=0?'bg-green-50 dark:bg-green-900/30':'bg-red-50 dark:bg-red-900/30'}`}><p className={`text-sm font-black ${s.net>=0?'text-green-700':'text-red-600'}`}>₹{Math.abs(s.net).toFixed(0)}</p><p className={`text-[10px] ${s.net>=0?'text-green-400':'text-red-400'}`}>{s.net>=0?(te?'లాభం':'Profit'):(te?'నష్టం':'Loss')}</p></div>
+                    <div className={`rounded-xl p-2 ${s.net>=0?'bg-green-50 dark:bg-green-900/30 ':'bg-red-50 dark:bg-red-900/30'}`}><p className={`text-sm font-black ${s.net>=0?'text-green-700':'text-red-600'}`}>₹{Math.abs(s.net).toFixed(0)}</p><p className={`text-[10px] ${s.net>=0?'text-green-400':'text-red-400'}`}>{s.net>=0?(te?'లాభం':'Profit'):(te?'నష్టం':'Loss')}</p></div>
                   </div>
                 </div>
               ))}
