@@ -133,32 +133,32 @@ function AttendancePage() {
       <div className="border-b sticky top-14 z-30 px-4 py-3" style={{backgroundColor:"rgb(var(--surface))"}}>
         {view==='summary' ? (
           <div className="flex items-center gap-3">
-            <button onClick={()=>setView('day')} className="text-orange-600 font-bold text-sm">← Back</button>
+            <button onClick={()=>setView('day')} className="text-amber-500 font-bold text-sm">← Back</button>
             <div className="flex-1">
               <p className="font-black" style={{color:"rgb(var(--text))"}}>{sumWorker?.name}</p>
               <p className="text-xs dark:text-slate-500 text-gray-400">{months[month]} {year} — Summary</p>
             </div>
-            {sumLoading && <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin"/>}
+            {sumLoading && <div className="w-4 h-4 border-2 border-amber-400/50 border-t-transparent rounded-full animate-spin"/>}
           </div>
         ) : (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <select value={year} onChange={e=>{ setYear(+e.target.value) }}
-                className="border dark:border-slate-600 border-gray-200 rounded-lg px-2 py-1.5 text-sm font-semibold focus:ring-2 focus:ring-orange-400 focus:outline-none">
+                className="border dark:border-slate-600 border-gray-200 rounded-lg px-2 py-1.5 text-sm font-semibold focus:ring-2 focus:ring-amber-400 focus:outline-none">
                 {[now.getFullYear()-1, now.getFullYear(), now.getFullYear()+1].map(y=><option key={y} value={y}>{y}</option>)}
               </select>
               <div className="flex overflow-x-auto gap-1 flex-1 pb-0.5">
                 {months.map((m,i)=>(
                   <button key={i} onClick={()=>setMonth(i)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap flex-shrink-0 transition ${month===i?'bg-orange-600 text-white':'bg-gray-100 dark:text-slate-400 text-gray-500 hover:bg-gray-200'}`}>
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap flex-shrink-0 transition ${month===i?'bg-amber-600 text-white':'bg-gray-100 dark:text-slate-400 text-gray-500 hover:bg-gray-200'}`}>
                     {m.slice(0,3)}
                   </button>
                 ))}
               </div>
             </div>
-            <div className="bg-orange-50 rounded-xl px-3 py-2 flex items-center justify-between">
-              <span className="text-sm font-bold text-orange-700">📅 {months[month]} {day}, {year}</span>
-              <span className="text-xs text-orange-500">{Object.keys(attMap).length}/{workers.length} marked</span>
+            <div className="bg-slate-800/50 rounded-xl px-3 py-2 flex items-center justify-between">
+              <span className="text-sm font-bold text-amber-400">📅 {months[month]} {day}, {year}</span>
+              <span className="text-xs text-amber-400">{Object.keys(attMap).length}/{workers.length} marked</span>
             </div>
           </div>
         )}
@@ -168,7 +168,7 @@ function AttendancePage() {
         <div className="p-4 max-w-xl mx-auto space-y-3">
           {sumLoading ? (
             <div className="flex flex-col items-center py-16 gap-3">
-              <div className="animate-spin w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full"/>
+              <div className="animate-spin w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full"/>
               <p className="dark:text-slate-500 text-gray-400 text-sm">Loading...</p>
             </div>
           ) : (
@@ -183,7 +183,7 @@ function AttendancePage() {
                   <p className="text-xs dark:text-slate-500 text-gray-400 mt-0.5">Earned</p>
                 </div>
                 <div className="rounded-2xl border p-3 text-center shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}>
-                  <p className="text-2xl font-black text-orange-500">₹{advTot.toFixed(0)}</p>
+                  <p className="text-2xl font-black text-amber-400">₹{advTot.toFixed(0)}</p>
                   <p className="text-xs dark:text-slate-500 text-gray-400 mt-0.5">Advance</p>
                 </div>
               </div>
@@ -221,7 +221,7 @@ function AttendancePage() {
                         </div>
                         <div className="flex-1">
                           <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${SL[a.attendance_type]??''}`}>{SHIFT_LABELS[a.attendance_type] ?? a.attendance_type}</span>
-                          {a.advance>0 && <span className="ml-2 text-xs text-orange-500 font-semibold">Adv ₹{a.advance}</span>}
+                          {a.advance>0 && <span className="ml-2 text-xs text-amber-400 font-semibold">Adv ₹{a.advance}</span>}
                           {a.site_id && (
                             <p className="text-[11px] text-blue-500 font-medium mt-0.5">
                               📍 {sites.find(s=>s.id===a.site_id)?.site_name ?? 'Site'}
@@ -247,9 +247,9 @@ function AttendancePage() {
                 const isSel     = d===day
                 const isWeekend = [0,6].includes(new Date(year,month,d).getDay())
                 const markStatus = markedDays[dk]
-                const bgClass = isSel ? 'bg-orange-600' : markStatus === 'full' ? 'bg-green-500' : markStatus === 'partial' ? 'bg-amber-400' : isToday ? 'bg-orange-100' : 'hover:dark:bg-slate-800 bg-gray-50'
-                const numColor = isSel ? 'text-white' : markStatus ? 'text-white' : isToday ? 'text-orange-700' : isWeekend ? 'text-red-400' : 'dark:text-slate-300 text-gray-600'
-                const dowColor = isSel ? 'text-orange-100' : markStatus ? 'text-white/70' : isToday ? 'text-orange-500' : isWeekend ? 'text-red-300' : 'text-gray-300'
+                const bgClass = isSel ? 'bg-amber-600' : markStatus === 'full' ? 'bg-green-500' : markStatus === 'partial' ? 'bg-amber-400' : isToday ? 'bg-amber-900/30' : 'hover:dark:bg-slate-800 bg-gray-50'
+                const numColor = isSel ? 'text-white' : markStatus ? 'text-white' : isToday ? 'text-amber-400' : isWeekend ? 'text-red-400' : 'dark:text-slate-300 text-gray-600'
+                const dowColor = isSel ? 'text-amber-100' : markStatus ? 'text-white/70' : isToday ? 'text-amber-400' : isWeekend ? 'text-red-300' : 'text-gray-300'
                 return (
                   <button key={d} onClick={()=>setDay(d)} className={`w-full py-3 flex flex-col items-center transition ${bgClass}`}>
                     <span className={`text-xs font-black leading-none ${numColor}`}>{d}</span>
@@ -271,7 +271,7 @@ function AttendancePage() {
                 {Object.entries(grouped).map(([wt,list])=>(
                   <div key={wt} className="mb-4">
                     <div className="flex items-center gap-2 mb-2 sticky top-0 py-1" style={{backgroundColor:"rgb(var(--bg))"}}>
-                      <div className="w-1 h-4 bg-orange-500 rounded"/>
+                      <div className="w-1 h-4 bg-amber-500 rounded"/>
                       <span className="text-sm font-black dark:text-slate-200 text-gray-700">{wt}</span>
                       <span className="text-xs dark:text-slate-500 text-gray-400 ml-1">{list.filter(w=>attMap[w.id!]).length}/{list.length} marked</span>
                     </div>
@@ -288,7 +288,7 @@ function AttendancePage() {
                             {att ? (
                               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                 <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold border ${SL[att.attendance_type]??''}`}>{SHIFT_LABELS[att.attendance_type] ?? att.attendance_type}</span>
-                                {att.advance>0 && <span className="text-[11px] text-orange-500 font-medium">₹{att.advance} adv</span>}
+                                {att.advance>0 && <span className="text-[11px] text-amber-400 font-medium">₹{att.advance} adv</span>}
                               </div>
                             ) : (
                               <p className="text-[11px] text-gray-300 mt-0.5">{ts(lang,'notMarked') as string}</p>
@@ -300,7 +300,7 @@ function AttendancePage() {
                               const a=attMap[w.id!]
                               setForm({shift:a?.attendance_type??'6-6',siteId:a?.site_id??(sites[0]?.id??''),advance:a?.advance?.toString()??'',payMode:a?.payment_mode??'Cash'})
                               setModal(w)
-                            }} className={`p-1.5 rounded-lg ${att?'text-orange-500 hover:bg-orange-50':'text-green-500 hover:bg-green-50'}`}>
+                            }} className={`p-1.5 rounded-lg ${att?'text-amber-400 hover:bg-slate-800/50':'text-green-500 hover:bg-green-50'}`}>
                               {att?'✏️':'➕'}
                             </button>
                           </div>
@@ -329,20 +329,20 @@ function AttendancePage() {
             <div className="grid grid-cols-4 gap-2 mb-4">
               {SHIFTS.map(s=>(
                 <button key={s} onClick={()=>setForm({...form,shift:s})}
-                  className={`py-2.5 rounded-xl text-xs font-bold border-2 transition ${form.shift===s?`${SC[s]} text-white border-transparent`:'bg-opacity-0 dark:text-slate-300 text-gray-600 dark:border-slate-600 border-gray-200 hover:border-orange-300'}`}>
+                  className={`py-2.5 rounded-xl text-xs font-bold border-2 transition ${form.shift===s?`${SC[s]} text-white border-transparent`:'bg-opacity-0 dark:text-slate-300 text-gray-600 dark:border-slate-600 border-gray-200 hover:border-amber-400'}`}>
                   {SHIFT_LABELS[s] ?? s}
                 </button>
               ))}
             </div>
             {form.shift!=='Absent' && (
-              <div className="bg-orange-50 rounded-xl px-4 py-2 text-sm font-semibold text-orange-700 mb-3">
+              <div className="bg-slate-800/50 rounded-xl px-4 py-2 text-sm font-semibold text-amber-400 mb-3">
                 💰 Wage: ₹{wage(modal,form.shift)}
               </div>
             )}
             {sites.length>0 && (
               <div className="mb-3">
                 <label className="block text-xs font-bold dark:text-slate-500 text-gray-400 uppercase tracking-wide mb-1.5">Site</label>
-                <select value={form.siteId} onChange={e=>setForm({...form,siteId:e.target.value})} className="w-full border dark:border-slate-600 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-orange-400 focus:outline-none">
+                <select value={form.siteId} onChange={e=>setForm({...form,siteId:e.target.value})} className="w-full border dark:border-slate-600 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none">
                   <option value="">— No site —</option>
                   {sites.map(s=><option key={s.id} value={s.id}>{s.site_name}</option>)}
                 </select>
@@ -353,18 +353,18 @@ function AttendancePage() {
                 <label className="block text-xs font-bold dark:text-slate-500 text-gray-400 uppercase tracking-wide mb-1.5">Advance ₹</label>
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 dark:text-slate-500 text-gray-400 text-sm">₹</span>
-                  <input type="number" inputMode="numeric" value={form.advance} onChange={e=>setForm({...form,advance:e.target.value})} placeholder="0" className="w-full border dark:border-slate-600 border-gray-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-orange-400 focus:outline-none"/>
+                  <input type="number" inputMode="numeric" value={form.advance} onChange={e=>setForm({...form,advance:e.target.value})} placeholder="0" className="w-full border dark:border-slate-600 border-gray-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none"/>
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-bold dark:text-slate-500 text-gray-400 uppercase tracking-wide mb-1.5">Payment</label>
-                <select value={form.payMode} onChange={e=>setForm({...form,payMode:e.target.value})} className="w-full border dark:border-slate-600 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-orange-400 focus:outline-none">
+                <select value={form.payMode} onChange={e=>setForm({...form,payMode:e.target.value})} className="w-full border dark:border-slate-600 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none">
                   {['Cash','Online','None'].map(m=><option key={m}>{m}</option>)}
                 </select>
               </div>
             </div>
             <button onClick={saveAtt} disabled={saving}
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl py-3 font-bold disabled:opacity-50 transition">
+              className="w-full bg-amber-600 hover:bg-amber-600 text-white rounded-xl py-3 font-bold disabled:opacity-50 transition">
               {saving?'⏳ Saving...':'Save Attendance'}
             </button>
           </div>
