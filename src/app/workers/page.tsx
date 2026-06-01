@@ -75,9 +75,9 @@ function WorkersPage() {
     <div className="min-h-screen pb-24" style={{backgroundColor:"rgb(var(--bg))"}}>
       {toast && <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.type==='ok'?'bg-green-500':'bg-red-500'}`}>{toast.msg}</div>}
 
-      <div className="border-b border-gray-100 px-4 pt-5 pb-4 sticky top-14 z-30" style={{backgroundColor:"rgb(var(--surface))"}}>
+      <div className="border-b px-4 pt-5 pb-4 sticky top-14 z-30" style={{backgroundColor:"rgb(var(--surface))"}}>
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-black text-gray-800">{ts(lang,'workers')}</h1>
+          <h1 className="text-xl font-black" style={{color:"rgb(var(--text))"}}>{ts(lang,'workers')}</h1>
           <button onClick={() => { setForm(empty()); setModal('add') }} className="btn-primary text-sm">
             + {ts(lang,'addWorker')}
           </button>
@@ -108,18 +108,18 @@ function WorkersPage() {
                     {w.name[0]?.toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-800">{w.name}</p>
+                    <p className="font-bold" style={{color:"rgb(var(--text))"}}>{w.name}</p>
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       <span className={stateTag(w.state)}>{w.state}</span>
                       <span className="badge-purple">{w.role}</span>
-                      <span className="text-xs text-gray-400 self-center">₹{w.rate_6_6}/day</span>
+                      <span className="text-xs self-center" style={{color:"rgb(var(--muted))"}}>₹{w.rate_6_6}/day</span>
                     </div>
                   </div>
                   <div className="flex gap-0.5">
-                    {w.phone && <a href={`tel:${w.phone}`} className="p-2 text-green-500 hover:bg-green-50 rounded-xl transition">📞</a>}
-                    <button onClick={() => { setForm({...w}); setModal('view') }}  className="p-2 text-blue-400 hover:bg-blue-50  rounded-xl transition">👁️</button>
-                    <button onClick={() => { setForm({...w}); setModal('edit') }}  className="p-2 text-orange-400 hover:bg-orange-50 rounded-xl transition">✏️</button>
-                    <button onClick={() => del(w)}                                 className="p-2 text-red-300 hover:bg-red-50    rounded-xl transition">🗑️</button>
+                    {w.phone && <a href={`tel:${w.phone}`} className="p-2 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl transition">📞</a>}
+                    <button onClick={() => { setForm({...w}); setModal('view') }}  className="p-2 text-blue-400 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20  rounded-xl transition">👁️</button>
+                    <button onClick={() => { setForm({...w}); setModal('edit') }}  className="p-2 text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-xl transition">✏️</button>
+                    <button onClick={() => del(w)}                                 className="p-2 text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20    rounded-xl transition">🗑️</button>
                   </div>
                 </div>
               </div>
@@ -133,7 +133,7 @@ function WorkersPage() {
           <div className="modal-box" onClick={e=>e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="font-black text-lg">{modal==='add'?ts(lang,'addWorker'):ts(lang,'editWorker')}</h2>
-              <button onClick={()=>setModal(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">✕</button>
+              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:"rgb(var(--muted))"}}>✕</button>
             </div>
             <div className="p-5 space-y-5">
               <section>
@@ -155,10 +155,10 @@ function WorkersPage() {
                 <p className="section-title">💰 {ts(lang,'wageRates')}</p>
                 <div className="space-y-2">
                   {SHIFTS.map((s,i) => (
-                    <div key={s} className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2">
-                      <span className="text-sm text-gray-600 w-24 flex-shrink-0 font-medium">{S_LABELS[i]}</span>
+                    <div key={s} className="flex items-center gap-3 rounded-xl px-3 py-2" style={{background:"rgb(var(--bg))"}}>
+                      <span className="text-sm w-24 flex-shrink-0 font-medium">{S_LABELS[i]}</span>
                       <div className="flex-1 relative">
-                        <span className="absolute left-3 top-2.5 text-gray-400 text-sm font-medium">₹</span>
+                        <span className="absolute left-3 top-2.5" style={{color:"rgb(var(--muted))"}} text-sm font-medium">₹</span>
                         <input type="number" inputMode="numeric" className="input pl-7 py-2"
                           value={((form as unknown) as Record<string, number>)[rateKey(s)]||''}
                           onChange={e=>setForm({...form,[rateKey(s)]:+e.target.value})} />
@@ -184,10 +184,10 @@ function WorkersPage() {
                 <div className="w-10 h-10 rounded-2xl bg-orange-100 flex items-center justify-center text-orange-700 font-black">{form.name[0]}</div>
                 <div>
                   <h2 className="font-black text-lg leading-tight">{form.name}</h2>
-                  <p className="text-sm text-gray-400">{form.work_type} · {form.state}</p>
+                  <p className="text-sm dark:text-slate-500 text-gray-400">{form.work_type} · {form.state}</p>
                 </div>
               </div>
-              <button onClick={()=>setModal(null)} className="text-gray-400 text-2xl leading-none">✕</button>
+              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:"rgb(var(--muted))"}}>✕</button>
             </div>
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
@@ -197,9 +197,9 @@ function WorkersPage() {
                   [ts(lang,'state'),  form.state],
                   [ts(lang,'role'),   form.role],
                 ].map(([l,v]) => (
-                  <div key={l} className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">{l}</p>
-                    <p className="font-bold text-gray-800 mt-0.5">{v}</p>
+                  <div key={l} className="rounded-xl p-3" style={{background:"rgb(var(--bg))"}}>
+                    <p className="text-xs font-semibold uppercase tracking-wide" style={{color:"rgb(var(--muted))"}}>{l}</p>
+                    <p className="font-bold mt-0.5" style={{color:"rgb(var(--text))"}}>{v}</p>
                   </div>
                 ))}
               </div>
@@ -207,14 +207,14 @@ function WorkersPage() {
                 <p className="section-title">💰 {ts(lang,'wageRates')}</p>
                 <div className="grid grid-cols-2 gap-2">
                   {SHIFTS.map((s,i) => (
-                    <div key={s} className="flex justify-between items-center bg-gray-50 rounded-xl px-3 py-2">
-                      <span className="text-sm text-gray-500">{S_LABELS[i]}</span>
+                    <div key={s} className="flex justify-between items-center rounded-xl px-3 py-2" style={{background:"rgb(var(--bg))"}}>
+                      <span className="text-sm dark:text-slate-400 text-gray-500">{S_LABELS[i]}</span>
                       <span className="font-bold text-orange-600">₹{((form as unknown) as Record<string, number>)[rateKey(s)]||0}</span>
                     </div>
                   ))}
                 </div>
               </div>
-              {form.notes && <div className="text-sm text-gray-500 bg-gray-50 rounded-xl p-3">{form.notes}</div>}
+              {form.notes && <div className="text-sm rounded-xl p-3" style={{color:"rgb(var(--muted))",background:"rgb(var(--bg))"}}>{form.notes}</div>}
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={()=>setModal('edit')} className="btn-ghost w-full py-3">✏️ {ts(lang,'edit')}</button>
                 <button onClick={()=>del(form)} className="btn-danger w-full py-3">🗑️ {ts(lang,'delete')}</button>
@@ -230,7 +230,7 @@ function WorkersPage() {
 const FilterRow = ({ label, opts, labels, value, onChange }:
   { label:string; opts:(string|null)[]; labels:string[]; value:string|null; onChange:(v:string|null)=>void }) => (
   <div className="flex items-center gap-2 flex-wrap">
-    <span className="text-xs font-semibold text-gray-400 w-16 flex-shrink-0">{label}:</span>
+    <span className="text-xs font-semibold dark:text-slate-500 text-gray-400 w-16 flex-shrink-0">{label}:</span>
     {opts.map((o,i) => (
       <button key={i} onClick={()=>onChange(o)}
         className={`chip ${value===o?'chip-active':'chip-idle'}`}>
@@ -244,7 +244,7 @@ const FI = ({ label,value,onChange,type='text',required=false,maxLen,hint,multil
   <div>
     <div className="flex justify-between">
       <label className="label">{label}{required&&<span className="text-red-400 ml-1">*</span>}</label>
-      {hint && <span className="text-xs text-gray-400">{hint}</span>}
+      {hint && <span className="text-xs dark:text-slate-500 text-gray-400">{hint}</span>}
     </div>
     {multiline
       ? <textarea rows={2} value={value} onChange={e=>onChange(e.target.value)} className="input resize-none" />
@@ -264,7 +264,7 @@ const Spinner = () => <div className="flex justify-center py-16"><div className=
 const Empty = ({msg,icon}:{msg:string;icon:string}) => (
   <div className="text-center py-16">
     <div className="text-5xl mb-3 opacity-30">{icon}</div>
-    <p className="text-gray-400 font-medium">{msg}</p>
+    <p className="font-medium" style={{color:"rgb(var(--muted))"}}>{msg}</p>
   </div>
 )
 
