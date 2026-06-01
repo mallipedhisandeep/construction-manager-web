@@ -85,15 +85,14 @@ function MoneyPage() {
 
   useEffect(() => { load() }, [period]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (loading) return <AppShell><div className="flex justify-center items-center h-64"><div className="animate-spin w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full"/></div></AppShell>
-  if (!data) return <AppShell><div className="text-center p-8" style={{color:'rgb(var(--muted))'}}>{te?'డేటా లేదు':'No data available'}</div></AppShell>
+  if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full"/></div>
+  if (!data) return <div className="text-center p-8" style={{color:'rgb(var(--muted))'}}>{te?'డేటా లేదు':'No data available'}</div>
 
   const totalExpenses = data.workerWages + data.goodsSpend + data.siteSpend + data.privateWorkerPaid
   const net = data.siteIncome - totalExpenses
 
   return (
-    <AppShell>
-      <div className="page">
+    <div className="page">
         <div className="page-header">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>💰 {te?'డబ్బు':'Money Tracking'}</h1>
@@ -167,8 +166,7 @@ function MoneyPage() {
             </div>
           )}
         </div>
-      </div>
-    </AppShell>
+    </div>
   )
 }
 
@@ -190,4 +188,4 @@ const BalRow = ({emoji,label,val,posLabel,negLabel}:{emoji:string;label:string;v
   </div>
 )
 
-export default function Money() { return <MoneyPage /> }
+export default function Money() { return <AppShell><MoneyPage /></AppShell> }
