@@ -69,22 +69,22 @@ function PrivateWorkPage() {
       {toast && <div className="fixed top-16 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm">{toast}</div>}
 
       {totalPending > 0 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 flex items-center gap-2">
-          <span className="text-orange-600 font-bold">⚠️ {ts(lang,'totalPending')}: ₹{totalPending.toFixed(0)}</span>
+        <div className="bg-slate-800/50 border border-amber-700/40 rounded-xl p-3 mb-4 flex items-center gap-2">
+          <span className="text-amber-500 font-bold">⚠️ {ts(lang,'totalPending')}: ₹{totalPending.toFixed(0)}</span>
         </div>
       )}
 
       <div className="flex gap-2 mb-4">
         {['All','Active','Completed'].map(f => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition ${filter===f?'bg-orange-600 text-white border-orange-600':'dark:text-slate-300 text-gray-600 dark:border-slate-600 border-gray-200'}`} style={filter!==f?{backgroundColor:'rgb(var(--surface))'}:{}}>
+            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition ${filter===f?'bg-amber-600 text-white border-amber-500':'dark:text-slate-300 text-gray-600 dark:border-slate-600 border-gray-200'}`} style={filter!==f?{backgroundColor:'rgb(var(--surface))'}:{}}>
             {f}
           </button>
         ))}
       </div>
 
       <button onClick={() => { setForm({ status:'Active', price_charged:0, amount_paid:0, work_date: new Date().toISOString().split('T')[0] }); setPriceStr(''); setPaidStr(''); setModal('add') }}
-        className="w-full mb-4 bg-orange-600 text-white rounded-xl py-3 font-semibold hover:bg-orange-700 flex items-center justify-center gap-2">
+        className="w-full mb-4 bg-amber-600 text-white rounded-xl py-3 font-semibold hover:bg-amber-600 flex items-center justify-center gap-2">
         + {ts(lang,'addWork')}
       </button>
 
@@ -104,7 +104,7 @@ function PrivateWorkPage() {
                 <div className="text-xs dark:text-slate-500 text-gray-400">📅 {w.work_date}</div>
               </div>
               <div className="flex gap-1 flex-shrink-0">
-                <button onClick={() => { setForm({...w}); setPriceStr(w.price_charged?.toString() ?? ''); setPaidStr(w.amount_paid?.toString() ?? ''); setModal('edit') }} className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg text-sm">✏️</button>
+                <button onClick={() => { setForm({...w}); setPriceStr(w.price_charged?.toString() ?? ''); setPaidStr(w.amount_paid?.toString() ?? ''); setModal('edit') }} className="p-1.5 text-amber-400 hover:bg-slate-800/50 rounded-lg text-sm">✏️</button>
                 <button onClick={() => del(w)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg text-sm">🗑️</button>
               </div>
             </div>
@@ -118,9 +118,9 @@ function PrivateWorkPage() {
                 <div className="font-bold text-green-700">₹{w.amount_paid}</div>
               </div>
               {bal > 0 && (
-                <div className="flex-1 bg-orange-50 rounded-lg p-2 text-center">
-                  <div className="text-xs text-orange-500">{ts(lang,'due')}</div>
-                  <div className="font-bold text-orange-700">₹{bal}</div>
+                <div className="flex-1 bg-slate-800/50 rounded-lg p-2 text-center">
+                  <div className="text-xs text-amber-400">{ts(lang,'due')}</div>
+                  <div className="font-bold text-amber-400">₹{bal}</div>
                 </div>
               )}
             </div>
@@ -175,7 +175,7 @@ function PrivateWorkPage() {
                 <div className="flex gap-2">
                   {['Active','Completed'].map(s => (
                     <button key={s} onClick={() => setForm({...form,status:s})}
-                      className={`flex-1 py-2 rounded-lg text-sm font-medium border ${form.status===s?'bg-orange-600 text-white border-orange-600':'dark:bg-slate-800 bg-gray-50 dark:border-slate-600 border-gray-200'}`}>{s}</button>
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium border ${form.status===s?'bg-amber-600 text-white border-amber-500':'dark:bg-slate-800 bg-gray-50 dark:border-slate-600 border-gray-200'}`}>{s}</button>
                   ))}
                 </div>
               </div>
@@ -184,7 +184,7 @@ function PrivateWorkPage() {
                 <textarea rows={2} value={form.notes??''} onChange={e=>setForm({...form,notes:e.target.value})}
                   className="w-full border rounded-lg px-3 py-2 text-sm resize-none" />
               </div>
-              <button onClick={save} disabled={saving} className="w-full bg-orange-600 text-white rounded-xl py-3 font-semibold disabled:opacity-50">
+              <button onClick={save} disabled={saving} className="w-full bg-amber-600 text-white rounded-xl py-3 font-semibold disabled:opacity-50">
                 {saving?'⏳...':ts(lang,'save')}
               </button>
             </div>
