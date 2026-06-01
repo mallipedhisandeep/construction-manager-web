@@ -21,15 +21,15 @@ function Dashboard() {
   }, [])
 
   const modules = [
-    { label: lang==='te'?'రోజువారీ హాజరు':'Daily Attendance', emoji:'📅', href:'/attendance', grad:'from-orange-500 to-amber-400' },
-    { label: lang==='te'?'కార్మికులు':'Workers',             emoji:'👷', href:'/workers',    grad:'from-blue-500 to-cyan-400' },
-    { label: lang==='te'?'సైట్లు':'Sites',                   emoji:'🏗️', href:'/sites',      grad:'from-green-500 to-emerald-400' },
-    { label: lang==='te'?'ప్రైవేట్ కార్మికులు':'Private Workers', emoji:'🔧', href:'/private-workers', grad:'from-purple-500 to-violet-400' },
-    { label: lang==='te'?'ప్రైవేట్ పని':'Private Work',       emoji:'📋', href:'/private-work',    grad:'from-teal-500 to-cyan-500' },
-    { label: lang==='te'?'సరఫరాదారులు':'Suppliers',          emoji:'🏪', href:'/suppliers',  grad:'from-pink-500 to-rose-400' },
-    { label: lang==='te'?'వస్తువుల ఆర్డర్లు':'Goods Orders', emoji:'📦', href:'/goods',      grad:'from-amber-500 to-yellow-400' },
-    { label: lang==='te'?'డబ్బు':'Money Tracking',            emoji:'💰', href:'/money',      grad:'from-emerald-500 to-green-400' },
-    { label: lang==='te'?'నివేదికలు':'Reports',               emoji:'📊', href:'/reports',    grad:'from-indigo-500 to-blue-400' },
+    { label: lang==='te'?'రోజువారీ హాజరు':'Daily Attendance', emoji:'📅', href:'/attendance', color:'#3b82f6' },
+    { label: lang==='te'?'కార్మికులు':'Workers',             emoji:'👷', href:'/workers',    color:'#10b981' },
+    { label: lang==='te'?'సైట్లు':'Sites',                   emoji:'🏗️', href:'/sites',      color:'#d48c28' },
+    { label: lang==='te'?'ప్రైవేట్ కార్మికులు':'Private Workers', emoji:'🔧', href:'/private-workers', color:'#8b5cf6' },
+    { label: lang==='te'?'ప్రైవేట్ పని':'Private Work',       emoji:'📋', href:'/private-work',    color:'#06b6d4' },
+    { label: lang==='te'?'సరఫరాదారులు':'Suppliers',          emoji:'🏪', href:'/suppliers',  color:'#ec4899' },
+    { label: lang==='te'?'వస్తువుల ఆర్డర్లు':'Goods Orders', emoji:'📦', href:'/goods',      color:'#f59e0b' },
+    { label: lang==='te'?'డబ్బు':'Money Tracking',            emoji:'💰', href:'/money',      color:'#22c55e' },
+    { label: lang==='te'?'నివేదికలు':'Reports',               emoji:'📊', href:'/reports',    color:'#6366f1' },
   ]
 
   const statsData = [
@@ -40,19 +40,35 @@ function Dashboard() {
   ]
 
   return (
-    <div className="min-h-screen" style={{background:'linear-gradient(180deg, #f97316 0%, #fed7aa 35%, rgb(var(--bg)) 55%)'}}>
-      {/* Hero */}
-      <div className="px-5 pt-8 pb-16">
-        <p className="text-orange-100 text-sm font-medium">{lang==='te'?'తిరిగి స్వాగతం':'Welcome back'}</p>
-        <h1 className="text-white text-2xl font-black tracking-tight mt-0.5">{user}</h1>
-        <div className="grid grid-cols-4 gap-2 mt-5">
-          {statsData.map(s => (
-            <div key={s.l} className="bg-white/20 backdrop-blur rounded-2xl p-3 text-center">
-              <div className="text-xl">{s.e}</div>
-              <div className="text-xl font-black text-white">{s.v}</div>
-              <div className="text-[9px] text-orange-100 mt-0.5 leading-tight">{s.l}</div>
-            </div>
-          ))}
+    <div className="min-h-screen" style={{background:'rgb(var(--bg))'}}>
+      {/* Hero — dark steel gradient with gold accent */}
+      <div className="px-5 pt-8 pb-16 relative overflow-hidden"
+        style={{
+          background:'linear-gradient(160deg, #0a0e16 0%, #111827 50%, #0d1520 100%)',
+          borderBottom:'1px solid rgba(212,140,40,0.2)'
+        }}>
+        {/* Subtle gold grid decoration */}
+        <div className="absolute inset-0 opacity-5" style={{
+          backgroundImage:'linear-gradient(rgba(212,140,40,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(212,140,40,0.5) 1px, transparent 1px)',
+          backgroundSize:'40px 40px'
+        }}/>
+        <div className="relative z-10">
+          <p className="text-sm font-medium" style={{color:'rgba(212,140,40,0.7)'}}>
+            {lang==='te'?'తిరిగి స్వాగతం':'Welcome back'}
+          </p>
+          <h1 className="text-2xl font-black tracking-tight mt-0.5" style={{color:'#e8e8e8'}}>{user}</h1>
+
+          {/* Stats */}
+          <div className="grid grid-cols-4 gap-2 mt-5">
+            {statsData.map(s => (
+              <div key={s.l} className="rounded-2xl p-3 text-center backdrop-blur-sm"
+                style={{background:'rgba(212,140,40,0.08)',border:'1px solid rgba(212,140,40,0.2)'}}>
+                <div className="text-xl">{s.e}</div>
+                <div className="text-xl font-black" style={{color:'#d48c28'}}>{s.v}</div>
+                <div className="text-[9px] mt-0.5 leading-tight" style={{color:'rgba(212,140,40,0.6)'}}>{s.l}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -65,9 +81,10 @@ function Dashboard() {
           <div className="grid grid-cols-3 gap-3">
             {modules.map(m => (
               <button key={m.href} onClick={()=>router.push(m.href)}
-                className="flex flex-col items-center gap-2 p-3 rounded-2xl hover:scale-105 active:scale-95 transition-all relative"
-                style={{background:'rgb(var(--bg))'}}>
-                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${m.grad} flex items-center justify-center text-2xl shadow-sm`}>
+                className="flex flex-col items-center gap-2 p-3 rounded-2xl hover:scale-105 active:scale-95 transition-all"
+                style={{background:'rgb(var(--bg))',border:'1px solid rgb(var(--border))'}}>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
+                  style={{background:`${m.color}20`,border:`1px solid ${m.color}40`}}>
                   {m.emoji}
                 </div>
                 <span className="text-xs font-bold text-center leading-tight" style={{color:'rgb(var(--text))'}}>{m.label}</span>
