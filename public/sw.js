@@ -1,12 +1,7 @@
 // ── Construction Manager Service Worker ──────────────────────────────────────
-// FIX: Pre-cache the app shell on install so the app loads offline.
-// Previously the install event was empty — nothing was ever cached,
-// so the offline fallback always failed.
 
-const CACHE = 'cm-v2'
+const CACHE = 'cm-v3'
 
-// These are the core files that make the app shell work offline.
-// Next.js serves the page HTML from '/' and its JS/CSS bundles automatically.
 const PRECACHE_URLS = [
   '/',
   '/manifest.json',
@@ -38,6 +33,17 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(e.request.url)
 
+  // CRITICAL: Never intercept auth routes — the ?code= and session tokens
+  // must reach the app fresh from the network every time.
+  // Serving a cached /auth/callback or /auth/confirm breaks the PKCE exchange.
+  if (
+    url.pathname.startsWith('/auth/') ||
+    url.pathname === '/login'
+  ) {
+    e.respondWith(fetch(e.request))
+    return
+  }
+
   // Always go network-first for Supabase API calls — never serve stale data
   if (url.hostname.includes('supabase')) {
     e.respondWith(fetch(e.request))
@@ -54,7 +60,6 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     fetch(e.request)
       .then(response => {
-        // Cache fresh successful responses
         if (response && response.status === 200) {
           const clone = response.clone()
           caches.open(CACHE).then(cache => cache.put(e.request, clone))
@@ -62,10 +67,8 @@ self.addEventListener('fetch', (e) => {
         return response
       })
       .catch(() => {
-        // Network failed — serve from cache
         return caches.match(e.request).then(cached => {
           if (cached) return cached
-          // If it's a navigation request and nothing cached, serve the app shell
           if (e.request.mode === 'navigate') {
             return caches.match('/')
           }
