@@ -85,28 +85,26 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [])
 
   if (!ready) return (
-    <div className="flex items-center justify-center min-h-screen" style={{background:'rgb(10,14,22)'}}>
-      <div className="flex flex-col items-center gap-5">
-        <div className="relative w-24 h-24 rounded-full flex items-center justify-center"
-          style={{
-            background:'linear-gradient(135deg,#0f1828,#1a2540)',
-            border:'2px solid rgba(212,140,40,0.35)',
-            boxShadow:'0 0 40px rgba(212,140,40,0.15), inset 0 0 20px rgba(0,0,0,0.5)'
-          }}>
-          {/* App icon inside loader circle */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icon-192.png" alt="CM" width={52} height={52} style={{borderRadius:'12px',objectFit:'contain'}} />
-          {/* Spinning gold ring */}
-          <div className="absolute inset-0 rounded-full border-[3px] border-transparent animate-spin"
-            style={{borderTopColor:'#d48c28',borderRightColor:'rgba(212,140,40,0.2)'}}/>
+    <div className="flex items-center justify-center min-h-screen" style={{background:'rgb(12,12,14)'}}>
+      <div className="flex flex-col items-center gap-6">
+        <div className="relative">
+          <div className="w-20 h-20 rounded-3xl flex items-center justify-center"
+            style={{
+              background:'linear-gradient(135deg,rgba(212,140,40,0.1),rgba(212,140,40,0.04))',
+              border:'1.5px solid rgba(212,140,40,0.25)',
+              boxShadow:'0 0 40px rgba(212,140,40,0.12)'
+            }}>
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <text x="0" y="30" fontFamily="Georgia,serif" fontWeight="900" fontSize="28" fill="#b0b0b0">C</text>
+              <text x="20" y="30" fontFamily="Georgia,serif" fontWeight="900" fontSize="26" fill="#d48c28">M</text>
+            </svg>
+          </div>
+          <div className="absolute inset-0 rounded-3xl border-2 border-transparent animate-spin"
+            style={{borderTopColor:'rgba(212,140,40,0.7)',borderRightColor:'rgba(212,140,40,0.15)',animationDuration:'1s'}}/>
         </div>
         <div className="flex flex-col items-center gap-1">
-          <p className="text-sm font-bold tracking-[0.2em] uppercase" style={{color:'rgba(212,140,40,0.9)'}}>
-            Loading
-          </p>
-          <p className="text-xs" style={{color:'rgba(255,255,255,0.3)'}}>
-            లోడవుతోంది...
-          </p>
+          <p className="text-xs font-black tracking-[0.25em] uppercase" style={{color:'rgba(212,140,40,0.7)'}}>Loading</p>
+          <p className="text-xs" style={{color:'rgba(255,255,255,0.2)'}}>లోడవుతోంది...</p>
         </div>
       </div>
     </div>
