@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
-import { ts } from '@/lib/strings'
+import { ts, MONTHS } from '@/lib/strings'
 import type { Worker, Attendance, Site } from '@/lib/types'
 
 const SHIFTS = ['6-6','10-6','6-10','6-2','10-2','2-6','Absent']
@@ -21,6 +21,8 @@ const SL: Record<string,string> = {
   '10-2':'bg-purple-50 border-purple-200 text-purple-700','2-6':'bg-cyan-50 border-cyan-200 text-cyan-700',
   'Absent':'bg-red-50 border-red-200 text-red-600'
 }
+
+const pad = (n: number) => String(n).padStart(2, '0')
 
 function AttendancePage() {
   const { lang } = useLang()
@@ -42,9 +44,8 @@ function AttendancePage() {
   const [sumLoading, setSumLoading] = useState(false)
   const [markedDays, setMarkedDays] = useState<Record<string, 'full'|'partial'>>({})
 
-  const months = ts(lang,'months') as unknown as string[]
+  const months = MONTHS[lang]
   const daysInMonth = new Date(year, month+1, 0).getDate()
-  const pad = (n:number) => String(n).padStart(2,'0')
   const dKey = `${year}-${pad(month+1)}-${pad(day)}`
 
   const showToast = (msg:string, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(undefined),3000) }
@@ -65,7 +66,7 @@ function AttendancePage() {
     const result: Record<string, 'full'|'partial'> = {}
     Object.entries(byDay).forEach(([dk, workerSet]) => { result[dk] = (total > 0 && workerSet.size >= total) ? 'full' : 'partial' })
     setMarkedDays(result)
-  }, [year, month, pad])
+  }, [year, month])
 
   useEffect(()=>{ loadWorkers(); loadSites() },[loadWorkers,loadSites])
   useEffect(()=>{ loadAtt() },[loadAtt])
