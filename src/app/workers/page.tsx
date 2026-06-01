@@ -104,7 +104,7 @@ function WorkersPage() {
             {list.map(w => (
               <div key={w.id} className="card mb-2 overflow-hidden hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3 p-4">
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-700 to-orange-50 border border-orange-100 flex items-center justify-center text-amber-400 font-black text-lg flex-shrink-0">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-900 to-amber-700 border border-amber-700/40 flex items-center justify-center text-amber-400 font-black text-lg flex-shrink-0">
                     {w.name[0]?.toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -118,7 +118,7 @@ function WorkersPage() {
                   <div className="flex gap-0.5">
                     {w.phone && <a href={`tel:${w.phone}`} className="p-2 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl transition">📞</a>}
                     <button onClick={() => { setForm({...w}); setModal('view') }}  className="p-2 text-blue-400 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20  rounded-xl transition">👁️</button>
-                    <button onClick={() => { setForm({...w}); setModal('edit') }}  className="p-2 text-amber-400 hover:bg-slate-800/50 dark:hover:bg-orange-900/20 rounded-xl transition">✏️</button>
+                    <button onClick={() => { setForm({...w}); setModal('edit') }}  className="p-2 text-amber-400 hover:bg-slate-800/50 dark:hover:bg-amber-900/20 rounded-xl transition">✏️</button>
                     <button onClick={() => del(w)}                                 className="p-2 text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20    rounded-xl transition">🗑️</button>
                   </div>
                 </div>
