@@ -145,6 +145,8 @@ public/
 
 This is a personal project. If you'd like to suggest changes, open an issue.
 
+idea stared from solving a dad's problem 
+
 ---
 
 ## License
