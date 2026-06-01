@@ -158,7 +158,7 @@ function WorkersPage() {
                     <div key={s} className="flex items-center gap-3 rounded-xl px-3 py-2" style={{background:"rgb(var(--bg))"}}>
                       <span className="text-sm w-24 flex-shrink-0 font-medium">{S_LABELS[i]}</span>
                       <div className="flex-1 relative">
-                        <span className="absolute left-3 top-2.5" style={{color:"rgb(var(--muted))"}} text-sm font-medium">₹</span>
+                        <span className="absolute left-3 top-2.5 text-sm font-medium" style={{color:"rgb(var(--muted))"}}>₹</span>
                         <input type="number" inputMode="numeric" className="input pl-7 py-2"
                           value={((form as unknown) as Record<string, number>)[rateKey(s)]||''}
                           onChange={e=>setForm({...form,[rateKey(s)]:+e.target.value})} />
@@ -269,3 +269,4 @@ const Empty = ({msg,icon}:{msg:string;icon:string}) => (
 )
 
 export default function Workers() { return <AppShell><WorkersPage /></AppShell> }
+    
