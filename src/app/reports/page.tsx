@@ -41,13 +41,13 @@ function ReportsPage() {
           { data: spData },
           { data: allWorkers },
         ] = await Promise.all([
-          supabase.from('sites').select('*'),
+          supabase.from('sites').select('*').is('deleted_at', null),
           supabase.from('attendance').select('wage,advance,attendance_type,site_id,worker_id'),
           supabase.from('goods_orders').select('total_price,advance_paid,site_id').neq('status','Cancelled'),
           supabase.from('supplier_payments').select('amount'),
           supabase.from('private_work').select('price_charged,amount_paid,worker_id'),
           supabase.from('site_payments').select('amount,direction,site_id'),
-          supabase.from('workers').select('id,name'),
+          supabase.from('workers').select('id,name').is('deleted_at', null),
         ])
 
         const workerNameMap: Record<string, string> = {}
