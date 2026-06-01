@@ -93,7 +93,7 @@ function TrashPage() {
       </div>
       <div className="px-4 pt-4">
         {loading ? (
-          <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full"/></div>
+          <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full"/></div>
         ) : items.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-5xl mb-3 opacity-20">🗑️</div>
