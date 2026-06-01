@@ -23,9 +23,9 @@ function PrivateWorkPage() {
   const load = useCallback(async () => {
     setLoading(true)
     const [{ data: w }, { data: pw }, { data: s }] = await Promise.all([
-      supabase.from('private_work').select('*').order('created_at', {ascending:false}),
-      supabase.from('private_workers').select('*').order('name'),
-      supabase.from('sites').select('id,site_name').eq('status','Active')
+      supabase.from('private_work').select('*').is('deleted_at', null).order('created_at', {ascending:false}),
+      supabase.from('private_workers').select('*').is('deleted_at', null).order('name'),
+      supabase.from('sites').select('id,site_name').eq('status','Active').is('deleted_at', null)
     ])
     setWorks(w ?? []); setPWorkers(pw ?? []); setSites(s ?? [])
     setLoading(false)
@@ -53,14 +53,18 @@ function PrivateWorkPage() {
       price_charged: parseFloat(priceStr) || 0,
       amount_paid:   parseFloat(paidStr)  || 0,
     }
-    if (modal==='add') await supabase.from('private_work').insert({ ...data, user_id: userId })
-    else await supabase.from('private_work').update(data).eq('id', form.id!)
-    setSaving(false); setModal(null); load(); showToast(ts(lang,'savedOk'))
+    const { error: saveErr } = modal==='add'
+      ? await supabase.from('private_work').insert({ ...data, user_id: userId })
+      : await supabase.from('private_work').update(data).eq('id', form.id!)
+    setSaving(false)
+    if (saveErr) { showToast('Save failed: ' + saveErr.message); return }
+    setModal(null); load(); showToast(ts(lang,'savedOk'))
   }
 
   const del = async (w: PrivateWork) => {
     if (!confirm(ts(lang,'deleteConfirm'))) return
-    await supabase.from('private_work').delete().eq('id', w.id!)
+    const { error: delErr } = await supabase.from('private_work').update({ deleted_at: new Date().toISOString() }).eq('id', w.id!)
+    if (delErr) { showToast('Delete failed'); return }
     load()
   }
 
@@ -97,7 +101,7 @@ function PrivateWorkPage() {
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold [text-gray-800_not_used]dark:text-slate-100 text-gray-800">{w.worker_name}</span>
+                  <span className="font-bold ">{w.worker_name}</span>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${w.status==='Active'?'bg-green-100 text-green-700':'bg-blue-100 text-blue-700'}`}>{w.status}</span>
                 </div>
                 <div className="text-sm dark:text-slate-400 text-gray-500 mt-0.5">🔧 {w.work_type} · 📍 {w.site_name}</div>
