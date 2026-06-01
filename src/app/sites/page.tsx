@@ -175,7 +175,7 @@ function SitesPage() {
           <div key={s.id} className="card-hover mb-3" onClick={()=>openDetail(s)}>
             <div className="p-4">
               <div className="flex items-start gap-3">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 ${s.status==='Active'?'bg-green-50 dark:bg-green-900/30':'bg-blue-50 dark:bg-blue-900/30'}`}>🏗️</div>
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 ${s.status==='Active'?'text-2xl flex-shrink-0':"text-2xl flex-shrink-0"}`}>🏗️</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-bold" style={{color:'rgb(var(--text))'}}>{s.site_name}</h3>
