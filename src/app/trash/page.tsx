@@ -129,8 +129,8 @@ function RecycleBinHelp() {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <div className="text-5xl mb-4">🗑️</div>
-      <p className="font-bold text-gray-500 dark:text-gray-400">Recycle Bin is Empty</p>
-      <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Deleted workers, sites, suppliers and contractors will appear here</p>
+      <p className="font-bold dark:text-slate-400 text-gray-500 dark:dark:text-slate-500 text-gray-400">Recycle Bin is Empty</p>
+      <p className="text-sm dark:text-slate-500 text-gray-400 dark:dark:text-slate-400 text-gray-500 mt-1">Deleted workers, sites, suppliers and contractors will appear here</p>
     </div>
   )
 }
