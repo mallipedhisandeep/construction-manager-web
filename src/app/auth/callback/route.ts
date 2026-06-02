@@ -1,53 +1,85 @@
-// src/app/auth/callback/route.ts
+'use client'
+// src/app/auth/confirm/page.tsx
 //
-// Google redirects here with ?code= after the user selects their account.
-// This server-side route does ONE thing only: forward the code to the
-// browser-side /auth/confirm page so the Supabase JS client can call
-// exchangeCodeForSession() with the PKCE verifier from localStorage.
-//
-// It also sets a short-lived cookie with the code so that if the PWA
-// opens a new tab (Android Chrome behaviour), /auth/confirm can read
-// the code from the cookie as a fallback even if the URL params are lost.
+// PKCE flow: after Google redirects to /auth/callback (route.ts),
+// route.ts forwards the ?code= here. This client-side page calls
+// exchangeCodeForSession(code) in the browser where localStorage
+// (and the PKCE code_verifier) is available.
 
-import { NextRequest, NextResponse } from 'next/server'
+import { useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
-export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url)
+function ConfirmInner() {
+  const router = useRouter()
+  const params = useSearchParams()
 
-  // OAuth provider returned an error
-  const oauthError = searchParams.get('error')
-  if (oauthError) {
-    const desc = searchParams.get('error_description') ?? oauthError
-    console.error('[auth/callback] OAuth error:', desc)
-    return NextResponse.redirect(`${origin}/login?error=auth_failed`)
-  }
+  useEffect(() => {
+    const code = params.get('code')
+    const next = params.get('next') ?? '/'
 
-  const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/'
+    if (!code) {
+      router.replace('/login?error=auth_failed')
+      return
+    }
 
-  if (!code) {
-    console.error('[auth/callback] No code received')
-    return NextResponse.redirect(`${origin}/login?error=auth_failed`)
-  }
+    supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+      if (error) {
+        console.error('[confirm] exchange error:', error.message)
+        router.replace('/login?error=auth_failed')
+      } else {
+        router.replace(next)
+      }
+    })
+  }, [params, router])
 
-  // Forward to the client-side confirm page so the browser can exchange
-  // the code using the PKCE verifier stored in its own localStorage.
-  const confirmUrl = new URL(`${origin}/auth/confirm`)
-  confirmUrl.searchParams.set('code', code)
-  confirmUrl.searchParams.set('next', next)
-
-  const response = NextResponse.redirect(confirmUrl.toString())
-
-  // Also store the code in a cookie (5-minute TTL) as a fallback for
-  // Android PWA where the tab context can differ between the OAuth redirect
-  // and the return. /auth/confirm reads this cookie if URL params are missing.
-  response.cookies.set('cm_oauth_code', code, {
-    httpOnly: false,    // must be readable by client JS
-    secure: true,
-    sameSite: 'lax',
-    maxAge: 300,        // 5 minutes
-    path: '/',
-  })
-
-  return response
+  return (
+    <div
+      className="min-h-screen w-full flex flex-col items-center justify-center relative overflow-hidden"
+      style={{
+        backgroundImage: 'url(/login-bg.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.3) 50%, rgba(4,3,1,0.94) 100%)',
+        }}
+      />
+      <div className="relative z-10 flex flex-col items-center gap-4">
+        <div
+          className="w-10 h-10 border-2 border-transparent rounded-full animate-spin"
+          style={{ borderTopColor: '#d48c28' }}
+        />
+        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          Signing you in…
+        </p>
+      </div>
+    </div>
+  )
 }
+
+export default function ConfirmPage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="min-h-screen flex items-center justify-center"
+          style={{ background: '#0c0c0e' }}
+        >
+          <div
+            className="w-8 h-8 border-2 border-transparent rounded-full animate-spin"
+            style={{ borderTopColor: '#d48c28' }}
+          />
+        </div>
+      }
+    >
+      <ConfirmInner />
+    </Suspense>
+  )
+        }
+        
