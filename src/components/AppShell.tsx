@@ -55,6 +55,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
     checkAndRoute()
 
+    // Also subscribe to auth events (handles session restored after OAuth redirect)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return
       if (session) {
@@ -83,56 +84,27 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
-  // Show the same background as the login page while checking auth,
-  // so there is no jarring flash — it looks like a natural splash screen.
   if (!ready) return (
-    <div
-      className="min-h-screen w-full flex flex-col items-center justify-center relative overflow-hidden"
-      style={{
-        backgroundImage: 'url(/login-bg.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center center',
-        backgroundRepeat: 'no-repeat',
-      }}
-    >
-      {/* Same gradient overlay as login page */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.3) 50%, rgba(4,3,1,0.94) 100%)',
-        }}
-      />
-      {/* CM Logo + spinner */}
-      <div className="relative z-10 flex flex-col items-center gap-6">
+    <div className="flex items-center justify-center min-h-screen" style={{background:'rgb(12,12,14)'}}>
+      <div className="flex flex-col items-center gap-6">
         <div className="relative">
-          <div
-            className="w-24 h-24 rounded-3xl flex items-center justify-center"
+          <div className="w-20 h-20 rounded-3xl flex items-center justify-center"
             style={{
-              background: 'linear-gradient(135deg,rgba(212,140,40,0.15),rgba(212,140,40,0.05))',
-              border: '1.5px solid rgba(212,140,40,0.35)',
-              boxShadow: '0 0 60px rgba(212,140,40,0.18)',
-            }}
-          >
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <text x="0" y="36" fontFamily="Georgia,serif" fontWeight="900" fontSize="34" fill="#b0b0b0">C</text>
-              <text x="24" y="36" fontFamily="Georgia,serif" fontWeight="900" fontSize="32" fill="#d48c28">M</text>
+              background:'linear-gradient(135deg,rgba(212,140,40,0.1),rgba(212,140,40,0.04))',
+              border:'1.5px solid rgba(212,140,40,0.25)',
+              boxShadow:'0 0 40px rgba(212,140,40,0.12)'
+            }}>
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <text x="0" y="30" fontFamily="Georgia,serif" fontWeight="900" fontSize="28" fill="#b0b0b0">C</text>
+              <text x="20" y="30" fontFamily="Georgia,serif" fontWeight="900" fontSize="26" fill="#d48c28">M</text>
             </svg>
           </div>
-          <div
-            className="absolute inset-0 rounded-3xl border-2 border-transparent animate-spin"
-            style={{
-              borderTopColor: 'rgba(212,140,40,0.8)',
-              borderRightColor: 'rgba(212,140,40,0.15)',
-              animationDuration: '1s',
-            }}
-          />
+          <div className="absolute inset-0 rounded-3xl border-2 border-transparent animate-spin"
+            style={{borderTopColor:'rgba(212,140,40,0.7)',borderRightColor:'rgba(212,140,40,0.15)',animationDuration:'1s'}}/>
         </div>
         <div className="flex flex-col items-center gap-1">
-          <p className="text-sm font-black tracking-[0.25em] uppercase" style={{ color: 'rgba(212,140,40,0.85)' }}>
-            Construction Manager
-          </p>
-          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>లోడవుతోంది...</p>
+          <p className="text-xs font-black tracking-[0.25em] uppercase" style={{color:'rgba(212,140,40,0.7)'}}>Loading</p>
+          <p className="text-xs" style={{color:'rgba(255,255,255,0.2)'}}>లోడవుతోంది...</p>
         </div>
       </div>
     </div>
