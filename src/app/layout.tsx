@@ -10,7 +10,6 @@ export const viewport: Viewport = {
   maximumScale: 1,
   minimumScale: 1,
   userScalable: false,
-  // viewportFit: cover fills the full screen on notched phones (iPhone, etc.)
   viewportFit: 'cover',
 }
 
@@ -18,38 +17,28 @@ export const metadata: Metadata = {
   title: 'Construction Manager',
   description: 'Site and worker management',
   manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'CM App',
-  },
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'CM App' },
   formatDetection: { telephone: false },
-  // Prevent search engines from indexing (private business app)
-  robots: 'noindex, nofollow',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Mobile-first: explicitly block desktop scaling */}
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
+        {/* MUST be first — before any script or style — so browser locks
+            mobile layout before it parses anything else.
+            This prevents the desktop-width flash on PWA first load. */}
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+        />
 
-        {/* PWA / install meta */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="CM App" />
-
-        {/* Icons */}
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
-
-        {/* Theme colour for browser chrome */}
-        <meta name="theme-color" content="#0c0c0e" />
-
-        {/* Apply saved dark/light theme before first paint to prevent flash */}
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             var t = localStorage.getItem('theme') || 'dark';
@@ -57,33 +46,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           } catch(e) { document.documentElement.classList.add('dark'); }
         `}} />
       </head>
-      <body
-        style={{ backgroundColor: 'rgb(12,12,14)', color: 'rgb(238,236,229)' }}
-        className="min-h-screen"
-      >
+      <body style={{ backgroundColor: 'rgb(18,18,20)', color: 'rgb(238,236,229)' }} className="min-h-screen">
         {children}
-
-        {/* Register service worker */}
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-              navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                .then(function(reg) {
-                  // Force immediate activation of new SW version
-                  if (reg.waiting) { reg.waiting.postMessage({ type: 'SKIP_WAITING' }); }
-                  reg.addEventListener('updatefound', function() {
-                    var newWorker = reg.installing;
-                    if (newWorker) {
-                      newWorker.addEventListener('statechange', function() {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                          newWorker.postMessage({ type: 'SKIP_WAITING' });
-                        }
-                      });
-                    }
-                  });
-                })
-                .catch(function() {});
-            });
+            window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}))
           }
         `}} />
       </body>
