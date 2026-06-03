@@ -18,7 +18,7 @@ function GoodsPage() {
   const [loading,   setLoading]   = useState(true)
   const [modal,     setModal]     = useState(false)
   const [saving,    setSaving]    = useState(false)
-  const [toast,     setToast]     = useState<{msg:string;ok:boolean}>()
+  const [toast,     setToast]     = useState<{msg:string;ok:boolean} | undefined>()
   const [filter,    setFilter]    = useState<'All'|'Pending'|'Delivered'|'Cancelled'>('All')
   const [form, setForm] = useState<Partial<GoodsOrder & {priceStr:string;qtyStr:string;advStr:string}>>({
     status:'Pending', delivery_date: new Date().toISOString().split('T')[0],
@@ -31,8 +31,9 @@ function GoodsPage() {
     setLoading(true)
     const [{ data:o },{ data:s },{ data:si }] = await Promise.all([
       supabase.from('goods_orders').select('*').order('created_at',{ascending:false}),
-      supabase.from('suppliers').select('*').order('name'),
-      supabase.from('sites').select('id,site_name,status').eq('status','Active'),
+      supabase.from('suppliers').select('*').is('deleted_at', null).order('name'),
+      // FIX: added .is('deleted_at', null) so deleted sites don't appear in the dropdown
+      supabase.from('sites').select('id,site_name,status').eq('status','Active').is('deleted_at', null),
     ])
     setOrders(o??[]); setSuppliers(s??[]); setSites((si??[]) as typeof si & [])
     setLoading(false)
@@ -117,12 +118,10 @@ function GoodsPage() {
   const totalSpend = orders.filter(o=>o.status!=='Cancelled').reduce((s,o)=>s+o.total_price,0)
   const totalAdv   = orders.filter(o=>o.status!=='Cancelled').reduce((s,o)=>s+o.advance_paid,0)
 
-  // Telugu filter labels
   const filterLabels: Record<string, string> = te
     ? { All:'అన్నీ', Pending:'పెండింగ్', Delivered:'డెలివరీ అయింది', Cancelled:'రద్దు చేయబడింది' }
     : { All:'All',   Pending:'Pending',   Delivered:'Delivered',        Cancelled:'Cancelled' }
 
-  // Telugu status labels
   const statusLabels: Record<string, string> = te
     ? { Pending:'పెండింగ్', Delivered:'డెలివరీ అయింది', Cancelled:'రద్దు' }
     : { Pending:'Pending',   Delivered:'Delivered',        Cancelled:'Cancelled' }
