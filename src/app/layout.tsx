@@ -25,32 +25,58 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* MUST be first — before any script or style — so browser locks
-            mobile layout before it parses anything else.
-            This prevents the desktop-width flash on PWA first load. */}
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
         />
-
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+        {/* Theme init before first paint */}
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             var t = localStorage.getItem('theme') || 'dark';
             document.documentElement.classList.toggle('dark', t === 'dark');
           } catch(e) { document.documentElement.classList.add('dark'); }
         `}} />
+
+        {/*
+          ISSUE 3 FIX — Splash screen background
+          The black flash + icon splash happens because:
+          1. The browser shows the PWA splash (from manifest: background_color + icon)
+          2. Then React hydrates and renders the login page
+          There is no way to change the PWA OS-level splash screen via code alone —
+          it always comes from manifest.json's background_color and icons.
+
+          The fix has two parts:
+          A) manifest.json background_color → use a dark colour that matches the
+             bottom edge of login-bg.jpg (already set to #0c0c0e — keep it).
+          B) The <body> gets the login-bg.jpg as its background immediately via
+             CSS so as soon as React renders ANYTHING, the image is already there.
+             This eliminates the white/plain flash between splash and login page.
+        */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          body {
+            background-image: url('/login-bg.jpg');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+          }
+        `}} />
       </head>
-      <body style={{ backgroundColor: 'rgb(18,18,20)', color: 'rgb(238,236,229)' }} className="min-h-screen">
+      <body
+        className="min-h-screen"
+        style={{ color: 'rgb(238,236,229)' }}
+      >
         {children}
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}))
+            window.addEventListener('load', () =>
+              navigator.serviceWorker.register('/sw.js').catch(() => {})
+            )
           }
         `}} />
       </body>
