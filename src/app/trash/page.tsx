@@ -12,7 +12,7 @@ function TrashPage() {
   const { lang } = useLang()
   const [items,   setItems]   = useState<TrashItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [toast,   setToast]   = useState<{msg:string;ok:boolean}>()
+  const [toast,   setToast]   = useState<{msg:string;ok:boolean} | undefined>()
   const showToast = (msg:string, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(undefined),3000) }
 
   const load = useCallback(async () => {
@@ -27,7 +27,6 @@ function TrashPage() {
     ]
 
     for (const t of tables) {
-      // Check if deleted_at column exists by trying to query it
       const { data, error } = await supabase
         .from(t.name)
         .select('*')
@@ -95,9 +94,11 @@ function TrashPage() {
         {loading ? (
           <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full"/></div>
         ) : items.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-5xl mb-3 opacity-20">🗑️</div>
-            <p className="font-semibold" style={{color:'rgb(var(--muted))'}}>{tss(lang,'noTrash')}</p>
+          // FIX: removed duplicate RecycleBinHelp call — was rendered twice (once here, once below)
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="text-5xl mb-4 opacity-20">🗑️</div>
+            <p className="font-bold" style={{color:'rgb(var(--muted))'}}>{tss(lang,'noTrash')}</p>
+            <p className="text-sm mt-1" style={{color:'rgb(var(--muted))'}}>Deleted workers, sites, suppliers and contractors will appear here</p>
           </div>
         ) : items.map(item => (
           <div key={`${item.table}-${item.id}`} className="card mb-3 p-4 flex items-center gap-3">
@@ -116,22 +117,9 @@ function TrashPage() {
             </div>
           </div>
         ))}
-
-        {/* Setup help - only shown if recycle bin SQL hasn't been run yet */}
-        {items.length === 0 && !loading && <RecycleBinHelp />}
       </div>
     </div>
   )
 }
-// Only shown when there are no items AND the query worked fine —
-// helps user understand if they haven't run the SQL yet
-function RecycleBinHelp() {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="text-5xl mb-4">🗑️</div>
-      <p className="font-bold dark:text-slate-400 text-gray-500 dark:dark:text-slate-500 text-gray-400">Recycle Bin is Empty</p>
-      <p className="text-sm dark:text-slate-500 text-gray-400 dark:dark:text-slate-400 text-gray-500 mt-1">Deleted workers, sites, suppliers and contractors will appear here</p>
-    </div>
-  )
-}
+
 export default function Trash() { return <AppShell><TrashPage /></AppShell> }
