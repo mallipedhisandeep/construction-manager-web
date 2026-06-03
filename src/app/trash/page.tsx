@@ -12,18 +12,23 @@ function TrashPage() {
   const { lang } = useLang()
   const [items,   setItems]   = useState<TrashItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [toast,   setToast]   = useState<{msg:string;ok:boolean} | undefined>()
-  const showToast = (msg:string, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(undefined),3000) }
+  const [toast,   setToast]   = useState<{msg:string;ok:boolean}|undefined>()
+
+  const showToast = (msg:string, ok=true) => {
+    setToast({msg,ok}); setTimeout(()=>setToast(undefined),3000)
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
     const results: TrashItem[] = []
 
     const tables = [
-      { name:'workers',         labelField:'name',      subtitleField:'work_type', display:'Worker' },
-      { name:'sites',           labelField:'site_name', subtitleField:'status',    display:'Site' },
-      { name:'suppliers',       labelField:'name',      subtitleField:'shop_name', display:'Supplier' },
-      { name:'private_workers', labelField:'name',      subtitleField:'work_type', display:'Contractor' },
+      { name:'workers',      labelField:'name',       subtitleField:'work_type',  display:'Worker' },
+      { name:'sites',        labelField:'site_name',  subtitleField:'status',     display:'Site' },
+      { name:'suppliers',    labelField:'name',        subtitleField:'shop_name', display:'Supplier' },
+      { name:'private_workers', labelField:'name',    subtitleField:'work_type',  display:'Contractor' },
+      // FIX: added goods_orders so deleted orders appear in Recycle Bin
+      { name:'goods_orders', labelField:'goods_name', subtitleField:'supplier_name', display:'Goods Order' },
     ]
 
     for (const t of tables) {
@@ -36,10 +41,10 @@ function TrashPage() {
       if (!error && data) {
         data.forEach((row: Record<string,unknown>) => {
           results.push({
-            id: row.id as string,
-            table: t.name,
-            label: `${t.display}: ${row[t.labelField]}`,
-            subtitle: (row[t.subtitleField] ?? '') as string,
+            id:         row.id as string,
+            table:      t.name,
+            label:      `${t.display}: ${row[t.labelField]}`,
+            subtitle:   (row[t.subtitleField] ?? '') as string,
             deleted_at: row.deleted_at as string,
           })
         })
@@ -54,7 +59,10 @@ function TrashPage() {
   useEffect(() => { load() }, [load])
 
   const restore = async (item: TrashItem) => {
-    const { error } = await supabase.from(item.table).update({ deleted_at: null }).eq('id', item.id)
+    const { error } = await supabase
+      .from(item.table)
+      .update({ deleted_at: null })
+      .eq('id', item.id)
     if (error) showToast(error.message, false)
     else { showToast(tss(lang,'restore') + '!'); load() }
   }
@@ -74,41 +82,77 @@ function TrashPage() {
     showToast('Recycle bin emptied'); load()
   }
 
-  const daysSince = (d: string) => Math.floor((Date.now() - new Date(d).getTime()) / 86400000)
+  const daysSince = (d:string) =>
+    Math.floor((Date.now() - new Date(d).getTime()) / 86400000)
+
+  // Icon per table type
+  const icon = (table:string) => ({
+    workers:'👷', sites:'🏗️', suppliers:'🏪',
+    private_workers:'🔧', goods_orders:'📦',
+  }[table] ?? '🗑️')
 
   return (
     <div className="page">
-      {toast && <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.ok?'bg-green-500':'bg-red-500'}`}>{toast.msg}</div>}
+      {toast && (
+        <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.ok?'bg-green-500':'bg-red-500'}`}>
+          {toast.msg}
+        </div>
+      )}
+
       <div className="page-header">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>🗑️ {tss(lang,'trash')}</h1>
-            <p className="text-xs mt-0.5" style={{color:'rgb(var(--muted))'}}>{tss(lang,'trashNote')}</p>
+            <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>
+              🗑️ {tss(lang,'trash')}
+            </h1>
+            <p className="text-xs mt-0.5" style={{color:'rgb(var(--muted))'}}>
+              {tss(lang,'trashNote')}
+            </p>
           </div>
           {items.length > 0 && (
-            <button onClick={emptyTrash} className="btn-danger btn-sm">Empty All</button>
+            <button onClick={emptyTrash} className="btn-danger btn-sm">
+              Empty All
+            </button>
           )}
         </div>
       </div>
+
       <div className="px-4 pt-4">
         {loading ? (
-          <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full"/></div>
+          <div className="flex justify-center py-16">
+            <div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full"/>
+          </div>
         ) : items.length === 0 ? (
-          // FIX: removed duplicate RecycleBinHelp call — was rendered twice (once here, once below)
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="text-5xl mb-4 opacity-20">🗑️</div>
-            <p className="font-bold" style={{color:'rgb(var(--muted))'}}>{tss(lang,'noTrash')}</p>
-            <p className="text-sm mt-1" style={{color:'rgb(var(--muted))'}}>Deleted workers, sites, suppliers and contractors will appear here</p>
+            <p className="font-bold" style={{color:'rgb(var(--muted))'}}>
+              {tss(lang,'noTrash')}
+            </p>
+            <p className="text-sm mt-1" style={{color:'rgb(var(--muted))'}}>
+              Deleted workers, sites, suppliers, contractors and goods orders appear here
+            </p>
           </div>
         ) : items.map(item => (
           <div key={`${item.table}-${item.id}`} className="card mb-3 p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+              style={{background:'rgb(var(--surface2))'}}>
+              {icon(item.table)}
+            </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm truncate" style={{color:'rgb(var(--text))'}}>{item.label}</p>
-              {item.subtitle && <p className="text-xs truncate" style={{color:'rgb(var(--muted))'}}>{item.subtitle}</p>}
-              <p className="text-xs mt-0.5" style={{color:'rgb(var(--muted))'}}>{daysSince(item.deleted_at)} days ago</p>
+              <p className="font-bold text-sm truncate" style={{color:'rgb(var(--text))'}}>
+                {item.label}
+              </p>
+              {item.subtitle && (
+                <p className="text-xs truncate" style={{color:'rgb(var(--muted))'}}>
+                  {item.subtitle}
+                </p>
+              )}
+              <p className="text-xs mt-0.5" style={{color:'rgb(var(--muted))'}}>
+                {daysSince(item.deleted_at)} days ago
+              </p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
-              <button onClick={()=>restore(item)} className="btn-ghost btn-sm text-green-600 dark:text-green-400">
+              <button onClick={()=>restore(item)} className="btn-ghost btn-sm text-green-500">
                 ↩ {tss(lang,'restore')}
               </button>
               <button onClick={()=>deletePermanent(item)} className="btn-danger btn-sm">
