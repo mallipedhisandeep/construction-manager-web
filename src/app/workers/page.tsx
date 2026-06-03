@@ -22,7 +22,8 @@ function WorkersPage() {
   const [modal,  setModal]  = useState<'add'|'edit'|'view'|null>(null)
   const [form,   setForm]   = useState<Worker>(empty())
   const [saving, setSaving] = useState(false)
-  const [toast,  setToast]  = useState<{msg:string;type:'ok'|'err'}>()
+  // FIX: explicit undefined type so TypeScript is happy
+  const [toast,  setToast]  = useState<{msg:string;type:'ok'|'err'} | undefined>()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -49,7 +50,6 @@ function WorkersPage() {
     if (form.phone.length !== 10) { showToast(ts(lang,'invalidPhone'),'err'); return }
     setSaving(true)
     try {
-      // ── FIX: stamp user_id on every insert ──
       const userId = await uid()
       const { error } = modal==='add'
         ? await supabase.from('workers').insert({ ...form, user_id: userId })
@@ -61,6 +61,7 @@ function WorkersPage() {
       showToast(e instanceof Error ? e.message : 'Save failed','err')
     } finally { setSaving(false) }
   }
+
   const del = async (w:Worker) => {
     if (!confirm(ts(lang,'deleteConfirm'))) return
     const { error } = await supabase.from('workers').update({ deleted_at: new Date().toISOString() }).eq('id', w.id!)
@@ -160,7 +161,7 @@ function WorkersPage() {
                       <div className="flex-1 relative">
                         <span className="absolute left-3 top-2.5 text-sm font-medium" style={{color:"rgb(var(--muted))"}}>₹</span>
                         <input type="number" inputMode="numeric" className="input pl-7 py-2"
-                          value={((form as unknown) as Record<string, number>)[rateKey(s)]||''}
+                          value={(form as unknown as Record<string, number>)[rateKey(s)]||''}
                           onChange={e=>setForm({...form,[rateKey(s)]:+e.target.value})} />
                       </div>
                     </div>
@@ -209,7 +210,7 @@ function WorkersPage() {
                   {SHIFTS.map((s,i) => (
                     <div key={s} className="flex justify-between items-center rounded-xl px-3 py-2" style={{background:"rgb(var(--bg))"}}>
                       <span className="text-sm dark:text-slate-400 text-gray-500">{S_LABELS[i]}</span>
-                      <span className="font-bold text-amber-500">₹{((form as unknown) as Record<string, number>)[rateKey(s)]||0}</span>
+                      <span className="font-bold text-amber-500">₹{(form as unknown as Record<string, number>)[rateKey(s)]||0}</span>
                     </div>
                   ))}
                 </div>
@@ -269,4 +270,3 @@ const Empty = ({msg,icon}:{msg:string;icon:string}) => (
 )
 
 export default function Workers() { return <AppShell><WorkersPage /></AppShell> }
-    
