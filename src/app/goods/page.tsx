@@ -5,7 +5,9 @@ import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import type { GoodsOrder, Supplier, SupplierGoods, Site } from '@/lib/types'
 
-const STATUS_STYLE: Record<string,string> = { Pending:'badge-amber', Delivered:'badge-green', Cancelled:'badge-red' }
+const STATUS_STYLE: Record<string,string> = {
+  Pending:'badge-amber', Delivered:'badge-green', Cancelled:'badge-red'
+}
 
 function GoodsPage() {
   const { lang } = useLang()
@@ -18,21 +20,24 @@ function GoodsPage() {
   const [loading,   setLoading]   = useState(true)
   const [modal,     setModal]     = useState(false)
   const [saving,    setSaving]    = useState(false)
-  const [toast,     setToast]     = useState<{msg:string;ok:boolean} | undefined>()
+  const [toast,     setToast]     = useState<{msg:string;ok:boolean}|undefined>()
   const [filter,    setFilter]    = useState<'All'|'Pending'|'Delivered'|'Cancelled'>('All')
   const [form, setForm] = useState<Partial<GoodsOrder & {priceStr:string;qtyStr:string;advStr:string}>>({
-    status:'Pending', delivery_date: new Date().toISOString().split('T')[0],
-    priceStr:'', qtyStr:'', advStr:''
+    status:'Pending',
+    delivery_date: new Date().toISOString().split('T')[0],
+    priceStr:'', qtyStr:'', advStr:'',
   })
 
-  const showToast = (msg:string, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(undefined),3000) }
+  const showToast = (msg:string, ok=true) => {
+    setToast({msg,ok}); setTimeout(()=>setToast(undefined),3000)
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
     const [{ data:o },{ data:s },{ data:si }] = await Promise.all([
-      supabase.from('goods_orders').select('*').order('created_at',{ascending:false}),
+      // FIX: only show orders that are NOT soft-deleted
+      supabase.from('goods_orders').select('*').is('deleted_at', null).order('created_at',{ascending:false}),
       supabase.from('suppliers').select('*').is('deleted_at', null).order('name'),
-      // FIX: added .is('deleted_at', null) so deleted sites don't appear in the dropdown
       supabase.from('sites').select('id,site_name,status').eq('status','Active').is('deleted_at', null),
     ])
     setOrders(o??[]); setSuppliers(s??[]); setSites((si??[]) as typeof si & [])
@@ -52,11 +57,7 @@ function GoodsPage() {
     setForm(f=>({...f, goods_name:goodsName, unit:item?.unit??'bags', priceStr:item?.price_per_unit?.toString()??''}))
   }
 
-  const calcTotal = () => {
-    const qty = parseFloat(form.qtyStr||'0')
-    const price = parseFloat(form.priceStr||'0')
-    return qty * price
-  }
+  const calcTotal = () => (parseFloat(form.qtyStr||'0')) * (parseFloat(form.priceStr||'0'))
 
   const save = async () => {
     if (!form.supplier_id||!form.goods_name||!form.delivery_date) {
@@ -64,11 +65,11 @@ function GoodsPage() {
       return
     }
     setSaving(true)
-    const sup = suppliers.find(s=>s.id===form.supplier_id)
+    const sup  = suppliers.find(s=>s.id===form.supplier_id)
     const site = sites.find(s=>s.id===form.site_id)
-    const qty = parseFloat(form.qtyStr||'0')
+    const qty   = parseFloat(form.qtyStr||'0')
     const price = parseFloat(form.priceStr||'0')
-    const adv = parseFloat(form.advStr||'0')
+    const adv   = parseFloat(form.advStr||'0')
     const total = qty * price
 
     try {
@@ -97,7 +98,7 @@ function GoodsPage() {
       setModal(false); load()
       showToast(te
         ? ('ఆర్డర్ జోడించబడింది!' + (adv>0?' అడ్వాన్స్ నమోదు చేయబడింది.':''))
-        : ('Order added!' + (adv>0?' Advance logged to supplier.':'')))
+        : ('Order added!'         + (adv>0?' Advance logged to supplier.':'')))
     } catch(e:unknown) {
       showToast(e instanceof Error ? e.message : (te?'సేవ్ విఫలమైంది':'Save failed'), false)
     } finally { setSaving(false) }
@@ -108,90 +109,148 @@ function GoodsPage() {
     load()
   }
 
+  // ── FIX: soft-delete instead of hard-delete so item appears in Recycle Bin ──
   const delOrder = async (id:string) => {
-    if (!confirm(te ? 'ఈ ఆర్డర్ తొలగించాలా?' : 'Delete this order?')) return
-    await supabase.from('goods_orders').delete().eq('id',id)
+    if (!confirm(te ? 'ఈ ఆర్డర్‌ని చెత్తబుట్టకు తరలించాలా?' : 'Move this order to recycle bin?')) return
+    const { error } = await supabase
+      .from('goods_orders')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) { showToast(error.message, false); return }
+    showToast(te ? 'చెత్తబుట్టకు తరలించబడింది 🗑️' : 'Moved to recycle bin 🗑️')
     load()
   }
 
-  const filtered = filter==='All' ? orders : orders.filter(o=>o.status===filter)
+  const filtered  = filter==='All' ? orders : orders.filter(o=>o.status===filter)
   const totalSpend = orders.filter(o=>o.status!=='Cancelled').reduce((s,o)=>s+o.total_price,0)
   const totalAdv   = orders.filter(o=>o.status!=='Cancelled').reduce((s,o)=>s+o.advance_paid,0)
 
-  const filterLabels: Record<string, string> = te
-    ? { All:'అన్నీ', Pending:'పెండింగ్', Delivered:'డెలివరీ అయింది', Cancelled:'రద్దు చేయబడింది' }
-    : { All:'All',   Pending:'Pending',   Delivered:'Delivered',        Cancelled:'Cancelled' }
-
-  const statusLabels: Record<string, string> = te
-    ? { Pending:'పెండింగ్', Delivered:'డెలివరీ అయింది', Cancelled:'రద్దు' }
-    : { Pending:'Pending',   Delivered:'Delivered',        Cancelled:'Cancelled' }
+  const filterLabels: Record<string,string> = te
+    ? {All:'అన్నీ',Pending:'పెండింగ్',Delivered:'డెలివరీ అయింది',Cancelled:'రద్దు చేయబడింది'}
+    : {All:'All',  Pending:'Pending',  Delivered:'Delivered',       Cancelled:'Cancelled'}
+  const statusLabels: Record<string,string> = te
+    ? {Pending:'పెండింగ్',Delivered:'డెలివరీ అయింది',Cancelled:'రద్దు'}
+    : {Pending:'Pending', Delivered:'Delivered',       Cancelled:'Cancelled'}
 
   return (
     <div className="page">
-      {toast && <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.ok?'bg-green-500':'bg-red-500'}`}>{toast.msg}</div>}
+      {toast && (
+        <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.ok?'bg-green-500':'bg-red-500'}`}>
+          {toast.msg}
+        </div>
+      )}
 
       <div className="page-header">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-black dark:text-slate-100 text-gray-800">📦 {te?'వస్తువుల ఆర్డర్లు':'Goods Orders'}</h1>
-          <button onClick={()=>{ setForm({status:'Pending',delivery_date:new Date().toISOString().split('T')[0],priceStr:'',qtyStr:'',advStr:''}); setCatalog([]); setModal(true) }}
-            className="btn-primary btn-sm">+ {te?'కొత్త ఆర్డర్':'New Order'}</button>
+          <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>
+            📦 {te?'వస్తువుల ఆర్డర్లు':'Goods Orders'}
+          </h1>
+          <button
+            onClick={()=>{ setForm({status:'Pending',delivery_date:new Date().toISOString().split('T')[0],priceStr:'',qtyStr:'',advStr:''}); setCatalog([]); setModal(true) }}
+            className="btn-primary btn-sm">
+            + {te?'కొత్త ఆర్డర్':'New Order'}
+          </button>
         </div>
+
         {orders.length>0 && (
           <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className="bg-red-50 rounded-xl p-2 text-center"><p className="font-black text-red-600 text-sm">₹{totalSpend.toFixed(0)}</p><p className="text-[10px] text-red-400">{te?'మొత్తం ఆర్డర్':'Total Ordered'}</p></div>
-            <div className="bg-green-50 rounded-xl p-2 text-center"><p className="font-black text-green-600 text-sm">₹{totalAdv.toFixed(0)}</p><p className="text-[10px] text-green-400">{te?'అడ్వాన్స్ చెల్లింపు':'Advance Paid'}</p></div>
-            <div className="bg-slate-800/50 rounded-xl p-2 text-center"><p className="font-black text-amber-500 text-sm">₹{(totalSpend-totalAdv).toFixed(0)}</p><p className="text-[10px] text-amber-400">{te?'బాకీ':'Balance Due'}</p></div>
+            <div className="rounded-xl p-2 text-center" style={{background:'rgba(220,38,38,0.12)'}}>
+              <p className="font-black text-red-400 text-sm">₹{totalSpend.toFixed(0)}</p>
+              <p className="text-[10px] text-red-400">{te?'మొత్తం ఆర్డర్':'Total Ordered'}</p>
+            </div>
+            <div className="rounded-xl p-2 text-center" style={{background:'rgba(22,163,74,0.12)'}}>
+              <p className="font-black text-green-400 text-sm">₹{totalAdv.toFixed(0)}</p>
+              <p className="text-[10px] text-green-400">{te?'అడ్వాన్స్ చెల్లింపు':'Advance Paid'}</p>
+            </div>
+            <div className="rounded-xl p-2 text-center" style={{background:'rgba(212,140,40,0.12)'}}>
+              <p className="font-black text-sm" style={{color:'#d48c28'}}>₹{(totalSpend-totalAdv).toFixed(0)}</p>
+              <p className="text-[10px]" style={{color:'#d48c28'}}>{te?'బాకీ':'Balance Due'}</p>
+            </div>
           </div>
         )}
+
         <div className="flex gap-2 overflow-x-auto">
           {(['All','Pending','Delivered','Cancelled'] as const).map(f=>(
-            <button key={f} onClick={()=>setFilter(f)} className={`chip flex-shrink-0 ${filter===f?'chip-active':'chip-idle'}`}>{filterLabels[f]}</button>
+            <button key={f} onClick={()=>setFilter(f)}
+              className={`chip flex-shrink-0 ${filter===f?'chip-active':'chip-idle'}`}>
+              {filterLabels[f]}
+            </button>
           ))}
         </div>
       </div>
 
       <div className="px-4 pt-4">
-        {loading
-          ? <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full"/></div>
-          : filtered.length===0
-            ? <div className="text-center py-16"><div className="text-5xl mb-2 opacity-20">📦</div><p className="dark:text-slate-500 text-gray-400">{te?'ఆర్డర్లు లేవు':'No orders'}</p></div>
-            : filtered.map(o=>(
-              <div key={o.id} className="card mb-3 overflow-hidden">
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold dark:text-slate-100 text-gray-800">{o.goods_name}</span>
-                        <span className={STATUS_STYLE[o.status]??'badge-gray'}>{statusLabels[o.status]??o.status}</span>
-                      </div>
-                      <p className="text-sm dark:text-slate-400 text-gray-500 mt-0.5">🏪 {o.supplier_name}{o.site_name?` · 🏗️ ${o.site_name}`:''}</p>
-                      <p className="text-xs dark:text-slate-500 text-gray-400 mt-0.5">📅 {o.delivery_date} · {o.quantity} {o.unit}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-black dark:text-slate-100 text-gray-800">₹{o.total_price.toFixed(0)}</p>
-                      {o.advance_paid>0 && <p className="text-xs text-green-600">{te?'అడ్వాన్స్':'Adv'} ₹{o.advance_paid}</p>}
-                      {o.total_price-o.advance_paid>0 && <p className="text-xs text-amber-400">{te?'బాకీ':'Due'} ₹{(o.total_price-o.advance_paid).toFixed(0)}</p>}
-                    </div>
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full"/>
+          </div>
+        ) : filtered.length===0 ? (
+          <div className="text-center py-16">
+            <div className="text-5xl mb-2 opacity-20">📦</div>
+            <p style={{color:'rgb(var(--muted))'}}>{te?'ఆర్డర్లు లేవు':'No orders'}</p>
+          </div>
+        ) : filtered.map(o=>(
+          <div key={o.id} className="card mb-3 overflow-hidden">
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold" style={{color:'rgb(var(--text))'}}>{o.goods_name}</span>
+                    <span className={STATUS_STYLE[o.status]??'badge-gray'}>{statusLabels[o.status]??o.status}</span>
                   </div>
+                  <p className="text-sm mt-0.5" style={{color:'rgb(var(--muted))'}}>
+                    🏪 {o.supplier_name}{o.site_name?` · 🏗️ ${o.site_name}`:''}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{color:'rgb(var(--muted))'}}>
+                    📅 {o.delivery_date} · {o.quantity} {o.unit}
+                  </p>
                 </div>
-                <div className="border-t border-gray-50 flex">
-                  {o.status==='Pending' && <button onClick={()=>updateStatus(o.id!,'Delivered')} className="flex-1 py-2 text-xs font-bold text-green-600 hover:bg-green-50 transition">✓ {te?'డెలివరీ గుర్తించు':'Mark Delivered'}</button>}
-                  {o.status==='Pending' && <div className="w-px bg-gray-100"/>}
-                  {o.status!=='Cancelled' && <button onClick={()=>updateStatus(o.id!,'Cancelled')} className="flex-1 py-2 text-xs font-bold dark:text-slate-500 text-gray-400 hover:dark:bg-slate-800 bg-gray-50 transition">✕ {te?'రద్దు చేయి':'Cancel'}</button>}
-                  <div className="w-px bg-gray-100"/>
-                  <button onClick={()=>delOrder(o.id!)} className="px-4 py-2 text-xs font-bold text-red-400 hover:bg-red-50 transition">🗑️</button>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-black" style={{color:'rgb(var(--text))'}}>₹{o.total_price.toFixed(0)}</p>
+                  {o.advance_paid>0 && <p className="text-xs text-green-500">{te?'అడ్వాన్స్':'Adv'} ₹{o.advance_paid}</p>}
+                  {(o.total_price-o.advance_paid)>0 && (
+                    <p className="text-xs" style={{color:'#d48c28'}}>{te?'బాకీ':'Due'} ₹{(o.total_price-o.advance_paid).toFixed(0)}</p>
+                  )}
                 </div>
               </div>
-            ))
-        }
+            </div>
+            <div className="border-t flex" style={{borderColor:'rgb(var(--border))'}}>
+              {o.status==='Pending' && (
+                <button onClick={()=>updateStatus(o.id!,'Delivered')}
+                  className="flex-1 py-2 text-xs font-bold text-green-500 hover:bg-green-500/10 transition">
+                  ✓ {te?'డెలివరీ గుర్తించు':'Mark Delivered'}
+                </button>
+              )}
+              {o.status==='Pending' && (
+                <div className="w-px" style={{background:'rgb(var(--border))'}}/>
+              )}
+              {o.status!=='Cancelled' && (
+                <button onClick={()=>updateStatus(o.id!,'Cancelled')}
+                  className="flex-1 py-2 text-xs font-bold transition"
+                  style={{color:'rgb(var(--muted))'}}>
+                  ✕ {te?'రద్దు చేయి':'Cancel'}
+                </button>
+              )}
+              <div className="w-px" style={{background:'rgb(var(--border))'}}/>
+              {/* FIX: now calls soft-delete (sets deleted_at) instead of hard-delete */}
+              <button onClick={()=>delOrder(o.id!)}
+                className="px-4 py-2 text-xs font-bold text-red-400 hover:bg-red-500/10 transition">
+                🗑️
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
+      {/* ── New Order Modal ── */}
       {modal && (
         <div className="modal-backdrop" onClick={()=>setModal(false)}>
           <div className="modal-box" onClick={e=>e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="font-black text-lg">{te?'కొత్త వస్తువుల ఆర్డర్':'New Goods Order'}</h2>
-              <button onClick={()=>setModal(false)} className="text-gray-300 text-2xl">✕</button>
+              <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>
+                {te?'కొత్త వస్తువుల ఆర్డర్':'New Goods Order'}
+              </h2>
+              <button onClick={()=>setModal(false)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
             </div>
             <div className="p-5 space-y-3">
               <div>
@@ -211,19 +270,22 @@ function GoodsPage() {
                 </div>
               ) : form.supplier_id ? (
                 <div>
-                  <label className="label">{te?'వస్తువు పేరు (మాన్యువల్‌గా నమోదు)':'Goods Name (enter manually)'}</label>
-                  <input value={form.goods_name??''} onChange={e=>setForm(f=>({...f,goods_name:e.target.value}))} className="input" placeholder={te?'సరఫరాదారుకు జాబితా లేదు':'Supplier has no catalog yet'}/>
+                  <label className="label">{te?'వస్తువు పేరు':'Goods Name'}</label>
+                  <input value={form.goods_name??''} onChange={e=>setForm(f=>({...f,goods_name:e.target.value}))}
+                    className="input" placeholder={te?'మాన్యువల్‌గా నమోదు చేయండి':'Enter manually'}/>
                 </div>
               ) : null}
               <div>
-                <label className="label">{te?'సైటు (డెలివరీ చోటు)':'Site (where to deliver)'}</label>
+                <label className="label">{te?'సైటు':'Site'}</label>
                 <select value={form.site_id??''} onChange={e=>setForm(f=>({...f,site_id:e.target.value}))} className="input">
                   <option value="">{te?'— నిర్దిష్ట సైటు లేదు —':'— No specific site —'}</option>
                   {sites.map(s=><option key={s.id} value={s.id}>{s.site_name}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="label">{te?'పరిమాణం':'Quantity'}</label><input type="number" inputMode="decimal" value={form.qtyStr??''} onChange={e=>setForm(f=>({...f,qtyStr:e.target.value}))} className="input" placeholder="0"/></div>
+                <div><label className="label">{te?'పరిమాణం':'Quantity'}</label>
+                  <input type="number" inputMode="decimal" value={form.qtyStr??''} onChange={e=>setForm(f=>({...f,qtyStr:e.target.value}))} className="input" placeholder="0"/>
+                </div>
                 <div><label className="label">{te?'యూనిట్':'Unit'}</label>
                   <select value={form.unit??'bags'} onChange={e=>setForm(f=>({...f,unit:e.target.value}))} className="input">
                     {['bags','tons','pieces','sq.ft','cu.ft','liters','kg','loads','rods','tiles','Nos'].map(u=><option key={u}>{u}</option>)}
@@ -231,18 +293,26 @@ function GoodsPage() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="label">{te?'ధర / యూనిట్ ₹':'Price / Unit ₹'}</label><input type="number" inputMode="decimal" value={form.priceStr??''} onChange={e=>setForm(f=>({...f,priceStr:e.target.value}))} className="input" placeholder="0"/></div>
-                <div className="bg-slate-800/50 rounded-xl p-3 flex flex-col justify-center">
-                  <p className="text-xs text-amber-400 font-bold uppercase tracking-wide">{te?'మొత్తం':'Total'}</p>
-                  <p className="text-lg font-black text-amber-400">₹{calcTotal().toFixed(0)}</p>
+                <div><label className="label">{te?'ధర / యూనిట్ ₹':'Price / Unit ₹'}</label>
+                  <input type="number" inputMode="decimal" value={form.priceStr??''} onChange={e=>setForm(f=>({...f,priceStr:e.target.value}))} className="input" placeholder="0"/>
+                </div>
+                <div className="rounded-xl p-3 flex flex-col justify-center" style={{background:'rgba(212,140,40,0.1)'}}>
+                  <p className="text-xs font-bold uppercase tracking-wide" style={{color:'#d48c28'}}>{te?'మొత్తం':'Total'}</p>
+                  <p className="text-xl font-black" style={{color:'#d48c28'}}>₹{calcTotal().toFixed(0)}</p>
                 </div>
               </div>
               <div>
-                <label className="label">{te?'అడ్వాన్స్ చెల్లింపు ₹':'Advance Paid ₹'} <span className="dark:text-slate-500 text-gray-400 font-normal">({te?'సరఫరాదారు చరిత్రకు స్వయంచాలకంగా జోడించబడుతుంది':'auto-added to supplier history'})</span></label>
+                <label className="label">{te?'అడ్వాన్స్ చెల్లింపు ₹':'Advance Paid ₹'}</label>
                 <input type="number" inputMode="decimal" value={form.advStr??''} onChange={e=>setForm(f=>({...f,advStr:e.target.value}))} className="input" placeholder="0"/>
               </div>
-              <div><label className="label">{te?'డెలివరీ తేదీ *':'Delivery Date *'}</label><input type="date" value={form.delivery_date??''} onChange={e=>setForm(f=>({...f,delivery_date:e.target.value}))} className="input"/></div>
-              <div><label className="label">{te?'గమనికలు':'Notes'}</label><input value={form.notes??''} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} className="input" placeholder={te?'ఐచ్ఛికం...':'Optional...'}/></div>
+              <div>
+                <label className="label">{te?'డెలివరీ తేదీ *':'Delivery Date *'}</label>
+                <input type="date" value={form.delivery_date??''} onChange={e=>setForm(f=>({...f,delivery_date:e.target.value}))} className="input"/>
+              </div>
+              <div>
+                <label className="label">{te?'గమనికలు':'Notes'}</label>
+                <input value={form.notes??''} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} className="input" placeholder={te?'ఐచ్ఛికం...':'Optional...'}/>
+              </div>
               <button onClick={save} disabled={saving} className="btn-primary btn-full">
                 {saving ? (te?'⏳ సేవ్ అవుతోంది...':'⏳ Saving...') : (te?'ఆర్డర్ ఇవ్వు':'Place Order')}
               </button>
