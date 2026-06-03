@@ -1,31 +1,33 @@
 'use client'
 import { useState, useEffect, createContext, useContext, useCallback } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Nav from './Nav'
 import type { Lang } from '@/lib/strings'
 
 type Theme = 'light' | 'dark'
 
-interface AppCtx {
-  lang: Lang
-  setLang: (l: Lang) => void
-  theme: Theme
-  toggleTheme: () => void
-}
+// FIX: split context into clear lang/theme shapes so each hook returns only what it needs
+interface LangCtx  { lang: Lang; toggleLang: () => void }
+interface ThemeCtx { theme: Theme; toggleTheme: () => void }
+interface AppCtx   extends LangCtx, ThemeCtx {}
 
-const Ctx = createContext<AppCtx>({ lang:'en', setLang:()=>{}, theme:'dark', toggleTheme:()=>{} })
-export const useLang  = () => useContext(Ctx)
-export const useTheme = () => useContext(Ctx)
+const Ctx = createContext<AppCtx>({
+  lang: 'en', toggleLang: () => {},
+  theme: 'dark', toggleTheme: () => {},
+})
+
+// Each hook now returns only the relevant slice — no stale setLang leaking into useTheme etc.
+export const useLang  = (): LangCtx  => { const c = useContext(Ctx); return { lang: c.lang, toggleLang: c.toggleLang } }
+export const useTheme = (): ThemeCtx => { const c = useContext(Ctx); return { theme: c.theme, toggleTheme: c.toggleTheme } }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [lang,  setLangState]  = useState<Lang>('en')
   const [theme, setThemeState] = useState<Theme>('dark')
   const [ready, setReady]      = useState(false)
-  const router   = useRouter()
-  const pathname = usePathname()
+  const router = useRouter()
 
-  // Apply saved theme immediately
+  // Restore saved preferences on mount
   useEffect(() => {
     const savedLang  = localStorage.getItem('lang')
     const savedTheme = localStorage.getItem('theme') as Theme | null
@@ -35,6 +37,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle('dark', t === 'dark')
   }, [])
 
+  // Keep <html class="dark"> in sync whenever theme changes
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
@@ -46,39 +49,32 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const checkAndRoute = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!mounted) return
-      if (session) {
-        setReady(true)
-      } else {
-        router.replace('/login')
-      }
+      if (session) setReady(true)
+      else router.replace('/login')
     }
 
     checkAndRoute()
 
-    // Also subscribe to auth events (handles session restored after OAuth redirect)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return
-      if (session) {
-        setReady(true)
-      } else {
-        setReady(false)
-        router.replace('/login')
-      }
+      if (session) setReady(true)
+      else { setReady(false); router.replace('/login') }
     })
 
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
+    return () => { mounted = false; subscription.unsubscribe() }
   }, [router])
 
-  const setLang = useCallback((l: Lang) => {
-    setLangState(l); localStorage.setItem('lang', l)
+  const toggleLang = useCallback(() => {
+    setLangState(prev => {
+      const next: Lang = prev === 'en' ? 'te' : 'en'
+      localStorage.setItem('lang', next)
+      return next
+    })
   }, [])
 
   const toggleTheme = useCallback(() => {
     setThemeState(prev => {
-      const next = prev === 'light' ? 'dark' : 'light'
+      const next: Theme = prev === 'light' ? 'dark' : 'light'
       localStorage.setItem('theme', next)
       return next
     })
@@ -111,14 +107,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <Ctx.Provider value={{ lang, setLang, theme, toggleTheme }}>
-      <Nav
-        lang={lang}
-        onToggleLang={() => setLang(lang === 'en' ? 'te' : 'en')}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-      />
-      <main className="md:ml-56 pt-14">{children}</main>
+    // FIX: provide toggleLang/toggleTheme directly — Nav reads these from context, no prop drilling
+    <Ctx.Provider value={{ lang, toggleLang, theme, toggleTheme }}>
+      <Nav />
+      <main className="pt-14 pb-16">{children}</main>
     </Ctx.Provider>
   )
 }
