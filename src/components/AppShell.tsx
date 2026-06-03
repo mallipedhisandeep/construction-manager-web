@@ -7,7 +7,6 @@ import type { Lang } from '@/lib/strings'
 
 type Theme = 'light' | 'dark'
 
-// FIX: split context into clear lang/theme shapes so each hook returns only what it needs
 interface LangCtx  { lang: Lang; toggleLang: () => void }
 interface ThemeCtx { theme: Theme; toggleTheme: () => void }
 interface AppCtx   extends LangCtx, ThemeCtx {}
@@ -17,9 +16,76 @@ const Ctx = createContext<AppCtx>({
   theme: 'dark', toggleTheme: () => {},
 })
 
-// Each hook now returns only the relevant slice — no stale setLang leaking into useTheme etc.
 export const useLang  = (): LangCtx  => { const c = useContext(Ctx); return { lang: c.lang, toggleLang: c.toggleLang } }
 export const useTheme = (): ThemeCtx => { const c = useContext(Ctx); return { theme: c.theme, toggleTheme: c.toggleTheme } }
+
+// ── Splash screen — same background as the login page ────────────────────────
+function Splash() {
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden"
+      style={{
+        backgroundImage: 'url(/login-bg.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      {/* Same gradient overlay as login/page.tsx */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.45) 50%, rgba(4,3,1,0.92) 100%)',
+        }}
+      />
+
+      {/* Logo + name centred */}
+      <div className="relative z-10 flex flex-col items-center gap-5">
+        <div
+          className="w-24 h-24 rounded-3xl flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(135deg,rgba(212,140,40,0.18),rgba(212,140,40,0.06))',
+            border: '1.5px solid rgba(212,140,40,0.4)',
+            boxShadow: '0 0 60px rgba(212,140,40,0.18), 0 8px 40px rgba(0,0,0,0.55)',
+          }}
+        >
+          <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+            <text x="1" y="40" fontFamily="Georgia,serif" fontWeight="900" fontSize="36" fill="#cccccc">C</text>
+            <text x="27" y="40" fontFamily="Georgia,serif" fontWeight="900" fontSize="34" fill="#d48c28">M</text>
+          </svg>
+        </div>
+
+        <div className="flex flex-col items-center gap-1.5">
+          <p
+            className="text-xl font-black tracking-widest uppercase"
+            style={{ color: '#e8e3d8', fontFamily: "'Syne',sans-serif", letterSpacing: '0.16em' }}
+          >
+            Construction
+          </p>
+          <p
+            className="text-sm font-bold tracking-[0.32em] uppercase"
+            style={{ color: 'rgba(212,140,40,0.85)', fontFamily: "'Syne',sans-serif" }}
+          >
+            Manager
+          </p>
+        </div>
+
+        {/* Spinner */}
+        <div className="mt-1 relative w-8 h-8">
+          <div
+            className="absolute inset-0 rounded-full border-2 border-transparent animate-spin"
+            style={{
+              borderTopColor: '#d48c28',
+              borderRightColor: 'rgba(212,140,40,0.2)',
+              animationDuration: '0.9s',
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [lang,  setLangState]  = useState<Lang>('en')
@@ -27,7 +93,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [ready, setReady]      = useState(false)
   const router = useRouter()
 
-  // Restore saved preferences on mount
   useEffect(() => {
     const savedLang  = localStorage.getItem('lang')
     const savedTheme = localStorage.getItem('theme') as Theme | null
@@ -37,12 +102,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle('dark', t === 'dark')
   }, [])
 
-  // Keep <html class="dark"> in sync whenever theme changes
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
 
-  // Auth guard — listen for session changes in real time
   useEffect(() => {
     let mounted = true
 
@@ -80,34 +143,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
-  if (!ready) return (
-    <div className="flex items-center justify-center min-h-screen" style={{background:'rgb(12,12,14)'}}>
-      <div className="flex flex-col items-center gap-6">
-        <div className="relative">
-          <div className="w-20 h-20 rounded-3xl flex items-center justify-center"
-            style={{
-              background:'linear-gradient(135deg,rgba(212,140,40,0.1),rgba(212,140,40,0.04))',
-              border:'1.5px solid rgba(212,140,40,0.25)',
-              boxShadow:'0 0 40px rgba(212,140,40,0.12)'
-            }}>
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-              <text x="0" y="30" fontFamily="Georgia,serif" fontWeight="900" fontSize="28" fill="#b0b0b0">C</text>
-              <text x="20" y="30" fontFamily="Georgia,serif" fontWeight="900" fontSize="26" fill="#d48c28">M</text>
-            </svg>
-          </div>
-          <div className="absolute inset-0 rounded-3xl border-2 border-transparent animate-spin"
-            style={{borderTopColor:'rgba(212,140,40,0.7)',borderRightColor:'rgba(212,140,40,0.15)',animationDuration:'1s'}}/>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <p className="text-xs font-black tracking-[0.25em] uppercase" style={{color:'rgba(212,140,40,0.7)'}}>Loading</p>
-          <p className="text-xs" style={{color:'rgba(255,255,255,0.2)'}}>లోడవుతోంది...</p>
-        </div>
-      </div>
-    </div>
-  )
+  // Show login-page background as splash while auth is being checked
+  if (!ready) return <Splash />
 
   return (
-    // FIX: provide toggleLang/toggleTheme directly — Nav reads these from context, no prop drilling
     <Ctx.Provider value={{ lang, toggleLang, theme, toggleTheme }}>
       <Nav />
       <main className="pt-14 pb-16">{children}</main>
