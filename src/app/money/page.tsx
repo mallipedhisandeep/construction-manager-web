@@ -18,14 +18,15 @@ function MoneyPage() {
   const [sites, setSites] = useState<Array<{id:string;name:string;income:number;workerCost:number;goodsCost:number;net:number}>>([])
 
   const te = lang === 'te'
-  const now = new Date()
-  const monthStart = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // FIX: compute monthStart inside the callback so it doesn't become a stale dep
   const load = useCallback(async () => {
     setLoading(true)
     try {
+      const now = new Date()
+      const monthStart = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`
       const dateFilter = period==='month' ? monthStart : '2000-01-01'
+
       const [
         { data: attData },{ data: spData },{ data: goodsData },
         { data: supPay },{ data: pwPay },{ data: siteList },
@@ -158,9 +159,9 @@ function MoneyPage() {
                 <div key={s.id} className="card mb-2 p-4">
                   <p className="font-bold mb-2" style={{color:'rgb(var(--text))'}}>{s.name}</p>
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="bg-green-50 dark:bg-green-900/30  rounded-xl p-2"><p className="text-sm font-black text-green-600">₹{s.income.toFixed(0)}</p><p className="text-[10px] text-green-400">{te?'వచ్చింది':'Received'}</p></div>
+                    <div className="bg-green-50 dark:bg-green-900/30 rounded-xl p-2"><p className="text-sm font-black text-green-600">₹{s.income.toFixed(0)}</p><p className="text-[10px] text-green-400">{te?'వచ్చింది':'Received'}</p></div>
                     <div className="bg-red-50 dark:bg-red-900/30 rounded-xl p-2"><p className="text-sm font-black text-red-500">₹{(s.workerCost+s.goodsCost).toFixed(0)}</p><p className="text-[10px] text-red-400">{te?'ఖర్చు':'Spent'}</p></div>
-                    <div className={`rounded-xl p-2 ${s.net>=0?'bg-green-50 dark:bg-green-900/30 ':'bg-red-50 dark:bg-red-900/30'}`}><p className={`text-sm font-black ${s.net>=0?'text-green-700':'text-red-600'}`}>₹{Math.abs(s.net).toFixed(0)}</p><p className={`text-[10px] ${s.net>=0?'text-green-400':'text-red-400'}`}>{s.net>=0?(te?'లాభం':'Profit'):(te?'నష్టం':'Loss')}</p></div>
+                    <div className={`rounded-xl p-2 ${s.net>=0?'bg-green-50 dark:bg-green-900/30':'bg-red-50 dark:bg-red-900/30'}`}><p className={`text-sm font-black ${s.net>=0?'text-green-700':'text-red-600'}`}>₹{Math.abs(s.net).toFixed(0)}</p><p className={`text-[10px] ${s.net>=0?'text-green-400':'text-red-400'}`}>{s.net>=0?(te?'లాభం':'Profit'):(te?'నష్టం':'Loss')}</p></div>
                   </div>
                 </div>
               ))}
