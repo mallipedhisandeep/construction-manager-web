@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 
@@ -26,7 +26,7 @@ function ReportsPage() {
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState({ totalBudget:0, totalReceived:0, totalSpend:0, totalGoodsSpend:0, totalWorkerSpend:0, netPL:0 })
   const [outstanding, setOutstanding] = useState({ workers:0, suppliers:0, privateWorkers:0, sitesPending:0 })
-  const printRef = useRef<HTMLDivElement>(null)
+  // FIX: removed unused printRef — the print function opens a new window directly, ref was dead code
 
   useEffect(() => {
     const load = async () => {
@@ -73,6 +73,8 @@ function ReportsPage() {
         const totalPwCharged  = allPw?.reduce((s,p)=>s+p.price_charged,0) ?? 0
         const totalPwPaid     = allPw?.reduce((s,p)=>s+p.amount_paid,0) ?? 0
         const sitesPending    = (sites ?? []).filter(s=>s.status==='Active').length
+        // suppress unused var warnings for totalAdv — it's used in balance calc below
+        void totalAdv
         setOutstanding({ workers:Math.max(0,totalWorkerCost-totalAdv), suppliers:Math.max(0,totalGoodsOwed-totalSupPaid), privateWorkers:Math.max(0,totalPwCharged-totalPwPaid), sitesPending })
 
         const workerIds = [...new Set(allAtt?.map(a=>a.worker_id) ?? [])]
@@ -166,8 +168,7 @@ function ReportsPage() {
         </div>
       </div>
 
-      <div ref={printRef} className="px-4 pt-4 pb-28">
-        {/* OVERVIEW */}
+      <div className="px-4 pt-4 pb-28">
         {tab==='overview' && (
           <div className="space-y-4">
             {loading ? (
@@ -211,7 +212,6 @@ function ReportsPage() {
           </div>
         )}
 
-        {/* SITES */}
         {tab==='sites' && (
           <div className="space-y-3">
             {loading ? [0,1,2].map(i=><SkeletonCard key={i} rows={3}/>) :
@@ -249,7 +249,6 @@ function ReportsPage() {
           </div>
         )}
 
-        {/* WORKERS */}
         {tab==='workers' && (
           <div className="space-y-2">
             {loading ? [0,1,2,3].map(i=><SkeletonCard key={i}/>) :
@@ -272,7 +271,6 @@ function ReportsPage() {
           </div>
         )}
 
-        {/* OUTSTANDING */}
         {tab==='outstanding' && (
           <div className="space-y-3">
             {loading ? [0,1].map(i=><SkeletonCard key={i} rows={3}/>) : (
@@ -313,5 +311,4 @@ function ReportsPage() {
   )
 }
 
-// FIX: was double-wrapping AppShell — reports had AppShell inside AND outside
 export default function Reports() { return <AppShell><ReportsPage /></AppShell> }
