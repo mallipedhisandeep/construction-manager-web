@@ -1,376 +1,255 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
-import { ts, MONTHS } from '@/lib/strings'
+import { ts } from '@/lib/strings'
 import type { Worker, Attendance, Site } from '@/lib/types'
 
-const SHIFTS = ['6-6','10-6','6-10','6-2','10-2','2-6','Absent']
-const SHIFT_LABELS: Record<string,string> = {
-  '6-6':'6AM–6PM','10-6':'10AM–6PM','6-10':'6AM–9AM',
-  '6-2':'6AM–2PM','10-2':'10AM–2PM','2-6':'3PM–6PM','Absent':'Absent',
-}
-const SC: Record<string,string> = {
-  '6-6':'bg-green-600','10-6':'bg-teal-600','6-10':'bg-blue-600',
-  '6-2':'bg-indigo-600','10-2':'bg-purple-600','2-6':'bg-cyan-600','Absent':'bg-red-500'
-}
-const SL: Record<string,string> = {
-  '6-6':'bg-green-50 border-green-200 text-green-700','10-6':'bg-teal-50 border-teal-200 text-teal-700',
-  '6-10':'bg-blue-50 border-blue-200 text-blue-700','6-2':'bg-indigo-50 border-indigo-200 text-indigo-700',
-  '10-2':'bg-purple-50 border-purple-200 text-purple-700','2-6':'bg-cyan-50 border-cyan-200 text-cyan-700',
-  'Absent':'bg-red-50 border-red-200 text-red-600'
-}
-
-const pad = (n: number) => String(n).padStart(2, '0')
+const ATT_TYPES   = ['Full Day','Half Day','OT','Absent']
+const ATT_LABELS  = ['Full','Half','OT','Absent']
+const ATT_COLORS  = ['bg-green-500','bg-amber-400','bg-blue-500','bg-red-400']
 
 function AttendancePage() {
   const { lang } = useLang()
-  const now = new Date()
-  const [year,  setYear]  = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth())
-  const [day,   setDay]   = useState(now.getDate())
-  const [workers, setWorkers] = useState<Worker[]>([])
-  const [attMap,  setAttMap]  = useState<Record<string, Attendance>>({})
-  const [sites,   setSites]   = useState<Pick<Site,'id'|'site_name'>[]>([])
-  const [modal,   setModal]   = useState<Worker|null>(null)
-  const [form, setForm] = useState({ shift:'6-6', siteId:'', advance:'', payMode:'Cash' })
-  const [saving, setSaving] = useState(false)
-  const [toast,  setToast]  = useState<{msg:string;ok:boolean}>()
-  const [view,   setView]   = useState<'day'|'summary'>('day')
-  const [sumWorker,  setSumWorker]  = useState<Worker|null>(null)
-  const [sumRecords, setSumRecords] = useState<Attendance[]>([])
-  const [sumPrevBal, setSumPrevBal] = useState(0)
-  const [sumLoading, setSumLoading] = useState(false)
-  const [markedDays, setMarkedDays] = useState<Record<string, 'full'|'partial'>>({})
+  const [workers,  setWorkers]  = useState<Worker[]>([])
+  const [sites,    setSites]    = useState<Pick<Site,'id'|'site_name'>[]>([])
+  const [att,      setAtt]      = useState<Record<string, Attendance>>({})
+  const [dateKey,  setDateKey]  = useState(() => new Date().toISOString().split('T')[0])
+  const [loading,  setLoading]  = useState(true)
+  const [saving,   setSaving]   = useState(false)
+  // FIX: proper union type with undefined initial value
+  const [toast,    setToast]    = useState<{msg:string; ok:boolean} | undefined>()
+  const [siteId,   setSiteId]   = useState('')
+  const [history,  setHistory]  = useState<(Attendance & {worker_name?:string})[]>([])
+  const [viewMode, setViewMode] = useState<'mark'|'history'>('mark')
 
-  const months = MONTHS[lang]
-  const daysInMonth = new Date(year, month+1, 0).getDate()
-  const dKey = `${year}-${pad(month+1)}-${pad(day)}`
+  const showToast = (msg:string, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(undefined), 3500) }
 
-  const showToast = (msg:string, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(undefined),3000) }
+  const load = useCallback(async () => {
+    setLoading(true)
+    const [{ data: ws },{ data: si },{ data: existing }] = await Promise.all([
+      supabase.from('workers').select('*').is('deleted_at', null).order('name'),
+      supabase.from('sites').select('id,site_name').eq('status','Active').is('deleted_at', null),
+      supabase.from('attendance').select('*').eq('date_key', dateKey),
+    ])
+    setWorkers(ws ?? [])
+    setSites(si ?? [])
+    const map: Record<string, Attendance> = {}
+    existing?.forEach(a => { map[a.worker_id] = a })
+    setAtt(map)
+    setLoading(false)
+  }, [dateKey])
 
-  const loadWorkers  = useCallback(async()=>{ const {data}=await supabase.from('workers').select('*').is('deleted_at',null).order('work_type').order('state').order('name'); setWorkers(data??[]) },[])
-  const loadSites    = useCallback(async()=>{ const {data}=await supabase.from('sites').select('id,site_name').is('deleted_at',null); setSites(data??[]) },[])
-  const loadAtt      = useCallback(async()=>{ const {data}=await supabase.from('attendance').select('*').eq('date_key',dKey); const m:Record<string,Attendance>={}; data?.forEach(a=>{m[a.worker_id]=a}); setAttMap(m) },[dKey])
+  useEffect(() => { load() }, [load])
 
-  const loadMonthMarked = useCallback(async () => {
-    const start = `${year}-${pad(month+1)}-01`
-    const end   = month===11 ? `${year+1}-01-01` : `${year}-${pad(month+2)}-01`
-    const { data } = await supabase.from('attendance').select('date_key, worker_id').gte('date_key', start).lt('date_key', end)
-    if (!data) return
-    const byDay: Record<string, Set<string>> = {}
-    data.forEach(a => { if (!byDay[a.date_key]) byDay[a.date_key] = new Set(); byDay[a.date_key].add(a.worker_id) })
-    const { count: totalWorkers } = await supabase.from('workers').select('id', { count: 'exact', head: true }).is('deleted_at', null)
-    const total = totalWorkers ?? 0
-    const result: Record<string, 'full'|'partial'> = {}
-    Object.entries(byDay).forEach(([dk, workerSet]) => { result[dk] = (total > 0 && workerSet.size >= total) ? 'full' : 'partial' })
-    setMarkedDays(result)
-  }, [year, month])
+  const loadHistory = useCallback(async () => {
+    const { data } = await supabase.from('attendance').select('*').order('date_key',{ascending:false}).limit(100)
+    const ws: Record<string,string> = {}
+    workers.forEach(w => { if (w.id) ws[w.id] = w.name })
+    setHistory((data??[]).map(a => ({ ...a, worker_name: ws[a.worker_id] ?? '(Unknown)' })))
+  }, [workers])
 
-  useEffect(()=>{ loadWorkers(); loadSites() },[loadWorkers,loadSites])
-  useEffect(()=>{ loadAtt() },[loadAtt])
-  useEffect(()=>{ loadMonthMarked() },[loadMonthMarked])
+  useEffect(() => { if (viewMode==='history') loadHistory() }, [viewMode, loadHistory])
 
-  const wage = (w:Worker,s:string) => ({'6-6':w.rate_6_6,'10-6':w.rate_10_6,'6-10':w.rate_6_10,'6-2':w.rate_6_2,'10-2':w.rate_10_2,'2-6':w.rate_2_6,'Absent':0}[s]??0)
+  const toggle = (wId: string, type: string) => {
+    setAtt(prev => ({
+      ...prev,
+      [wId]: { ...(prev[wId]??{}), worker_id:wId, date_key:dateKey, attendance_type:type, advance: prev[wId]?.advance??0, wage:0 } as Attendance
+    }))
+  }
 
-  const openSummary = async (w:Worker) => {
-    setSumWorker(w); setSumLoading(true); setView('summary'); setSumRecords([]); setSumPrevBal(0)
-    const start = `${year}-${pad(month+1)}-01`
-    const end   = month===11 ? `${year+1}-01-01` : `${year}-${pad(month+2)}-01`
-    try {
-      const [{data:curr},{data:prev}] = await Promise.all([
-        supabase.from('attendance').select('*').eq('worker_id',w.id!).gte('date_key',start).lt('date_key',end).order('date_key'),
-        supabase.from('attendance').select('wage,advance,attendance_type').eq('worker_id',w.id!).lt('date_key',start),
-      ])
-      setSumRecords(curr??[])
-      const pE = prev?.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+(a.wage??0),0)??0
-      const pA = prev?.reduce((s,a)=>s+(a.advance??0),0)??0
-      setSumPrevBal(pE-pA)
-    } finally { setSumLoading(false) }
+  const setAdv = (wId: string, val: string) => {
+    setAtt(prev => ({
+      ...prev,
+      [wId]: { ...(prev[wId]??{ worker_id:wId, date_key:dateKey, attendance_type:'Full Day', wage:0 }), advance: parseFloat(val)||0 } as Attendance
+    }))
+  }
+
+  const calcWage = (w: Worker, type: string): number => {
+    const map: Record<string,keyof Worker> = {
+      'Full Day':'rate_6_6','Half Day':'rate_10_6','OT':'rate_6_10','Absent':'rate_6_6'
+    }
+    if (type==='Absent') return 0
+    return (w[map[type]??'rate_6_6'] as number) ?? 0
   }
 
   const saveAtt = async () => {
-    if (!modal) return
     setSaving(true)
     try {
-      const workerWage = wage(modal, form.shift)
-      const advance    = parseFloat(form.advance) || 0
-      // ── FIX: stamp user_id on attendance insert ──
       const userId = await uid()
-      const payload: Attendance & { user_id: string | null } = {
-        worker_id: modal.id!, site_id: form.siteId||undefined,
-        date: new Date(year,month,day).toISOString(), date_key: dKey,
-        attendance_type: form.shift, wage: workerWage,
-        advance, payment_mode: form.payMode,
-        balance_after: 0,
-        user_id: userId,
-      }
-      const existing = attMap[modal.id!]
-      const {error} = existing?.id
-        ? await supabase.from('attendance').update(payload).eq('id',existing.id)
-        : await supabase.from('attendance').insert(payload)
+      const rows = workers
+        .filter(w => att[w.id!]?.attendance_type)
+        .map(w => {
+          const a = att[w.id!]
+          const wage = calcWage(w, a.attendance_type)
+          // FIX: removed erroneous user_id cast into Attendance record;
+          //      only spread valid Attendance fields, append user_id cleanly
+          return {
+            worker_id:       w.id!,
+            date_key:        dateKey,
+            attendance_type: a.attendance_type,
+            advance:         a.advance ?? 0,
+            wage,
+            site_id:  siteId || null,
+            user_id:  userId,
+          }
+        })
+
+      if (rows.length === 0) { showToast(ts(lang,'noAttMarked'), false); setSaving(false); return }
+
+      const { error } = await supabase.from('attendance').upsert(rows, { onConflict: 'worker_id,date_key' })
       if (error) throw error
-      setModal(null)
-      await loadAtt()
-      await loadMonthMarked()
-      showToast(ts(lang,'savedOk') as string)
-    } catch(e:unknown) { showToast(e instanceof Error ? e.message : 'Save failed', false) }
-    finally { setSaving(false) }
+      showToast(ts(lang,'attSaved'))
+    } catch(e:unknown) {
+      showToast(e instanceof Error ? e.message : 'Save failed', false)
+    } finally { setSaving(false) }
   }
 
-  const grouped: Record<string,Worker[]> = {}
-  workers.forEach(w=>{ const k=w.work_type; grouped[k]=[...(grouped[k]??[]),w] })
+  const deleteAtt = async (id: string) => {
+    await supabase.from('attendance').delete().eq('id', id)
+    loadHistory()
+  }
 
-  const earned   = sumRecords.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+a.wage,0)
-  const advTot   = sumRecords.reduce((s,a)=>s+a.advance,0)
-  const finalBal = sumPrevBal + earned - advTot
+  const summary = Object.values(att)
+  const present = summary.filter(a=>a.attendance_type!=='Absent').length
+  const totalWages = workers.reduce((s,w)=>{
+    const a = att[w.id!]
+    return s + (a ? calcWage(w, a.attendance_type) : 0)
+  }, 0)
+  const totalAdv = summary.reduce((s,a)=>s+(a.advance??0),0)
+
+  const groupedHistory = history.reduce((grp, a) => {
+    grp[a.date_key] = grp[a.date_key] ?? []
+    grp[a.date_key].push(a)
+    return grp
+  }, {} as Record<string, typeof history>)
 
   return (
-    <div className="min-h-screen pb-24" style={{backgroundColor:"rgb(var(--bg))"}}>
+    <div className="page">
       {toast && <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.ok?'bg-green-500':'bg-red-500'}`}>{toast.msg}</div>}
 
-      <div className="border-b sticky top-14 z-30 px-4 py-3" style={{backgroundColor:"rgb(var(--surface))"}}>
-        {view==='summary' ? (
-          <div className="flex items-center gap-3">
-            <button onClick={()=>setView('day')} className="text-amber-500 font-bold text-sm">← Back</button>
-            <div className="flex-1">
-              <p className="font-black" style={{color:"rgb(var(--text))"}}>{sumWorker?.name}</p>
-              <p className="text-xs dark:text-slate-500 text-gray-400">{months[month]} {year} — Summary</p>
-            </div>
-            {sumLoading && <div className="w-4 h-4 border-2 border-amber-400/50 border-t-transparent rounded-full animate-spin"/>}
+      <div className="page-header">
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>📋 {ts(lang,'attendance')}</h1>
+          <div className="flex gap-2">
+            <button onClick={()=>setViewMode('mark')} className={`chip ${viewMode==='mark'?'chip-active':'chip-idle'}`}>{ts(lang,'mark')}</button>
+            <button onClick={()=>setViewMode('history')} className={`chip ${viewMode==='history'?'chip-active':'chip-idle'}`}>{ts(lang,'history')}</button>
           </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <select value={year} onChange={e=>{ setYear(+e.target.value) }}
-                className="border dark:border-slate-600 border-gray-200 rounded-lg px-2 py-1.5 text-sm font-semibold focus:ring-2 focus:ring-amber-400 focus:outline-none">
-                {[now.getFullYear()-1, now.getFullYear(), now.getFullYear()+1].map(y=><option key={y} value={y}>{y}</option>)}
-              </select>
-              <div className="flex overflow-x-auto gap-1 flex-1 pb-0.5">
-                {months.map((m,i)=>(
-                  <button key={i} onClick={()=>setMonth(i)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap flex-shrink-0 transition ${month===i?'bg-amber-600 text-white':'bg-gray-100 dark:text-slate-400 text-gray-500 hover:bg-gray-200'}`}>
-                    {m.slice(0,3)}
-                  </button>
-                ))}
+        </div>
+
+        {viewMode==='mark' && (
+          <>
+            <input type="date" value={dateKey} onChange={e=>setDateKey(e.target.value)} className="input mb-3"/>
+            <select value={siteId} onChange={e=>setSiteId(e.target.value)} className="input mb-3">
+              <option value="">{ts(lang,'noSite')}</option>
+              {sites.map(s=><option key={s.id} value={s.id}>{s.site_name}</option>)}
+            </select>
+            {!loading && (
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-green-50 dark:bg-green-900/30 rounded-xl p-2 text-center">
+                  <p className="font-black text-green-600 dark:text-green-400">{present}/{workers.length}</p>
+                  <p className="text-[10px] text-green-500">{ts(lang,'present')}</p>
+                </div>
+                <div className="rounded-xl p-2 text-center" style={{background:'rgba(var(--accent),0.12)'}}>
+                  <p className="font-black" style={{color:'rgb(var(--accent))'}}>₹{totalWages}</p>
+                  <p className="text-[10px]" style={{color:'rgb(var(--accent))'}}>Wages</p>
+                </div>
+                <div className="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-2 text-center">
+                  <p className="font-black text-blue-600 dark:text-blue-400">₹{totalAdv}</p>
+                  <p className="text-[10px] text-blue-500">Advance</p>
+                </div>
               </div>
-            </div>
-            <div className="bg-slate-800/50 rounded-xl px-3 py-2 flex items-center justify-between">
-              <span className="text-sm font-bold text-amber-400">📅 {months[month]} {day}, {year}</span>
-              <span className="text-xs text-amber-400">{Object.keys(attMap).length}/{workers.length} marked</span>
-            </div>
-          </div>
+            )}
+          </>
         )}
       </div>
 
-      {view==='summary' ? (
-        <div className="p-4 max-w-xl mx-auto space-y-3">
-          {sumLoading ? (
-            <div className="flex flex-col items-center py-16 gap-3">
-              <div className="animate-spin w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full"/>
-              <p className="dark:text-slate-500 text-gray-400 text-sm">Loading...</p>
-            </div>
+      {viewMode==='mark' && (
+        <div className="px-4 pt-3">
+          {loading ? (
+            <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full"/></div>
+          ) : workers.length===0 ? (
+            <div className="text-center py-16 opacity-50"><p className="text-4xl mb-2">👷</p><p style={{color:'rgb(var(--muted))'}}>{ts(lang,'noWorkers')}</p></div>
           ) : (
             <>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-2xl border p-3 text-center shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}>
-                  <p className="text-2xl font-black text-blue-600">{sumRecords.filter(a=>a.attendance_type!=='Absent').length}</p>
-                  <p className="text-xs dark:text-slate-500 text-gray-400 mt-0.5">Days</p>
-                </div>
-                <div className="rounded-2xl border p-3 text-center shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}>
-                  <p className="text-2xl font-black text-green-600">₹{earned.toFixed(0)}</p>
-                  <p className="text-xs dark:text-slate-500 text-gray-400 mt-0.5">Earned</p>
-                </div>
-                <div className="rounded-2xl border p-3 text-center shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}>
-                  <p className="text-2xl font-black text-amber-400">₹{advTot.toFixed(0)}</p>
-                  <p className="text-xs dark:text-slate-500 text-gray-400 mt-0.5">Advance</p>
-                </div>
-              </div>
-              {sumPrevBal!==0 && (
-                <div className={`rounded-2xl border-2 border-dashed p-4 ${sumPrevBal>0?'border-green-300 bg-green-50':'border-red-300 bg-red-50'}`}>
-                  <p className="text-xs font-bold dark:text-slate-500 text-gray-400 uppercase tracking-wide mb-1">Carried from previous months</p>
-                  <p className={`text-xl font-black ${sumPrevBal>0?'text-green-700':'text-red-600'}`}>₹{Math.abs(sumPrevBal).toFixed(0)}</p>
-                  <p className="text-xs dark:text-slate-400 text-gray-500">{sumPrevBal>0?'You owed this to worker':'Worker owed this to you'}</p>
-                </div>
-              )}
-              <div className={`rounded-2xl p-4 ${finalBal>0?'bg-green-600':finalBal<0?'bg-red-500':'bg-gray-200'}`}>
-                <p className="text-xs font-bold text-white/70 uppercase tracking-wide mb-1">Net Balance</p>
-                <p className="text-3xl font-black text-white">₹{Math.abs(finalBal).toFixed(0)}</p>
-                <p className="text-sm text-white/80 mt-1">
-                  {finalBal===0?'✓ All settled':finalBal>0?`Pay worker ₹${finalBal.toFixed(0)}`:`Worker owes ₹${Math.abs(finalBal).toFixed(0)}`}
-                </p>
-              </div>
-              {sumRecords.length===0 ? (
-                <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 text-center">
-                  <p className="text-3xl mb-2">📅</p>
-                  <p className="font-bold dark:text-slate-200 text-gray-700">No Records for {months[month]} {year}</p>
-                  <p className="text-sm dark:text-slate-400 text-gray-500 mt-1">Go back and mark attendance first</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs font-black dark:text-slate-500 text-gray-400 uppercase tracking-widest">{sumRecords.length} Records</p>
-                  {sumRecords.map(a=>{
-                    const d = a.date_key?.split('-')[2]
-                    const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(a.date_key+'T00:00:00').getDay()]
-                    return (
-                      <div key={a.id} className="border rounded-xl flex items-center gap-3 px-4 py-3 shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}>
-                        <div className={`w-12 h-12 ${SC[a.attendance_type]??'bg-gray-400'} rounded-xl flex flex-col items-center justify-center text-white flex-shrink-0`}>
-                          <span className="font-black text-sm leading-tight">{d}</span>
-                          <span className="text-[9px] opacity-80">{dow}</span>
-                        </div>
-                        <div className="flex-1">
-                          <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${SL[a.attendance_type]??''}`}>{SHIFT_LABELS[a.attendance_type] ?? a.attendance_type}</span>
-                          {a.advance>0 && <span className="ml-2 text-xs text-amber-400 font-semibold">Adv ₹{a.advance}</span>}
-                          {a.site_id && (
-                            <p className="text-[11px] text-blue-500 font-medium mt-0.5">
-                              📍 {sites.find(s=>s.id===a.site_id)?.site_name ?? 'Site'}
-                            </p>
-                          )}
-                        </div>
-                        <span className="font-bold dark:text-slate-200 text-gray-700">₹{a.wage}</span>
+              {workers.map(w=>{
+                const a = att[w.id!]
+                const type = a?.attendance_type
+                return (
+                  <div key={w.id} className="card mb-2 overflow-hidden">
+                    <div className="flex items-center gap-3 p-3">
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-amber-400 flex-shrink-0"
+                        style={{background:'rgba(var(--accent),0.15)'}}>
+                        {w.name[0]}
                       </div>
-                    )
-                  })}
-                </div>
-              )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold truncate" style={{color:'rgb(var(--text))'}}>{w.name}</p>
+                        <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{w.work_type} · {w.role}</p>
+                      </div>
+                      {type && type!=='Absent' && (
+                        <p className="text-xs font-bold text-green-600 dark:text-green-400 flex-shrink-0">₹{calcWage(w,type)}</p>
+                      )}
+                    </div>
+                    <div className="flex border-t" style={{borderColor:'rgb(var(--border))'}}>
+                      {ATT_TYPES.map((t,i)=>(
+                        <button key={t} onClick={()=>toggle(w.id!,t)}
+                          className={`flex-1 py-2 text-xs font-bold transition ${type===t?`${ATT_COLORS[i]} text-white`:'dark:text-slate-500 text-gray-400'}`}>
+                          {ATT_LABELS[i]}
+                        </button>
+                      ))}
+                    </div>
+                    {type && type!=='Absent' && (
+                      <div className="flex items-center gap-2 px-3 pb-2 border-t" style={{borderColor:'rgb(var(--border))'}}>
+                        <span className="text-xs" style={{color:'rgb(var(--muted))'}}>₹ {ts(lang,'advance')}:</span>
+                        <input type="number" inputMode="decimal" value={a?.advance||''} onChange={e=>setAdv(w.id!,e.target.value)}
+                          className="flex-1 input py-1 text-sm" placeholder="0"/>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+              <button onClick={saveAtt} disabled={saving} className="btn-primary btn-full mt-4 mb-8">
+                {saving ? `⏳ ${ts(lang,'saving')}` : `💾 ${ts(lang,'saveAttendance')}`}
+              </button>
             </>
           )}
         </div>
-      ) : (
-        <div className="flex" style={{ height: 'calc(100vh - 170px)', minHeight: '400px' }}>
-          <div className="w-14 border-r flex-shrink-0 overflow-y-auto" style={{backgroundColor:"rgb(var(--surface))"}}>
-            <div className="py-2">
-              {Array.from({length:daysInMonth},(_,i)=>i+1).map(d=>{
-                const dk = `${year}-${pad(month+1)}-${pad(d)}`
-                const isToday   = d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear()
-                const isSel     = d===day
-                const isWeekend = [0,6].includes(new Date(year,month,d).getDay())
-                const markStatus = markedDays[dk]
-                const bgClass = isSel ? 'bg-amber-600' : markStatus === 'full' ? 'bg-green-500' : markStatus === 'partial' ? 'bg-amber-400' : isToday ? 'bg-amber-900/30' : 'hover:dark:bg-slate-800 bg-gray-50'
-                const numColor = isSel ? 'text-white' : markStatus ? 'text-white' : isToday ? 'text-amber-400' : isWeekend ? 'text-red-400' : 'dark:text-slate-300 text-gray-600'
-                const dowColor = isSel ? 'text-amber-100' : markStatus ? 'text-white/70' : isToday ? 'text-amber-400' : isWeekend ? 'text-red-300' : 'text-gray-300'
-                return (
-                  <button key={d} onClick={()=>setDay(d)} className={`w-full py-3 flex flex-col items-center transition ${bgClass}`}>
-                    <span className={`text-xs font-black leading-none ${numColor}`}>{d}</span>
-                    <span className={`text-[8px] mt-0.5 ${dowColor}`}>{['S','M','T','W','T','F','S'][new Date(year,month,d).getDay()]}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+      )}
 
-          <div className="flex-1 overflow-y-auto">
-            {workers.length===0 ? (
-              <div className="flex flex-col items-center justify-center h-full dark:text-slate-500 text-gray-400">
-                <p className="text-4xl mb-2 opacity-30">👷</p>
-                <p className="text-sm">No workers added</p>
-              </div>
-            ) : (
-              <div className="p-3 pb-20">
-                {Object.entries(grouped).map(([wt,list])=>(
-                  <div key={wt} className="mb-4">
-                    <div className="flex items-center gap-2 mb-2 sticky top-0 py-1" style={{backgroundColor:"rgb(var(--bg))"}}>
-                      <div className="w-1 h-4 bg-amber-500 rounded"/>
-                      <span className="text-sm font-black dark:text-slate-200 text-gray-700">{wt}</span>
-                      <span className="text-xs dark:text-slate-500 text-gray-400 ml-1">{list.filter(w=>attMap[w.id!]).length}/{list.length} marked</span>
+      {viewMode==='history' && (
+        <div className="px-4 pt-3">
+          {Object.keys(groupedHistory).length===0 ? (
+            <div className="text-center py-16 opacity-50"><p className="text-4xl mb-2">📋</p><p style={{color:'rgb(var(--muted))'}}>{ts(lang,'noHistory')}</p></div>
+          ) : Object.entries(groupedHistory).map(([dk, records])=>{
+            const tot = records.filter(a=>a.attendance_type!=='Absent').length
+            const wages = records.reduce((s,a)=>s+(a.wage??0),0)
+            return (
+              <div key={dk} className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-black text-sm" style={{color:'rgb(var(--text))'}}>📅 {dk}</p>
+                  <div className="flex gap-2 text-xs" style={{color:'rgb(var(--muted))'}}>
+                    <span className="badge-green">{tot} present</span>
+                    <span className="badge-orange">₹{wages}</span>
+                  </div>
+                </div>
+                {records.map(a=>(
+                  <div key={a.id} className="card mb-1.5 p-3 flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${a.attendance_type==='Absent'?'bg-red-400':a.attendance_type==='Half Day'?'bg-amber-400':'bg-green-500'}`}/>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold truncate" style={{color:'rgb(var(--text))'}}>{a.worker_name}</p>
+                      <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{a.attendance_type} · ₹{a.wage??0}{(a.advance??0)>0?` · Adv ₹${a.advance}`:''}</p>
                     </div>
-                    {list.map(w=>{
-                      const att = attMap[w.id!]
-                      const col = att ? (SC[att.attendance_type]??'bg-gray-400') : null
-                      return (
-                        <div key={w.id} className="border rounded-xl mb-2 flex items-center gap-2.5 p-2.5 shadow-sm" style={{backgroundColor:"rgb(var(--surface))"}}>
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 ${col??'bg-gray-100'} ${col?'text-white':'dark:text-slate-500 text-gray-400'}`}>
-                            {w.name[0]?.toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-bold text-sm dark:text-slate-100 text-gray-800 truncate">{w.name}</p>
-                            {att ? (
-                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold border ${SL[att.attendance_type]??''}`}>{SHIFT_LABELS[att.attendance_type] ?? att.attendance_type}</span>
-                                {att.advance>0 && <span className="text-[11px] text-amber-400 font-medium">₹{att.advance} adv</span>}
-                              </div>
-                            ) : (
-                              <p className="text-[11px] text-gray-300 mt-0.5">{ts(lang,'notMarked') as string}</p>
-                            )}
-                          </div>
-                          <div className="flex gap-1 flex-shrink-0">
-                            <button onClick={()=>openSummary(w)} className="p-1.5 text-blue-400 hover:bg-blue-50 rounded-lg" title="Summary">📊</button>
-                            <button onClick={()=>{
-                              const a=attMap[w.id!]
-                              setForm({shift:a?.attendance_type??'6-6',siteId:a?.site_id??(sites[0]?.id??''),advance:a?.advance?.toString()??'',payMode:a?.payment_mode??'Cash'})
-                              setModal(w)
-                            }} className={`p-1.5 rounded-lg ${att?'text-amber-400 hover:bg-slate-800/50':'text-green-500 hover:bg-green-50'}`}>
-                              {att?'✏️':'➕'}
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })}
+                    <button onClick={()=>deleteAtt(a.id!)} className="text-red-400 hover:text-red-600 p-1 text-sm">🗑️</button>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {modal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end justify-center" onClick={()=>setModal(null)}>
-          <div className="w-full max-w-lg rounded-t-3xl p-5 shadow-2xl" style={{backgroundColor:"rgb(var(--surface))",color:"rgb(var(--text))"}} onClick={e=>e.stopPropagation()}>
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="font-black text-lg">{modal.name}</h3>
-                <p className="text-sm dark:text-slate-500 text-gray-400">{months[month]} {day}, {year} · {modal.state} · {modal.role}</p>
-              </div>
-              <button onClick={()=>setModal(null)} className="text-gray-300 text-2xl leading-none">✕</button>
-            </div>
-            <p className="text-xs font-bold dark:text-slate-500 text-gray-400 uppercase tracking-wide mb-2">Shift / Attendance</p>
-            <div className="grid grid-cols-4 gap-2 mb-4">
-              {SHIFTS.map(s=>(
-                <button key={s} onClick={()=>setForm({...form,shift:s})}
-                  className={`py-2.5 rounded-xl text-xs font-bold border-2 transition ${form.shift===s?`${SC[s]} text-white border-transparent`:'bg-opacity-0 dark:text-slate-300 text-gray-600 dark:border-slate-600 border-gray-200 hover:border-amber-400'}`}>
-                  {SHIFT_LABELS[s] ?? s}
-                </button>
-              ))}
-            </div>
-            {form.shift!=='Absent' && (
-              <div className="bg-slate-800/50 rounded-xl px-4 py-2 text-sm font-semibold text-amber-400 mb-3">
-                💰 Wage: ₹{wage(modal,form.shift)}
-              </div>
-            )}
-            {sites.length>0 && (
-              <div className="mb-3">
-                <label className="block text-xs font-bold dark:text-slate-500 text-gray-400 uppercase tracking-wide mb-1.5">Site</label>
-                <select value={form.siteId} onChange={e=>setForm({...form,siteId:e.target.value})} className="w-full border dark:border-slate-600 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none">
-                  <option value="">— No site —</option>
-                  {sites.map(s=><option key={s.id} value={s.id}>{s.site_name}</option>)}
-                </select>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div>
-                <label className="block text-xs font-bold dark:text-slate-500 text-gray-400 uppercase tracking-wide mb-1.5">Advance ₹</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 dark:text-slate-500 text-gray-400 text-sm">₹</span>
-                  <input type="number" inputMode="numeric" value={form.advance} onChange={e=>setForm({...form,advance:e.target.value})} placeholder="0" className="w-full border dark:border-slate-600 border-gray-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none"/>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold dark:text-slate-500 text-gray-400 uppercase tracking-wide mb-1.5">Payment</label>
-                <select value={form.payMode} onChange={e=>setForm({...form,payMode:e.target.value})} className="w-full border dark:border-slate-600 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none">
-                  {['Cash','Online','None'].map(m=><option key={m}>{m}</option>)}
-                </select>
-              </div>
-            </div>
-            <button onClick={saveAtt} disabled={saving}
-              className="w-full bg-amber-600 hover:bg-amber-600 text-white rounded-xl py-3 font-bold disabled:opacity-50 transition">
-              {saving?'⏳ Saving...':'Save Attendance'}
-            </button>
-          </div>
+            )
+          })}
         </div>
       )}
     </div>
   )
 }
+
 export default function Attendance() { return <AppShell><AttendancePage /></AppShell> }
