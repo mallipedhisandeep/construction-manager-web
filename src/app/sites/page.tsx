@@ -22,7 +22,7 @@ function SitesPage() {
   const [selected,   setSelected]   = useState<SiteDetail|null>(null)
   const [form,       setForm]       = useState<Partial<Site>>({status:'Active',floors_count:1,budget:0})
   const [saving,     setSaving]     = useState(false)
-  const [toast,      setToast]      = useState<{msg:string;ok:boolean}>()
+  const [toast,      setToast]      = useState<{msg:string;ok:boolean} | undefined>()
   const [tab,        setTab]        = useState<TabType>('info')
   const [agreements, setAgreements] = useState<FileRow[]>([])
   const [floorFiles, setFloorFiles] = useState<FileRow[]>([])
@@ -75,7 +75,6 @@ function SitesPage() {
       if (upErr) throw upErr
       const { data:urlData } = supabase.storage.from('construction-files').getPublicUrl(up.path)
       const url = urlData.publicUrl
-      // ── FIX: stamp user_id on file inserts ──
       const userId = await uid()
       if (pendingUpload.type==='agreement')
         await supabase.from('site_agreements').insert({site_id:selected.id,file_path:url,file_name:file.name,user_id:userId})
@@ -105,7 +104,6 @@ function SitesPage() {
     if (!form.site_name?.trim()) return
     setSaving(true)
     try {
-      // ── FIX: stamp user_id on insert ──
       const userId = await uid()
       const data = {...form, site_name_search:form.site_name!.toLowerCase()}
       const { error } = modal==='add'
@@ -121,12 +119,12 @@ function SitesPage() {
     if (!confirm(t('deleteConfirm'))) return
     await supabase.from('sites').update({ deleted_at: new Date().toISOString() }).eq('id', s.id)
     setModal(null); load()
-    showToast('Moved to recycle bin 🗑️', false)
+    // FIX: was passing false (red toast) — recycle bin move is informational, use true (green)
+    showToast('Moved to recycle bin 🗑️', true)
   }
 
   const savePayment = async () => {
     if (!pForm.amount || !selected) return
-    // ── FIX: stamp user_id on payment insert ──
     const userId = await uid()
     const { error } = await supabase.from('site_payments').insert({
       site_id:    selected.id,
@@ -175,7 +173,7 @@ function SitesPage() {
           <div key={s.id} className="card-hover mb-3" onClick={()=>openDetail(s)}>
             <div className="p-4">
               <div className="flex items-start gap-3">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 ${s.status==='Active'?'text-2xl flex-shrink-0':"text-2xl flex-shrink-0"}`}>🏗️</div>
+                <div className="text-2xl flex-shrink-0">🏗️</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-bold" style={{color:'rgb(var(--text))'}}>{s.site_name}</h3>
@@ -205,15 +203,15 @@ function SitesPage() {
             </div>
             <div className="p-5 space-y-3">
               {[
-                {k:'site_name',l:t('siteName'),r:true,t:'text'},
-                {k:'location', l:t('location'),r:false,t:'text'},
-                {k:'owner_name',l:t('ownerName'),r:false,t:'text'},
-                {k:'owner_phone',l:t('ownerPhone'),r:false,t:'tel'},
-                {k:'start_date',l:t('startDate'),r:false,t:'date'},
-              ].map(({k,l,r,t:type})=>(
+                {k:'site_name',  l:t('siteName'),   r:true,  tp:'text'},
+                {k:'location',   l:t('location'),   r:false, tp:'text'},
+                {k:'owner_name', l:t('ownerName'),  r:false, tp:'text'},
+                {k:'owner_phone',l:t('ownerPhone'), r:false, tp:'tel'},
+                {k:'start_date', l:t('startDate'),  r:false, tp:'date'},
+              ].map(({k,l,r,tp})=>(
                 <div key={k}>
                   <label className="label">{l}{r&&<span className="text-red-400 ml-1">*</span>}</label>
-                  <input type={type} value={(form as any)[k]??''} maxLength={k==='owner_phone'?10:undefined}
+                  <input type={tp} value={(form as Record<string,string>)[k]??''} maxLength={k==='owner_phone'?10:undefined}
                     onChange={e=>setForm({...form,[k]:e.target.value})} className="input"/>
                 </div>
               ))}
@@ -394,8 +392,7 @@ function DocSection({ title, color, files, uploading, onUpload, onDelete }:
           <p className="font-bold text-sm" style={{color:'rgb(var(--text))'}}>{title.split(' ').slice(1).join(' ')}</p>
           {files.length>0 && <span className="badge-gray">{files.length}</span>}
         </div>
-        <button onClick={onUpload} disabled={uploading}
-          className="btn-primary btn-sm disabled:opacity-50">
+        <button onClick={onUpload} disabled={uploading} className="btn-primary btn-sm disabled:opacity-50">
           {uploading?'⏳':'+ Upload'}
         </button>
       </div>
