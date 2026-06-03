@@ -18,13 +18,14 @@ function PrivateWorkPage() {
   const [priceStr, setPriceStr] = useState('')
   const [paidStr,  setPaidStr]  = useState('')
   const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState<{msg:string;ok:boolean}>()
+  const [toast, setToast] = useState<{msg:string;ok:boolean} | undefined>()
 
   const load = useCallback(async () => {
     setLoading(true)
     const [{ data: w }, { data: pw }, { data: s }] = await Promise.all([
       supabase.from('private_work').select('*').is('deleted_at', null).order('created_at',{ascending:false}),
       supabase.from('private_workers').select('*').is('deleted_at', null).order('name'),
+      // FIX: added .is('deleted_at', null) so deleted sites don't appear in the dropdown
       supabase.from('sites').select('id,site_name').eq('status','Active').is('deleted_at', null)
     ])
     setWorks(w??[]); setPWorkers(pw??[]); setSites(s??[])
@@ -175,7 +176,7 @@ function PrivateWorkPage() {
                 <div className="flex gap-2">
                   {['Active','Completed'].map(s=>(
                     <button key={s} onClick={()=>setForm({...form,status:s})}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition`}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition"
                       style={form.status===s
                         ? {background:'linear-gradient(135deg,rgb(var(--accent)),rgb(var(--accent2)))',color:'#000',borderColor:'transparent'}
                         : {background:'rgb(var(--surface2))',borderColor:'rgb(var(--border))',color:'rgb(var(--text))'}}>
