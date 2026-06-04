@@ -1,23 +1,26 @@
-import type { Metadata, Viewport } from 'next'
+import type { Metadata } from 'next'
+// NOTE: Do NOT export `viewport` from here — Next.js App Router generates a
+// <meta name="viewport"> tag from the `viewport` export automatically.
+// Having BOTH the export AND a manual <meta name="viewport"> in <head> produces
+// TWO viewport tags in the rendered HTML. Chrome on Android PWA picks the wrong
+// one (falls back to the legacy 980px-wide desktop viewport) on first paint,
+// making the app look like a desktop layout. A manual refresh clears it because
+// the browser re-parses the corrected DOM. Removing the export and keeping only
+// ONE manual viewport tag in <head> fixes the issue permanently.
 import './globals.css'
 
 export const dynamic = 'force-dynamic'
 
-export const viewport: Viewport = {
-  themeColor: '#0c0c0e',
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  minimumScale: 1,
-  userScalable: false,
-  viewportFit: 'cover',
-}
-
+// Only metadata here — no viewport export (see note above)
 export const metadata: Metadata = {
   title: 'Construction Manager',
   description: 'Site and worker management',
   manifest: '/manifest.json',
-  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'CM App' },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'CM App',
+  },
   formatDetection: { telephone: false },
 }
 
@@ -25,10 +28,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/*
+          Single authoritative viewport tag.
+          This is the ONLY viewport declaration — the `viewport` Next.js export
+          has been removed above to prevent a duplicate tag being injected.
+          Duplicate viewport tags cause Android Chrome / PWA to use the legacy
+          980px desktop viewport on first load, making the app appear in desktop
+          layout until the user refreshes.
+        */}
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
         />
+
+        {/* PWA + Apple meta */}
+        <meta name="theme-color" content="#0c0c0e" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -41,26 +55,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             document.documentElement.classList.toggle('dark', t === 'dark');
           } catch(e) { document.documentElement.classList.add('dark'); }
         `}} />
-
-        {/*
-          FIX: Removed background-image from <body> that was set here previously.
-
-          The previous version set login-bg.jpg as the body background so the
-          page looked correct during hydration. However this caused TWO bugs:
-
-          1. DESKTOP LAYOUT ON FIRST LOGIN — after the session was confirmed and
-             the app rendered, the body background-image (login-bg.jpg) fought
-             with rgb(var(--bg)) on .page/.card elements, causing a flash of the
-             wrong background and triggering a layout recalculation that made the
-             app briefly appear in a desktop-like state before React settled.
-
-          2. The body background bled through transparent areas of the app UI
-             in light mode, making some sections look incorrect.
-
-          The correct approach: login/page.tsx applies login-bg.jpg only to its
-          own container. The rest of the app uses rgb(var(--bg)) from globals.css.
-          The dark class applied above (before first paint) ensures no white flash.
-        */}
       </head>
       <body
         className="min-h-screen"
