@@ -4,67 +4,88 @@ import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
-import type { PrivateWork, PrivateWorker, Site } from '@/lib/types'
+import type { PrivateWorker, PrivateWorkerPayment } from '@/lib/types'
 
-function PrivateWorkPage() {
+function PrivateWorkersPage() {
   const { lang } = useLang()
-  const [works, setWorks] = useState<PrivateWork[]>([])
-  const [pWorkers, setPWorkers] = useState<PrivateWorker[]>([])
-  const [sites, setSites] = useState<Pick<Site,'id'|'site_name'>[]>([])
+  const [workers, setWorkers] = useState<(PrivateWorker & { balance?: number })[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('All')
-  const [modal, setModal] = useState<'add'|'edit'|null>(null)
-  const [form, setForm] = useState<Partial<PrivateWork>>({status:'Active', price_charged:0, amount_paid:0})
-  const [priceStr, setPriceStr] = useState('')
-  const [paidStr,  setPaidStr]  = useState('')
-  const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState<{msg:string;ok:boolean} | undefined>()
+  const [modal,   setModal]   = useState<'add'|'edit'|'pay'|'hist'|null>(null)
+  const [selected,setSelected]= useState<PrivateWorker|null>(null)
+  const [form,    setForm]    = useState({ name:'', work_type:'', phone:'', notes:'' })
+  const [payForm, setPayForm] = useState({ amount:'', direction:'dad_to_worker', mode:'Cash', notes:'' })
+  const [hist,    setHist]    = useState<Array<{date:string;amount:number;isOut:boolean;label:string;sublabel:string;id?:string;canDel:boolean}>>([])
+  const [saving,  setSaving]  = useState(false)
+  // FIX M6: typed with | undefined so setToast(undefined) works correctly
+  const [toast,   setToast]   = useState<{msg:string;ok:boolean}|undefined>()
 
+  const showToast = (msg:string, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(undefined),3000) }
+
+  // FIX P2: bulk query instead of N+1 — fetch all work+payments once, calculate per worker in JS
   const load = useCallback(async () => {
     setLoading(true)
-    const [{ data: w }, { data: pw }, { data: s }] = await Promise.all([
-      supabase.from('private_work').select('*').is('deleted_at', null).order('created_at',{ascending:false}),
+    const [{ data: workers }, { data: allWork }, { data: allPays }] = await Promise.all([
       supabase.from('private_workers').select('*').is('deleted_at', null).order('name'),
-      // FIX: added .is('deleted_at', null) so deleted sites don't appear in the dropdown
-      supabase.from('sites').select('id,site_name').eq('status','Active').is('deleted_at', null)
+      supabase.from('private_work').select('worker_id,price_charged,amount_paid'),
+      supabase.from('private_worker_payments').select('worker_id,amount,direction'),
     ])
-    setWorks(w??[]); setPWorkers(pw??[]); setSites(s??[])
+    if (!workers) { setLoading(false); return }
+
+    const withBal = workers.map(w => {
+      let charged = 0, paid = 0
+      allWork?.filter(x=>x.worker_id===w.id).forEach(x=>{ charged += x.price_charged; paid += x.amount_paid })
+      allPays?.filter(x=>x.worker_id===w.id).forEach(p=>{ if(p.direction==='dad_to_worker') paid+=p.amount; else charged+=p.amount })
+      return { ...w, balance: charged - paid }
+    })
+    setWorkers(withBal)
     setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
-  const showToast = (msg:string, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(undefined), 3000) }
 
-  const filtered = filter==='All' ? works : works.filter(w=>w.status===filter)
-  const totalPending = works.reduce((s,w)=>s+(w.price_charged-w.amount_paid),0)
+  const loadHist = async (workerId: string) => {
+    const [{ data: pays }, { data: work }] = await Promise.all([
+      supabase.from('private_worker_payments').select('*').eq('worker_id', workerId).order('created_at',{ascending:false}),
+      supabase.from('private_work').select('*').eq('worker_id', workerId).gt('amount_paid',0).order('work_date',{ascending:false}),
+    ])
+    const entries: typeof hist = []
+    pays?.forEach(p => entries.push({ date:p.date, amount:p.amount, isOut:p.direction==='dad_to_worker', label:p.direction==='dad_to_worker'?ts(lang,'youToWorker'):ts(lang,'workerToYou'), sublabel:`${p.mode}${p.notes?` · ${p.notes}`:''}`, id:p.id, canDel:true }))
+    work?.forEach(w => entries.push({ date:w.work_date, amount:w.amount_paid, isOut:true, label:`Work — ${w.site_name}`, sublabel:w.work_type, canDel:false }))
+    entries.sort((a,b)=>b.date.localeCompare(a.date))
+    setHist(entries)
+  }
 
-  const save = async () => {
-    if (!form.worker_id||!form.site_id) { showToast(ts(lang,'required'), false); return }
+  const saveWorker = async () => {
+    if (!form.name.trim()) { showToast('Name required',false); return }
     setSaving(true)
-    const worker = pWorkers.find(w=>w.id===form.worker_id)
-    const site   = sites.find(s=>s.id===form.site_id)
     const userId = await uid()
-    const data = {
-      ...form,
-      worker_name: worker?.name??'', work_type: worker?.work_type??'',
-      site_name: site?.site_name??'',
-      work_date: form.work_date??new Date().toISOString().split('T')[0],
-      price_charged: parseFloat(priceStr)||0,
-      amount_paid:   parseFloat(paidStr)||0,
-    }
     const { error } = modal==='add'
-      ? await supabase.from('private_work').insert({...data,user_id:userId})
-      : await supabase.from('private_work').update(data).eq('id',form.id!)
+      ? await supabase.from('private_workers').insert({ ...form, user_id: userId })
+      : await supabase.from('private_workers').update(form).eq('id', selected!.id!)
     setSaving(false)
-    if (error) { showToast('Save failed: '+error.message, false); return }
+    if (error) { showToast(error.message,false); return }
     setModal(null); load(); showToast(ts(lang,'savedOk'))
   }
 
-  const del = async (w: PrivateWork) => {
+  const savePayment = async () => {
+    if (!payForm.amount || !selected) return
+    setSaving(true)
+    const userId = await uid()
+    const { error } = await supabase.from('private_worker_payments').insert({
+      worker_id: selected.id, amount: +payForm.amount,
+      direction: payForm.direction, mode: payForm.mode,
+      date: new Date().toISOString().split('T')[0], notes: payForm.notes,
+      source: 'manual', user_id: userId,
+    })
+    setSaving(false)
+    if (error) { showToast(error.message,false); return }
+    setModal(null); load(); showToast(ts(lang,'savedOk'))
+  }
+
+  const del = async (w: PrivateWorker) => {
     if (!confirm(ts(lang,'deleteConfirm'))) return
-    const { error } = await supabase.from('private_work').update({ deleted_at: new Date().toISOString() }).eq('id', w.id!)
-    if (error) { showToast('Delete failed', false); return }
-    load()
+    await supabase.from('private_workers').update({ deleted_at: new Date().toISOString() }).eq('id', w.id!)
+    showToast('Moved to recycle bin 🗑️'); load()
   }
 
   return (
@@ -72,124 +93,134 @@ function PrivateWorkPage() {
       {toast && <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.ok?'bg-green-500':'bg-red-500'}`}>{toast.msg}</div>}
 
       <div className="page-header">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>📋 {ts(lang,'privateWork')}</h1>
-          <button onClick={()=>{ setForm({status:'Active',price_charged:0,amount_paid:0,work_date:new Date().toISOString().split('T')[0]}); setPriceStr(''); setPaidStr(''); setModal('add') }}
-            className="btn-primary btn-sm">+ {ts(lang,'addWork')}</button>
-        </div>
-        {totalPending>0 && (
-          <div className="flex items-center gap-2 rounded-xl px-3 py-2 mb-3 text-sm font-semibold"
-            style={{background:'rgba(var(--accent),0.12)',border:'1px solid rgba(var(--accent),0.3)',color:'rgb(var(--accent))'}}>
-            ⚠️ {ts(lang,'totalPending')}: ₹{totalPending.toFixed(0)}
-          </div>
-        )}
-        <div className="flex gap-2">
-          {['All','Active','Completed'].map(f=>(
-            <button key={f} onClick={()=>setFilter(f)} className={`chip ${filter===f?'chip-active':'chip-idle'}`}>{f}</button>
-          ))}
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>🔧 {ts(lang,'privateWorkers')}</h1>
+          <button onClick={()=>{ setForm({name:'',work_type:'',phone:'',notes:''}); setModal('add') }} className="btn-primary btn-sm">
+            + {ts(lang,'addContractor')}
+          </button>
         </div>
       </div>
 
       <div className="px-4 pt-4">
         {loading ? (
-          <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-3 border-t-transparent rounded-full" style={{borderColor:'rgb(var(--accent)) transparent transparent transparent'}}/></div>
-        ) : filtered.length===0 ? (
-          <div className="text-center py-16"><div className="text-5xl mb-3 opacity-20">📋</div><p style={{color:'rgb(var(--muted))'}}>{ts(lang,'noWork')}</p></div>
-        ) : filtered.map(w=>{
-          const bal = w.price_charged - w.amount_paid
+          <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{borderColor:'rgb(var(--accent))',borderTopColor:'transparent'}}/></div>
+        ) : workers.length===0 ? (
+          <div className="text-center py-16"><div className="text-5xl mb-3 opacity-30">🔧</div><p style={{color:'rgb(var(--muted))'}}>{ts(lang,'noContractors')}</p></div>
+        ) : workers.map(w => {
+          const bal = w.balance ?? 0
           return (
             <div key={w.id} className="card mb-3 p-4">
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-lg flex-shrink-0" style={{background:'rgba(139,92,246,0.15)',color:'#7c3aed'}}>{w.name[0]}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold" style={{color:'rgb(var(--text))'}}>{w.worker_name}</span>
-                    <span className={w.status==='Active'?'badge-green':'badge-blue'}>{w.status}</span>
+                    <span className="font-bold" style={{color:'rgb(var(--text))'}}>{w.name}</span>
+                    <span className="text-xs" style={{color:'rgb(var(--muted))'}}>{w.work_type}</span>
                   </div>
-                  <div className="text-sm mt-0.5" style={{color:'rgb(var(--muted))'}}>🔧 {w.work_type} · 📍 {w.site_name}</div>
-                  <div className="text-xs" style={{color:'rgb(var(--muted))'}}>📅 {w.work_date}</div>
-                </div>
-                <div className="flex gap-1 flex-shrink-0">
-                  <button onClick={()=>{ setForm({...w}); setPriceStr(w.price_charged?.toString()??''); setPaidStr(w.amount_paid?.toString()??''); setModal('edit') }}
-                    className="p-1.5 rounded-lg" style={{color:'rgb(var(--accent))'}}>✏️</button>
-                  <button onClick={()=>del(w)} className="p-1.5 text-red-500 rounded-lg">🗑️</button>
+                  {w.phone && <a href={`tel:${w.phone}`} className="text-xs text-green-600 dark:text-green-400">📞 {w.phone}</a>}
+                  <div className="inline-block mt-1.5 text-xs px-2.5 py-1 rounded-xl font-semibold"
+                    style={{
+                      background: bal>0?'rgba(22,163,74,0.12)':bal<0?'rgba(220,38,38,0.12)':'rgb(var(--surface2))',
+                      color: bal>0?'#15803d':bal<0?'#b91c1c':'rgb(var(--muted))',
+                      border:`1px solid ${bal>0?'rgba(22,163,74,0.3)':bal<0?'rgba(220,38,38,0.3)':'rgb(var(--border))'}`,
+                    }}>
+                    {bal===0 ? ts(lang,'settled') : bal>0 ? `₹${bal.toFixed(0)} ${ts(lang,'toGive')}` : `₹${Math.abs(bal).toFixed(0)} ${ts(lang,'toReceive')}`}
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-2 mt-3">
-                <div className="flex-1 rounded-xl p-2 text-center" style={{background:'rgba(59,130,246,0.1)'}}>
-                  <div className="text-xs text-blue-600 dark:text-blue-400">{ts(lang,'charged')}</div>
-                  <div className="font-bold text-blue-600 dark:text-blue-400">₹{w.price_charged}</div>
-                </div>
-                <div className="flex-1 rounded-xl p-2 text-center" style={{background:'rgba(22,163,74,0.1)'}}>
-                  <div className="text-xs text-green-600 dark:text-green-400">{ts(lang,'paid')}</div>
-                  <div className="font-bold text-green-600 dark:text-green-400">₹{w.amount_paid}</div>
-                </div>
-                {bal>0 && (
-                  <div className="flex-1 rounded-xl p-2 text-center" style={{background:'rgba(var(--accent),0.1)'}}>
-                    <div className="text-xs" style={{color:'rgb(var(--accent))'}}>{ ts(lang,'due')}</div>
-                    <div className="font-bold" style={{color:'rgb(var(--accent))'}}>₹{bal}</div>
-                  </div>
-                )}
+              <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t" style={{borderColor:'rgb(var(--border))'}}>
+                <button onClick={()=>{ setSelected(w); setPayForm({amount:'',direction:'dad_to_worker',mode:'Cash',notes:''}); setModal('pay') }} className="btn-green btn-sm">💳 {ts(lang,'addPayment')}</button>
+                <button onClick={async()=>{ setSelected(w); await loadHist(w.id!); setModal('hist') }} className="btn-ghost btn-sm">📜 {ts(lang,'history')}</button>
+                <button onClick={()=>{ setSelected(w); setForm({name:w.name,work_type:w.work_type,phone:w.phone,notes:w.notes??''}); setModal('edit') }} className="btn-ghost btn-sm" style={{color:'rgb(var(--accent))'}}>✏️ {ts(lang,'edit')}</button>
+                <button onClick={()=>del(w)} className="btn-danger btn-sm">🗑️ {ts(lang,'delete')}</button>
               </div>
             </div>
           )
         })}
       </div>
 
-      {modal && (
+      {(modal==='add'||modal==='edit') && (
         <div className="modal-backdrop" onClick={()=>setModal(null)}>
           <div className="modal-box" onClick={e=>e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{modal==='add'?ts(lang,'addWork'):'Edit Work'}</h2>
+              <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{modal==='add'?ts(lang,'addContractor'):'Edit Contractor'}</h2>
+              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
+            </div>
+            <div className="p-5 space-y-3">
+              {(['name','work_type','phone'] as const).map(k=>(
+                <div key={k}><label className="label">{k.replace('_',' ')}</label><input value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} maxLength={k==='phone'?10:undefined} className="input"/></div>
+              ))}
+              <div><label className="label">{ts(lang,'notes')}</label><input value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} className="input"/></div>
+              <button onClick={saveWorker} disabled={saving} className="btn-primary btn-full">{saving?'⏳...':ts(lang,'save')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modal==='pay' && (
+        <div className="modal-backdrop" onClick={()=>setModal(null)}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{ts(lang,'addPayment')} — {selected?.name}</h2>
               <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
             </div>
             <div className="p-5 space-y-3">
               <div>
-                <label className="label">{ts(lang,'selectWorker')}</label>
-                <select value={form.worker_id??''} onChange={e=>setForm({...form,worker_id:e.target.value})} className="input">
-                  <option value="">— Select —</option>
-                  {pWorkers.map(w=><option key={w.id} value={w.id}>{w.name} ({w.work_type})</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="label">{ts(lang,'selectSite')}</label>
-                <select value={form.site_id??''} onChange={e=>setForm({...form,site_id:e.target.value})} className="input">
-                  <option value="">— Select —</option>
-                  {sites.map(s=><option key={s.id} value={s.id}>{s.site_name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="label">{ts(lang,'date')}</label>
-                <input type="date" value={form.work_date??''} onChange={e=>setForm({...form,work_date:e.target.value})} className="input"/>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">{ts(lang,'priceCharged')}</label>
-                  <input type="number" inputMode="decimal" value={priceStr} onChange={e=>setPriceStr(e.target.value)} placeholder="0" className="input"/>
-                </div>
-                <div>
-                  <label className="label">{ts(lang,'amountPaid')}</label>
-                  <input type="number" inputMode="decimal" value={paidStr} onChange={e=>setPaidStr(e.target.value)} placeholder="0" className="input"/>
-                </div>
-              </div>
-              <div>
-                <label className="label">{ts(lang,'status')}</label>
+                <label className="label">{ts(lang,'direction')}</label>
                 <div className="flex gap-2">
-                  {['Active','Completed'].map(s=>(
-                    <button key={s} onClick={()=>setForm({...form,status:s})}
-                      className="flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition"
-                      style={form.status===s
-                        ? {background:'linear-gradient(135deg,rgb(var(--accent)),rgb(var(--accent2)))',color:'#000',borderColor:'transparent'}
-                        : {background:'rgb(var(--surface2))',borderColor:'rgb(var(--border))',color:'rgb(var(--text))'}}>
-                      {s}
+                  {[['dad_to_worker',ts(lang,'youToWorker')],['worker_to_dad',ts(lang,'workerToYou')]].map(([v,l])=>(
+                    <button key={v} onClick={()=>setPayForm({...payForm,direction:v})}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                      style={{
+                        background: payForm.direction===v?'linear-gradient(135deg,rgb(var(--accent)),rgb(var(--accent2)))':'rgb(var(--surface2))',
+                        color: payForm.direction===v?'#fff':'rgb(var(--text))',
+                        border:`1px solid ${payForm.direction===v?'transparent':'rgb(var(--border))'}`,
+                      }}>
+                      {l}
                     </button>
                   ))}
                 </div>
               </div>
-              <div>
-                <label className="label">{ts(lang,'notes')}</label>
-                <textarea rows={2} value={form.notes??''} onChange={e=>setForm({...form,notes:e.target.value})} className="input resize-none"/>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="label">₹ Amount</label><input type="number" value={payForm.amount} onChange={e=>setPayForm({...payForm,amount:e.target.value})} className="input"/></div>
+                <div><label className="label">{ts(lang,'paymentMode')}</label>
+                  <select value={payForm.mode} onChange={e=>setPayForm({...payForm,mode:e.target.value})} className="input">
+                    {['Cash','Online'].map(m=><option key={m}>{m}</option>)}
+                  </select>
+                </div>
               </div>
-              <button onClick={save} disabled={saving} className="btn-primary btn-full">{saving?'⏳...':ts(lang,'save')}</button>
+              <div><label className="label">{ts(lang,'notes')}</label><input value={payForm.notes} onChange={e=>setPayForm({...payForm,notes:e.target.value})} className="input"/></div>
+              <button onClick={savePayment} disabled={saving} className="btn-green btn-full">{saving?'⏳...':ts(lang,'save')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modal==='hist' && (
+        <div className="modal-backdrop" onClick={()=>setModal(null)}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{ts(lang,'paymentHistory')} — {selected?.name}</h2>
+              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
+            </div>
+            <div className="p-5 space-y-2">
+              {hist.length===0 ? <p className="text-center py-4" style={{color:'rgb(var(--muted))'}}>{ts(lang,'noWork')}</p> :
+               hist.map((h,i)=>(
+                <div key={i} className="card p-3 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+                    style={{background:h.isOut?'rgba(22,163,74,0.12)':'rgba(220,38,38,0.12)',color:h.isOut?'#15803d':'#b91c1c'}}>
+                    {h.isOut?'↑':'↓'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2"><span className="font-bold" style={{color:h.isOut?'#15803d':'#b91c1c'}}>₹{h.amount}</span><span className="text-xs truncate" style={{color:'rgb(var(--muted))'}}>{h.label}</span></div>
+                    <div className="text-xs" style={{color:'rgb(var(--muted))'}}>{h.date} · {h.sublabel}</div>
+                  </div>
+                  {h.canDel && h.id && (
+                    <button onClick={async()=>{ await supabase.from('private_worker_payments').delete().eq('id',h.id!); loadHist(selected!.id!); load() }} className="text-red-400 text-xs p-1.5">🗑️</button>
+                  )}
+                </div>
+               ))
+              }
             </div>
           </div>
         </div>
@@ -198,4 +229,4 @@ function PrivateWorkPage() {
   )
 }
 
-export default function PrivateWork() { return <AppShell><PrivateWorkPage /></AppShell> }
+export default function PrivateWorkers() { return <AppShell><PrivateWorkersPage /></AppShell> }
