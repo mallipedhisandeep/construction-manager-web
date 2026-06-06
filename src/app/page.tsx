@@ -9,7 +9,7 @@ const modules = [
   { en:'Workers',        te:'కార్మికులు',           emoji:'👷', href:'/workers',         color:'#10b981' },
   { en:'Sites',          te:'సైట్లు',              emoji:'🏗️', href:'/sites',           color:'#f59e0b' },
   { en:'Contractors',    te:'కాంట్రాక్టర్లు',       emoji:'🔧', href:'/private-workers', color:'#8b5cf6' },
-  { en:'Contract Work',  te:'కాంట్రాక్టు పని',      emoji:'📋', href:'/private-work',   color:'#06b6d4' },
+  { en:'Contract Work',  te:'కాంట్రాక్టు పని',      emoji:'📝', href:'/private-work',   color:'#06b6d4' },
   { en:'Suppliers',      te:'సరఫరాదారులు',          emoji:'🏪', href:'/suppliers',       color:'#ec4899' },
   { en:'Goods Orders',   te:'వస్తువుల ఆర్డర్లు',    emoji:'📦', href:'/goods',           color:'#f59e0b' },
   { en:'Money Tracking', te:'డబ్బు ట్రాకింగ్',       emoji:'💰', href:'/money',           color:'#22c55e' },
@@ -31,12 +31,16 @@ function Dashboard() {
       const raw = data.user?.email?.split('@')[0] ?? ''
       setUser(raw.replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase()) || 'Admin')
     })
-    Promise.all([
-      supabase.from('workers').select('id',{count:'exact',head:true}).is('deleted_at',null),
-      supabase.from('sites').select('id',{count:'exact',head:true}).eq('status','Active').is('deleted_at',null),
-      supabase.from('private_workers').select('id',{count:'exact',head:true}).is('deleted_at',null),
-      supabase.from('suppliers').select('id',{count:'exact',head:true}).is('deleted_at',null),
-    ]).then(([w,s,p,su]) => setStats({ workers:w.count??0, sites:s.count??0, contractors:p.count??0, suppliers:su.count??0 }))
+    supabase.auth.getUser().then(({ data: userData }) => {
+      const userId = userData.user?.id
+      if (!userId) return
+      Promise.all([
+        supabase.from('workers').select('id',{count:'exact',head:true}).eq('user_id',userId).is('deleted_at',null),
+        supabase.from('sites').select('id',{count:'exact',head:true}).eq('user_id',userId).eq('status','Active').is('deleted_at',null),
+        supabase.from('private_workers').select('id',{count:'exact',head:true}).eq('user_id',userId).is('deleted_at',null),
+        supabase.from('suppliers').select('id',{count:'exact',head:true}).eq('user_id',userId).is('deleted_at',null),
+      ]).then(([w,s,p,su]) => setStats({ workers:w.count??0, sites:s.count??0, contractors:p.count??0, suppliers:su.count??0 }))
+    })
   }, [])
 
   const statsData = [
