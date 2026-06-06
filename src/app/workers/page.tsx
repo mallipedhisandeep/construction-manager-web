@@ -4,10 +4,12 @@ import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
+import { SHIFTS, SHIFT_LABELS } from '@/lib/constants'
 import type { Worker } from '@/lib/types'
 
-const SHIFTS   = ['6-6','10-6','6-10','6-2','10-2','2-6']
-const S_LABELS = ['6AM–6PM','10AM–6PM','6AM–9AM','6AM–2PM','10AM–2PM','3PM–6PM']
+// FIX m1: removed local SHIFTS/S_LABELS — now imported from constants.ts
+const DISPLAY_SHIFTS = SHIFTS.filter(s => s !== 'Absent') as string[]
+
 const empty = (): Worker => ({ name:'', phone:'', gender:'Male', state:'Telangana', role:'Mason', work_type:'Centring', rate_6_6:0, rate_10_6:0, rate_6_10:0, rate_6_2:0, rate_10_2:0, rate_2_6:0 })
 const stateTag = (s:string) => s==='Telangana'?'badge-green':s==='Andhra'?'badge-blue':'badge-orange'
 
@@ -32,7 +34,7 @@ function WorkersPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
-  const showToast = (msg:string,type:'ok'|'err'='ok') => { setToast({msg,type}); setTimeout(()=>setToast(undefined),3500) }
+  const showToast = (msg:string, type:'ok'|'err'='ok') => { setToast({msg,type}); setTimeout(()=>setToast(undefined),3500) }
 
   const filtered = workers.filter(w => {
     if (search && !w.name.toLowerCase().includes(search.toLowerCase()) && !w.phone.includes(search)) return false
@@ -79,7 +81,6 @@ function WorkersPage() {
         </div>
       )}
 
-      {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="border-b px-4 pt-5 pb-4 sticky top-14 z-30" style={{backgroundColor:'rgb(var(--surface))', borderColor:'rgb(var(--border))'}}>
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>{ts(lang,'workers')}</h1>
@@ -95,13 +96,11 @@ function WorkersPage() {
         </div>
       </div>
 
-      {/* ── Worker list ────────────────────────────────────────────── */}
       <div className="px-4 pt-4">
         {loading ? <Spinner /> :
          filtered.length === 0 ? <Empty msg={ts(lang,'noWorkers')} icon="👷" /> :
          Object.entries(grouped).map(([wt, list]) => (
           <div key={wt} className="mb-5">
-            {/* Section title — uses CSS variables, works in both light + dark */}
             <div className="flex items-center gap-2 mb-2">
               <div className="w-1 h-3.5 rounded" style={{background:'rgb(var(--accent))'}} />
               <span className="text-xs font-black uppercase tracking-widest" style={{color:'rgb(var(--muted))'}}>{wt}</span>
@@ -135,7 +134,6 @@ function WorkersPage() {
         ))}
       </div>
 
-      {/* ── Add / Edit modal ───────────────────────────────────────── */}
       {(modal==='add'||modal==='edit') && (
         <div className="modal-backdrop" onClick={() => setModal(null)}>
           <div className="modal-box" onClick={e=>e.stopPropagation()}>
@@ -144,16 +142,14 @@ function WorkersPage() {
               <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
             </div>
             <div className="p-5 space-y-5">
-
-              {/* Personal info section */}
               <section>
                 <SectionTitle>🙍 {ts(lang,'personalInfo')}</SectionTitle>
                 <div className="space-y-3">
                   <FI label={ts(lang,'name')}  value={form.name}  onChange={v=>setForm({...form,name:v})} required />
                   <FI label={ts(lang,'phone')} value={form.phone} onChange={v=>setForm({...form,phone:v.replace(/\D/g,'').slice(0,10)})} type="tel" maxLen={10} required hint={`${form.phone.length}/10`} />
                   <div className="grid grid-cols-2 gap-3">
-                    <FS label={ts(lang,'gender')}   value={form.gender}    opts={['Male','Female']}            labels={[ts(lang,'male'),ts(lang,'female')]}                             onChange={v=>setForm({...form,gender:v})} />
-                    <FS label={ts(lang,'workType')} value={form.work_type} opts={['Centring','Brickwork']}     labels={[ts(lang,'centring'),ts(lang,'brickwork')]}                       onChange={v=>setForm({...form,work_type:v})} />
+                    <FS label={ts(lang,'gender')}   value={form.gender}    opts={['Male','Female']}        labels={[ts(lang,'male'),ts(lang,'female')]}             onChange={v=>setForm({...form,gender:v})} />
+                    <FS label={ts(lang,'workType')} value={form.work_type} opts={['Centring','Brickwork']} labels={[ts(lang,'centring'),ts(lang,'brickwork')]}       onChange={v=>setForm({...form,work_type:v})} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <FS label={ts(lang,'state')} value={form.state} opts={['Telangana','Andhra','Bihar']} labels={[ts(lang,'telangana'),ts(lang,'andhra'),ts(lang,'bihar')]} onChange={v=>setForm({...form,state:v})} />
@@ -162,30 +158,20 @@ function WorkersPage() {
                 </div>
               </section>
 
-              {/* Wage rates section — FIX: all colors use CSS variables for light+dark */}
               <section>
                 <SectionTitle>💰 {ts(lang,'wageRates')}</SectionTitle>
                 <div className="space-y-2">
-                  {SHIFTS.map((s,i) => (
+                  {DISPLAY_SHIFTS.map(s => (
                     <div key={s} className="flex items-center gap-3 rounded-xl px-3 py-2.5"
                       style={{background:'rgb(var(--surface2))', border:'1px solid rgb(var(--border))'}}>
-                      {/* Shift label — uses --text for full contrast in both modes */}
                       <span className="text-sm w-24 flex-shrink-0 font-semibold" style={{color:'rgb(var(--text))'}}>
-                        {S_LABELS[i]}
+                        {SHIFT_LABELS[s]}
                       </span>
                       <div className="flex-1 relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold pointer-events-none"
-                          style={{color:'rgb(var(--accent))'}}>
-                          ₹
-                        </span>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          className="input pl-7 py-2"
-                          placeholder="0"
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold pointer-events-none" style={{color:'rgb(var(--accent))'}}>₹</span>
+                        <input type="number" inputMode="numeric" className="input pl-7 py-2" placeholder="0"
                           value={(form as unknown as Record<string,number>)[rateKey(s)] || ''}
-                          onChange={e=>setForm({...form,[rateKey(s)]:+e.target.value})}
-                        />
+                          onChange={e=>setForm({...form,[rateKey(s)]:+e.target.value})} />
                       </div>
                     </div>
                   ))}
@@ -201,7 +187,6 @@ function WorkersPage() {
         </div>
       )}
 
-      {/* ── View modal ─────────────────────────────────────────────── */}
       {modal==='view' && (
         <div className="modal-backdrop" onClick={()=>setModal(null)}>
           <div className="modal-box" onClick={e=>e.stopPropagation()}>
@@ -232,23 +217,17 @@ function WorkersPage() {
                   </div>
                 ))}
               </div>
-
-              {/* Wage rates in view modal — FIX: use CSS variables */}
               <div>
                 <SectionTitle>💰 {ts(lang,'wageRates')}</SectionTitle>
                 <div className="grid grid-cols-2 gap-2">
-                  {SHIFTS.map((s,i) => (
-                    <div key={s} className="flex justify-between items-center rounded-xl px-3 py-2"
-                      style={{background:'rgb(var(--bg))'}}>
-                      <span className="text-sm font-medium" style={{color:'rgb(var(--muted))'}}>{S_LABELS[i]}</span>
-                      <span className="font-bold" style={{color:'rgb(var(--accent))'}}>
-                        ₹{(form as unknown as Record<string,number>)[rateKey(s)]||0}
-                      </span>
+                  {DISPLAY_SHIFTS.map(s => (
+                    <div key={s} className="flex justify-between items-center rounded-xl px-3 py-2" style={{background:'rgb(var(--bg))'}}>
+                      <span className="text-sm font-medium" style={{color:'rgb(var(--muted))'}}>{SHIFT_LABELS[s]}</span>
+                      <span className="font-bold" style={{color:'rgb(var(--accent))'}}>₹{(form as unknown as Record<string,number>)[rateKey(s)]||0}</span>
                     </div>
                   ))}
                 </div>
               </div>
-
               {form.notes && (
                 <div className="text-sm rounded-xl p-3" style={{color:'rgb(var(--muted))',background:'rgb(var(--bg))'}}>
                   {form.notes}
@@ -266,47 +245,30 @@ function WorkersPage() {
   )
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-// SectionTitle: uses CSS variables instead of hardcoded dark/light Tailwind classes
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2 mb-3">
       <div className="w-0.5 h-4 rounded" style={{background:'rgb(var(--accent))'}} />
-      <p className="text-xs font-black uppercase tracking-widest" style={{color:'rgb(var(--muted))'}}>
-        {children}
-      </p>
+      <p className="text-xs font-black uppercase tracking-widest" style={{color:'rgb(var(--muted))'}}>{children}</p>
     </div>
   )
 }
-
-const FilterRow = ({ label, opts, labels, value, onChange }:
-  { label:string; opts:(string|null)[]; labels:string[]; value:string|null; onChange:(v:string|null)=>void }) => (
+const FilterRow = ({ label, opts, labels, value, onChange }:{ label:string; opts:(string|null)[]; labels:string[]; value:string|null; onChange:(v:string|null)=>void }) => (
   <div className="flex items-center gap-2 flex-wrap">
     <span className="text-xs font-semibold w-16 flex-shrink-0" style={{color:'rgb(var(--muted))'}}>{label}:</span>
-    {opts.map((o,i) => (
-      <button key={i} onClick={()=>onChange(o)} className={`chip ${value===o?'chip-active':'chip-idle'}`}>
-        {labels[i]}
-      </button>
-    ))}
+    {opts.map((o,i) => (<button key={i} onClick={()=>onChange(o)} className={`chip ${value===o?'chip-active':'chip-idle'}`}>{labels[i]}</button>))}
   </div>
 )
-
-const FI = ({ label,value,onChange,type='text',required=false,maxLen,hint,multiline }:
-  { label:string;value:string;onChange:(v:string)=>void;type?:string;required?:boolean;maxLen?:number;hint?:string;multiline?:boolean }) => (
+const FI = ({ label,value,onChange,type='text',required=false,maxLen,hint,multiline }:{ label:string;value:string;onChange:(v:string)=>void;type?:string;required?:boolean;maxLen?:number;hint?:string;multiline?:boolean }) => (
   <div>
     <div className="flex justify-between">
       <label className="label">{label}{required&&<span className="text-red-400 ml-1">*</span>}</label>
       {hint && <span className="text-xs" style={{color:'rgb(var(--muted))'}}>{hint}</span>}
     </div>
-    {multiline
-      ? <textarea rows={2} value={value} onChange={e=>onChange(e.target.value)} className="input resize-none" />
-      : <input type={type} value={value} onChange={e=>onChange(e.target.value)} maxLength={maxLen} className="input" />}
+    {multiline ? <textarea rows={2} value={value} onChange={e=>onChange(e.target.value)} className="input resize-none" /> : <input type={type} value={value} onChange={e=>onChange(e.target.value)} maxLength={maxLen} className="input" />}
   </div>
 )
-
-const FS = ({ label,value,opts,labels,onChange }:
-  { label:string;value:string;opts:string[];labels:string[];onChange:(v:string)=>void }) => (
+const FS = ({ label,value,opts,labels,onChange }:{ label:string;value:string;opts:string[];labels:string[];onChange:(v:string)=>void }) => (
   <div>
     <label className="label">{label}</label>
     <select value={value} onChange={e=>onChange(e.target.value)} className="input">
@@ -314,18 +276,13 @@ const FS = ({ label,value,opts,labels,onChange }:
     </select>
   </div>
 )
-
 const Spinner = () => (
   <div className="flex justify-center py-16">
     <div className="animate-spin w-8 h-8 border-4 border-t-transparent rounded-full" style={{borderColor:'rgb(var(--accent))', borderTopColor:'transparent'}} />
   </div>
 )
-
 const Empty = ({msg,icon}:{msg:string;icon:string}) => (
-  <div className="text-center py-16">
-    <div className="text-5xl mb-3 opacity-30">{icon}</div>
-    <p className="font-medium" style={{color:'rgb(var(--muted))'}}>{msg}</p>
-  </div>
+  <div className="text-center py-16"><div className="text-5xl mb-3 opacity-30">{icon}</div><p className="font-medium" style={{color:'rgb(var(--muted))'}}>{msg}</p></div>
 )
 
 export default function Workers() { return <AppShell><WorkersPage /></AppShell> }
