@@ -27,21 +27,22 @@ function storageKey(filePath: string): string {
   return idx >= 0 ? filePath.slice(idx + marker.length) : filePath
 }
 
-// Get a 1-hour signed URL for a file (works with private bucket)
-async function signedUrl(filePath: string): Promise<string> {
-  const key = storageKey(filePath)
+// FIX P7: batch sign all URLs in one API call instead of N individual calls
+// createSignedUrls (plural) returns all signed URLs in a single round-trip.
+async function signRows(rows: FileRow[]): Promise<FileRow[]> {
+  if (rows.length === 0) return []
+  const keys = rows.map(r => storageKey(r.file_path))
   const { data, error } = await supabase.storage
     .from(BUCKET)
-    .createSignedUrl(key, 3600) // 1 hour
-  if (error || !data?.signedUrl) return filePath // fallback to original
-  return data.signedUrl
-}
-
-// Sign all file_path values in a FileRow array
-async function signRows(rows: FileRow[]): Promise<FileRow[]> {
-  return Promise.all(
-    rows.map(async r => ({ ...r, signedUrl: await signedUrl(r.file_path) }))
-  )
+    .createSignedUrls(keys, 3600) // batch: one request for all files
+  if (error || !data) {
+    // fallback: return rows with original paths if batch fails
+    return rows.map(r => ({ ...r, signedUrl: r.file_path }))
+  }
+  return rows.map((r, i) => ({
+    ...r,
+    signedUrl: data[i]?.signedUrl ?? r.file_path,
+  }))
 }
 
 function SitesPage() {
