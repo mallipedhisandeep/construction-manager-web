@@ -15,9 +15,19 @@ const NAV = [
   { href:'/goods',           emoji:'📦', key:'goods'          as const },
   { href:'/money',           emoji:'💰', key:'money'          as const },
   { href:'/private-workers', emoji:'🔧', key:'privateWorkers' as const },
-  { href:'/private-work',    emoji:'📝', key:'privateWork'    as const }, // FIX m3: was 📋 (duplicate), now 📝
+  { href:'/private-work',    emoji:'📝', key:'privateWork'    as const },
   { href:'/reports',         emoji:'📊', key:'reports'        as const },
   { href:'/trash',           emoji:'🗑️', key:'trash'          as const },
+]
+
+// FIX 3: bottom nav shows first 4 items + Contract Work instead of "More"
+// "More" (drawer) only lives in the top-right hamburger button
+const BOTTOM_NAV = [
+  NAV[0], // Home
+  NAV[1], // Workers
+  NAV[2], // Attendance
+  NAV[3], // Sites
+  NAV[8], // Contract Work (📝) — replaces the old "More" button
 ]
 
 export default function Nav() {
@@ -56,6 +66,7 @@ export default function Nav() {
             style={{background:'rgb(var(--surface2))'}}>
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
+          {/* Top-right hamburger — opens drawer */}
           <button onClick={() => setOpen(true)}
             className="w-8 h-8 rounded-lg flex items-center justify-center transition"
             style={{background:'rgb(var(--surface2))', color:'rgb(var(--text))'}}>
@@ -68,10 +79,10 @@ export default function Nav() {
         </div>
       </header>
 
-      {/* ── Bottom tab bar ── */}
+      {/* ── Bottom tab bar — FIX 3: 5 real nav items, no "More" button ── */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 flex"
         style={{background:'rgb(var(--surface))', borderTop:'1px solid rgb(var(--border))', height:'56px'}}>
-        {NAV.slice(0,4).map(item => {
+        {BOTTOM_NAV.map(item => {
           const active = isActive(item.href)
           return (
             <Link key={item.href} href={item.href}
@@ -83,11 +94,6 @@ export default function Nav() {
             </Link>
           )
         })}
-        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors"
-          onClick={() => setOpen(true)} style={{color:'rgb(var(--muted))'}}>
-          <span className="text-lg leading-none">☰</span>
-          <span className="text-[10px] font-semibold">{lang==='te'?'మరిన్ని':'More'}</span>
-        </button>
       </nav>
 
       {/* ── Drawer ── */}
@@ -106,7 +112,6 @@ export default function Nav() {
                 className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-medium transition"
                 style={{background:'rgb(var(--surface2))', color:'rgb(var(--muted))'}}>✕</button>
             </div>
-
             <div className="flex-1 py-2">
               {NAV.map(item => {
                 const active = isActive(item.href)
@@ -124,7 +129,6 @@ export default function Nav() {
                 )
               })}
             </div>
-
             <div className="p-4 space-y-2" style={{borderTop:'1px solid rgb(var(--border))'}}>
               <button onClick={toggleTheme}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition"

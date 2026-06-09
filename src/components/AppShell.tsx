@@ -47,59 +47,64 @@ function Splash() {
   )
 }
 
+// FIX 1: detect system theme on first install
+function getInitialTheme(): Theme {
+  try {
+    const saved = localStorage.getItem('theme') as Theme | null
+    if (saved === 'light' || saved === 'dark') return saved
+    // No saved preference — follow device system theme
+    if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light'
+  } catch {}
+  return 'dark'
+}
+
+function getInitialLang(): Lang {
+  try {
+    const saved = localStorage.getItem('lang')
+    if (saved === 'en' || saved === 'te') return saved
+  } catch {}
+  return 'en'
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [lang,      setLangState]  = useState<Lang>('en')
   const [theme,     setThemeState] = useState<Theme>('dark')
   const [authState, setAuthState]  = useState<'checking'|'authed'|'unauthed'>('checking')
+  const [hydrated,  setHydrated]   = useState(false)
 
   const router   = useRouter()
   const pathname = usePathname()
   const isPublicPath = PUBLIC_PATHS.some(p => pathname.startsWith(p))
 
+  // FIX 1: init theme + lang from system/localStorage on mount
   useEffect(() => {
-    const savedLang  = localStorage.getItem('lang')
-    const savedTheme = localStorage.getItem('theme') as Theme | null
-    if (savedLang === 'en' || savedLang === 'te') setLangState(savedLang)
-    const t = savedTheme ?? 'dark'
+    const t = getInitialTheme()
+    const l = getInitialLang()
     setThemeState(t)
+    setLangState(l)
     document.documentElement.classList.toggle('dark', t === 'dark')
+    setHydrated(true)
   }, [])
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-  }, [theme])
+    if (hydrated) document.documentElement.classList.toggle('dark', theme === 'dark')
+  }, [theme, hydrated])
 
-  // FIX P6: session check runs ONCE on mount (no pathname dependency).
-  // Previously [pathname] caused a full auth re-check on every navigation.
-  // Now we use onAuthStateChange to reactively track session changes.
   useEffect(() => {
     let mounted = true
-
-    // Initial session check — runs once
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return
-      if (session) {
-        setAuthState('authed')
-      } else {
-        setAuthState('unauthed')
-        if (!isPublicPath) router.replace('/login')
-      }
+      if (session) { setAuthState('authed') }
+      else { setAuthState('unauthed'); if (!isPublicPath) router.replace('/login') }
     })
-
-    // Reactive listener for sign-in / sign-out events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return
-      if (session) {
-        setAuthState('authed')
-      } else {
-        setAuthState('unauthed')
-        if (!isPublicPath) router.replace('/login')
-      }
+      if (session) { setAuthState('authed') }
+      else { setAuthState('unauthed'); if (!isPublicPath) router.replace('/login') }
     })
-
     return () => { mounted = false; subscription.unsubscribe() }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // empty deps — intentional, runs once only
+  }, [])
 
   const toggleLang = useCallback(() => {
     setLangState(prev => {
