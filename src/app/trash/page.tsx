@@ -23,12 +23,15 @@ function TrashPage() {
     const results: TrashItem[] = []
 
     const tables = [
-      { name:'workers',      labelField:'name',       subtitleField:'work_type',  display:'Worker' },
-      { name:'sites',        labelField:'site_name',  subtitleField:'status',     display:'Site' },
-      { name:'suppliers',    labelField:'name',        subtitleField:'shop_name', display:'Supplier' },
-      { name:'private_workers', labelField:'name',    subtitleField:'work_type',  display:'Contractor' },
-      // FIX: added goods_orders so deleted orders appear in Recycle Bin
-      { name:'goods_orders', labelField:'goods_name', subtitleField:'supplier_name', display:'Goods Order' },
+      { name:'workers',                labelField:'name',         subtitleField:'work_type',    display:'Worker' },
+      { name:'sites',                  labelField:'site_name',    subtitleField:'status',        display:'Site' },
+      { name:'suppliers',              labelField:'name',         subtitleField:'shop_name',     display:'Supplier' },
+      { name:'private_workers',        labelField:'name',         subtitleField:'work_type',     display:'Contractor' },
+      { name:'goods_orders',           labelField:'goods_name',   subtitleField:'supplier_name', display:'Goods Order' },
+      { name:'site_payments',          labelField:'description',  subtitleField:'amount',        display:'Site Payment' },
+      { name:'supplier_payments',      labelField:'payment_type', subtitleField:'amount',        display:'Supplier Payment' },
+      { name:'private_worker_payments',labelField:'direction',    subtitleField:'amount',        display:'Contractor Payment' },
+      { name:'private_work',           labelField:'worker_name',  subtitleField:'site_name',     display:'Contract Work' },
     ]
 
     for (const t of tables) {
