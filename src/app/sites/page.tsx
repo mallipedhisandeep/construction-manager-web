@@ -444,7 +444,7 @@ function SitesPage() {
                       {p.description && <p className="text-xs truncate mt-0.5" style={{color:'rgb(var(--muted))'}}>{p.description}</p>}
                       <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{p.payment_date}</p>
                     </div>
-                    <button onClick={async()=>{ await supabase.from('site_payments').delete().eq('id',p.id); loadPayments(selected.id) }}
+                    <button onClick={async()=>{ await supabase.from('site_payments').update({deleted_at:new Date().toISOString()}).eq('id',p.id); loadPayments(selected.id) }}
                       className="text-red-400 hover:text-red-600 text-sm p-1.5">🗑️</button>
                   </div>
                 ))}
