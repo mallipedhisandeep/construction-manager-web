@@ -356,9 +356,10 @@ function AttendancePage() {
                       </p>
                       {sn && <p className="text-[11px] truncate" style={{color:'rgb(var(--accent))'}}>📍 {sn}</p>}
                       {(a.advance??0) > 0 && (
-                        <p className="text-xs" style={{color:'rgb(var(--accent))'}}>
-                          {lang==='te' ? 'అడ్వాన్స్' : 'Advance'} ₹{a.advance}
-                        </p>
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-lg mt-0.5 inline-block"
+                          style={{background:'rgba(var(--accent),0.15)',color:'rgb(var(--accent))'}}>
+                          {lang==='te'?'అడ్వాన్స్':'Adv'} ₹{a.advance}
+                        </span>
                       )}
                     </div>
                     <span className="font-bold text-sm flex-shrink-0" style={{color:'rgb(var(--text))'}}>₹{a.wage??0}</span>
@@ -449,8 +450,8 @@ function AttendancePage() {
                                   </span>
                                 )}
                                 {(att.advance??0) > 0 && (
-                                  <span className="text-[10px] font-semibold" style={{color:'rgb(var(--accent))'}}>
-                                    Adv ₹{att.advance}
+                                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-lg" style={{background:'rgba(var(--accent),0.15)',color:'rgb(var(--accent))'}}>
+                                    +₹{att.advance} adv
                                   </span>
                                 )}
                               </div>
