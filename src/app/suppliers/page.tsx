@@ -67,7 +67,7 @@ function SuppliersPage() {
     setSelected(sup); setView('detail'); setTab('goods')
     const [{ data:g }, { data:p }] = await Promise.all([
       supabase.from('supplier_goods').select('*').eq('supplier_id', sup.id).order('goods_name'),
-      supabase.from('supplier_payments').select('*').eq('supplier_id', sup.id).order('created_at',{ascending:false}),
+      supabase.from('supplier_payments').select('*').eq('supplier_id', sup.id).is('deleted_at',null).order('created_at',{ascending:false}),
     ])
     setGoods(g??[]); setPayments(p??[])
   }
@@ -125,7 +125,8 @@ function SuppliersPage() {
     if (selected) await loadDetail(selected)
   }
   const delPayment = async (id:string) => {
-    await supabase.from('supplier_payments').delete().eq('id', id)
+    // soft-delete payment so it goes to recycle bin
+    await supabase.from('supplier_payments').update({ deleted_at: new Date().toISOString() }).eq('id', id)
     if (selected) { await loadDetail(selected); load() }
   }
   const delSup = async () => {
