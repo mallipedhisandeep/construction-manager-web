@@ -1,10 +1,17 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-export default function LoginPage() {
+function LoginInner() {
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (searchParams.get('error') === 'auth_failed') setError('Sign-in failed. Please try again.')
+    if (searchParams.get('error') === 'config') setError('Configuration error. Contact support.')
+  }, [searchParams])
 
   const signIn = async () => {
     setLoading(true); setError('')
@@ -17,10 +24,7 @@ export default function LoginPage() {
         },
       })
       if (error) { setError(error.message); setLoading(false) }
-    } catch {
-      setError('Something went wrong. Try again.')
-      setLoading(false)
-    }
+    } catch { setError('Something went wrong. Try again.'); setLoading(false) }
   }
 
   return (
@@ -30,24 +34,13 @@ export default function LoginPage() {
         backgroundSize:     'cover',
         backgroundPosition: 'center center',
         backgroundRepeat:   'no-repeat',
-        paddingBottom:      'max(48px, env(safe-area-inset-bottom, 48px))',
+        paddingBottom:      'max(56px, env(safe-area-inset-bottom, 56px))',
       }}>
+      {/* Gradient overlay */}
       <div className="absolute inset-0 pointer-events-none"
-        style={{background:'linear-gradient(180deg,rgba(0,0,0,0.05) 0%,rgba(0,0,0,0.3) 50%,rgba(4,3,1,0.94) 100%)'}}/>
-      <div className="absolute top-0 left-0 right-0 flex flex-col items-center justify-center" style={{height:'62%'}}>
-        <img src="/icon-512.png" alt="CM" className="object-contain drop-shadow-2xl"
-          style={{width:150,height:150,filter:'drop-shadow(0 8px 40px rgba(0,0,0,0.8))'}}/>
-        <h1 className="text-white font-black text-3xl tracking-widest mt-5 drop-shadow-xl"
-          style={{textShadow:'0 2px 12px rgba(0,0,0,0.8)',letterSpacing:'0.18em'}}>
-          CONSTRUCTION
-        </h1>
-        <div className="flex items-center gap-3 mt-1.5">
-          <div className="h-px w-10" style={{background:'linear-gradient(to right,transparent,#f97316)'}}/>
-          <span className="font-black text-sm tracking-[0.35em]" style={{color:'#f97316'}}>MANAGER</span>
-          <div className="h-px w-10" style={{background:'linear-gradient(to left,transparent,#f97316)'}}/>
-        </div>
-        <p className="text-sm font-medium mt-2" style={{color:'rgba(253,186,116,0.75)'}}>నిర్మాణ మేనేజర్</p>
-      </div>
+        style={{background:'linear-gradient(180deg,rgba(0,0,0,0.0) 0%,rgba(0,0,0,0.15) 40%,rgba(4,3,1,0.96) 100%)'}}/>
+
+      {/* Bottom sign-in area only — NO icon, NO title, NO subtitle */}
       <div className="relative z-10 w-full max-w-sm px-6">
         {error && (
           <div className="mb-5 px-4 py-3 rounded-2xl text-sm text-center"
@@ -57,7 +50,7 @@ export default function LoginPage() {
         )}
         <button onClick={signIn} disabled={loading}
           className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 font-bold rounded-2xl py-4 text-[15px] transition-all active:scale-[0.98] disabled:opacity-60 select-none"
-          style={{boxShadow:'0 8px 40px rgba(0,0,0,0.55)'}}>
+          style={{boxShadow:'0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1)'}}>
           {loading ? (
             <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-700 rounded-full animate-spin"/>
           ) : (
@@ -70,10 +63,23 @@ export default function LoginPage() {
           )}
           <span>{loading ? 'Signing in…' : 'Continue with Google'}</span>
         </button>
-        <p className="text-center text-xs mt-4 select-none" style={{color:'rgba(255,255,255,0.3)'}}>
+        <p className="text-center text-xs mt-4 select-none" style={{color:'rgba(255,255,255,0.28)'}}>
           Google తో కొనసాగించండి
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center"
+        style={{backgroundImage:'url(/login-bg.jpg)',backgroundSize:'cover',backgroundPosition:'center'}}>
+        <div className="absolute inset-0" style={{background:'rgba(0,0,0,0.6)'}}/>
+      </div>
+    }>
+      <LoginInner />
+    </Suspense>
   )
 }
