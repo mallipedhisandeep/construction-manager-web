@@ -45,7 +45,7 @@ function PrivateWorkersPage() {
 
   const loadHist = async (workerId: string) => {
     const [{ data: pays }, { data: work }] = await Promise.all([
-      supabase.from('private_worker_payments').select('*').eq('worker_id', workerId).order('created_at',{ascending:false}),
+      supabase.from('private_worker_payments').select('*').eq('worker_id', workerId).is('deleted_at',null).order('created_at',{ascending:false}),
       supabase.from('private_work').select('*').eq('worker_id', workerId).gt('amount_paid',0).order('work_date',{ascending:false}),
     ])
     const entries: typeof hist = []
@@ -216,7 +216,7 @@ function PrivateWorkersPage() {
                     <div className="text-xs" style={{color:'rgb(var(--muted))'}}>{h.date} · {h.sublabel}</div>
                   </div>
                   {h.canDel && h.id && (
-                    <button onClick={async()=>{ await supabase.from('private_worker_payments').delete().eq('id',h.id!); loadHist(selected!.id!); load() }} className="text-red-400 text-xs p-1.5">🗑️</button>
+                    <button onClick={async()=>{ await supabase.from('private_worker_payments').update({deleted_at:new Date().toISOString()}).eq('id',h.id!); loadHist(selected!.id!); load() }} className="text-red-400 text-xs p-1.5">🗑️</button>
                   )}
                 </div>
                ))
