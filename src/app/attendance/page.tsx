@@ -561,7 +561,7 @@ function AttendancePage() {
 
               {/* FIX: advance allowed even when Absent — worker may receive advance on off-day */}
               <div>
-                <label className="label">{lang==='te' ? 'అడ్వాన్స్ ₹ (గైర్హాజరైనా)' : 'Advance ₹ (even if Absent)'}</label>
+                <label className="label">{lang==='te' ? 'అడ్వాన్స్ ₹ ' : 'Advance ₹ '}</label>
                 <input type="number" inputMode="decimal"
                   value={advInput} onChange={e => setAdvInput(e.target.value)}
                   placeholder="0" className="input"/>
