@@ -356,13 +356,20 @@ function AttendancePage() {
                       </p>
                       {sn && <p className="text-[11px] truncate" style={{color:'rgb(var(--accent))'}}>📍 {sn}</p>}
                       {(a.advance??0) > 0 && (
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-lg mt-0.5 inline-block"
-                          style={{background:'rgba(var(--accent),0.15)',color:'rgb(var(--accent))'}}>
-                          {lang==='te'?'అడ్వాన్స్':'Adv'} ₹{a.advance}
+                        <p className="text-xs" style={{color:'rgb(var(--accent))'}}>
+                          {lang==='te' ? 'అడ్వాన్స్' : 'Advance'} ₹{a.advance}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end flex-shrink-0 gap-0.5">
+                      <span className="font-bold text-sm" style={{color:'rgb(var(--text))'}}>₹{a.wage??0}</span>
+                      {(a.advance??0) > 0 && (
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded"
+                          style={{background:'rgba(220,38,38,0.15)',color:'#ef4444'}}>
+                          -₹{a.advance}
                         </span>
                       )}
                     </div>
-                    <span className="font-bold text-sm flex-shrink-0" style={{color:'rgb(var(--text))'}}>₹{a.wage??0}</span>
                   </div>
                 )
               })}
@@ -450,8 +457,9 @@ function AttendancePage() {
                                   </span>
                                 )}
                                 {(att.advance??0) > 0 && (
-                                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-lg" style={{background:'rgba(var(--accent),0.15)',color:'rgb(var(--accent))'}}>
-                                    +₹{att.advance} adv
+                                  <span className="text-[11px] font-black px-2 py-0.5 rounded-lg"
+                                    style={{background:'rgba(220,38,38,0.15)',color:'#ef4444',border:'1px solid rgba(220,38,38,0.3)'}}>
+                                    💵 ₹{att.advance}
                                   </span>
                                 )}
                               </div>
@@ -551,14 +559,13 @@ function AttendancePage() {
                 </div>
               )}
 
-              {shiftPick !== 'Absent' && (
-                <div>
-                  <label className="label">{lang==='te' ? 'అడ్వాన్స్ ₹' : 'Advance ₹'}</label>
-                  <input type="number" inputMode="decimal"
-                    value={advInput} onChange={e => setAdvInput(e.target.value)}
-                    placeholder="0" className="input"/>
-                </div>
-              )}
+              {/* FIX: advance allowed even when Absent — worker may receive advance on off-day */}
+              <div>
+                <label className="label">{lang==='te' ? 'అడ్వాన్స్ ₹ (గైర్హాజరైనా)' : 'Advance ₹ (even if Absent)'}</label>
+                <input type="number" inputMode="decimal"
+                  value={advInput} onChange={e => setAdvInput(e.target.value)}
+                  placeholder="0" className="input"/>
+              </div>
 
               <button onClick={saveOne} disabled={saving} className="btn-primary btn-full">
                 {saving ? '⏳ Saving...' : (lang==='te' ? '💾 సేవ్ చేయి' : '💾 Save Attendance')}
