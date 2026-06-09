@@ -7,11 +7,11 @@ import { ts } from '@/lib/strings'
 import { SHIFTS, SHIFT_LABELS } from '@/lib/constants'
 import type { Worker } from '@/lib/types'
 
-// FIX m1: removed local SHIFTS/S_LABELS — now imported from constants.ts
 const DISPLAY_SHIFTS = SHIFTS.filter(s => s !== 'Absent') as string[]
-
 const empty = (): Worker => ({ name:'', phone:'', gender:'Male', state:'Telangana', role:'Mason', work_type:'Centring', rate_6_6:0, rate_10_6:0, rate_6_10:0, rate_6_2:0, rate_10_2:0, rate_2_6:0 })
-const stateTag = (s:string) => s==='Telangana'?'badge-green':s==='Andhra'?'badge-blue':'badge-orange'
+
+// FIX 6: all states use same badge style — no more wrapping inconsistency
+const stateColor = (s:string) => s==='Telangana'?'#16a34a':s==='Andhra'?'#2563eb':'#d97706'
 
 function WorkersPage() {
   const { lang } = useLang()
@@ -24,7 +24,7 @@ function WorkersPage() {
   const [modal,  setModal]  = useState<'add'|'edit'|'view'|null>(null)
   const [form,   setForm]   = useState<Worker>(empty())
   const [saving, setSaving] = useState(false)
-  const [toast,  setToast]  = useState<{msg:string;type:'ok'|'err'} | undefined>()
+  const [toast,  setToast]  = useState<{msg:string;type:'ok'|'err'}|undefined>()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -65,34 +65,88 @@ function WorkersPage() {
 
   const del = async (w:Worker) => {
     if (!confirm(ts(lang,'deleteConfirm'))) return
-    const { error } = await supabase.from('workers').update({ deleted_at: new Date().toISOString() }).eq('id', w.id!)
-    if (error) { showToast(error.message,'err'); return }
-    setModal(null); load()
-    showToast('Moved to recycle bin 🗑️')
+    await supabase.from('workers').update({ deleted_at: new Date().toISOString() }).eq('id', w.id!)
+    setModal(null); load(); showToast('Moved to recycle bin 🗑️')
   }
 
   const rateKey = (s:string) => `rate_${s.replace('-','_')}` as keyof Worker
 
   return (
-    <div className="min-h-screen pb-24" style={{backgroundColor:'rgb(var(--bg))'}}>
+    <div className="min-h-screen pb-24" style={{background:'rgb(var(--bg))'}}>
       {toast && (
         <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.type==='ok'?'bg-green-500':'bg-red-500'}`}>
           {toast.msg}
         </div>
       )}
 
-      <div className="border-b px-4 pt-5 pb-4 sticky top-14 z-30" style={{backgroundColor:'rgb(var(--surface))', borderColor:'rgb(var(--border))'}}>
-        <div className="flex items-center justify-between mb-3">
+      {/* FIX 7: compact filter panel — reduced padding/spacing */}
+      <div className="border-b px-4 pt-4 pb-3 sticky top-14 z-30"
+        style={{background:'rgb(var(--surface))', borderColor:'rgb(var(--border))'}}>
+        <div className="flex items-center justify-between mb-2.5">
           <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>{ts(lang,'workers')}</h1>
-          <button onClick={() => { setForm(empty()); setModal('add') }} className="btn-primary text-sm">
+          <button onClick={() => { setForm(empty()); setModal('add') }} className="btn-primary btn-sm">
             + {ts(lang,'addWorker')}
           </button>
         </div>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={ts(lang,'search')} className="input mb-3" />
-        <div className="space-y-2">
-          <FilterRow label={ts(lang,'workType')} opts={[null,'Centring','Brickwork']} labels={['All','Centring','Brickwork']} value={fType} onChange={setFType} />
-          <FilterRow label={ts(lang,'state')}    opts={[null,'Telangana','Andhra','Bihar']} labels={['All','Telangana','Andhra','Bihar']} value={fState} onChange={setFState} />
-          <FilterRow label={ts(lang,'role')}     opts={[null,'Mason','Helper']} labels={['All', ts(lang,'mason'), ts(lang,'helper')]} value={fRole} onChange={setFRole} />
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder={ts(lang,'search')} className="input mb-2.5 py-2 text-sm" />
+
+        {/* FIX 2+7: filters on single rows, no wrapping, compact */}
+        <div className="space-y-1.5">
+          {/* Work Type row */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wide flex-shrink-0 w-14"
+              style={{color:'rgb(var(--muted))'}}>
+              {ts(lang,'workType')}
+            </span>
+            <div className="flex gap-1 flex-nowrap overflow-x-auto" style={{scrollbarWidth:'none'}}>
+              {[{v:null,l:ts(lang,'allTypes')},{v:'Centring',l:ts(lang,'centring')},{v:'Brickwork',l:ts(lang,'brickwork')}].map(({v,l})=>(
+                <button key={String(v)} onClick={()=>setFType(v)}
+                  className="chip flex-shrink-0 text-xs py-0.5 px-2"
+                  style={fType===v
+                    ? {background:'rgb(var(--accent))',color:'#fff',border:'1px solid transparent'}
+                    : {background:'rgb(var(--surface2))',color:'rgb(var(--muted))',border:'1px solid rgb(var(--border))'}}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* State row — FIX 2: nowrap so Bihar never wraps */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wide flex-shrink-0 w-14"
+              style={{color:'rgb(var(--muted))'}}>
+              {ts(lang,'state')}
+            </span>
+            <div className="flex gap-1 flex-nowrap overflow-x-auto" style={{scrollbarWidth:'none'}}>
+              {[{v:null,l:ts(lang,'allStates')},{v:'Telangana',l:ts(lang,'telangana')},{v:'Andhra',l:ts(lang,'andhra')},{v:'Bihar',l:ts(lang,'bihar')}].map(({v,l})=>(
+                <button key={String(v)} onClick={()=>setFState(v)}
+                  className="chip flex-shrink-0 text-xs py-0.5 px-2"
+                  style={fState===v
+                    ? {background:'rgb(var(--accent))',color:'#fff',border:'1px solid transparent'}
+                    : {background:'rgb(var(--surface2))',color:'rgb(var(--muted))',border:'1px solid rgb(var(--border))'}}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Role row */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wide flex-shrink-0 w-14"
+              style={{color:'rgb(var(--muted))'}}>
+              {ts(lang,'role')}
+            </span>
+            <div className="flex gap-1 flex-nowrap overflow-x-auto" style={{scrollbarWidth:'none'}}>
+              {[{v:null,l:ts(lang,'allRoles')},{v:'Mason',l:ts(lang,'mason')},{v:'Helper',l:ts(lang,'helper')}].map(({v,l})=>(
+                <button key={String(v)} onClick={()=>setFRole(v)}
+                  className="chip flex-shrink-0 text-xs py-0.5 px-2"
+                  style={fRole===v
+                    ? {background:'rgb(var(--accent))',color:'#fff',border:'1px solid transparent'}
+                    : {background:'rgb(var(--surface2))',color:'rgb(var(--muted))',border:'1px solid rgb(var(--border))'}}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -107,25 +161,29 @@ function WorkersPage() {
               <span className="badge-orange">{list.length}</span>
             </div>
             {list.map(w => (
-              <div key={w.id} className="card mb-2 overflow-hidden hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-3 p-4">
-                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center font-black text-lg flex-shrink-0"
-                    style={{background:'rgba(212,140,40,0.15)', border:'1px solid rgba(212,140,40,0.3)', color:'rgb(var(--accent))'}}>
+              <div key={w.id} className="card mb-2 overflow-hidden">
+                <div className="flex items-center gap-3 p-3.5">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-base flex-shrink-0"
+                    style={{background:'rgba(212,140,40,0.15)', color:'rgb(var(--accent))'}}>
                     {w.name[0]?.toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold" style={{color:'rgb(var(--text))'}}>{w.name}</p>
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      <span className={stateTag(w.state)}>{w.state}</span>
-                      <span className="badge-purple">{w.role}</span>
-                      <span className="text-xs self-center" style={{color:'rgb(var(--muted))'}}>₹{w.rate_6_6}/day</span>
+                    <p className="font-bold text-sm" style={{color:'rgb(var(--text))'}}>{w.name}</p>
+                    {/* FIX 6: consistent single-row badge layout for ALL states */}
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                        style={{background:`${stateColor(w.state)}22`, color:stateColor(w.state), border:`1px solid ${stateColor(w.state)}44`}}>
+                        {w.state}
+                      </span>
+                      <span className="badge-purple text-[11px]">{w.role}</span>
+                      <span className="text-[11px]" style={{color:'rgb(var(--muted))'}}>₹{w.rate_6_6}/day</span>
                     </div>
                   </div>
                   <div className="flex gap-0.5">
-                    {w.phone && <a href={`tel:${w.phone}`} className="p-2 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl transition">📞</a>}
-                    <button onClick={() => { setForm({...w}); setModal('view') }}  className="p-2 rounded-xl transition" style={{color:'rgb(var(--info))'}}>👁️</button>
-                    <button onClick={() => { setForm({...w}); setModal('edit') }}  className="p-2 rounded-xl transition" style={{color:'rgb(var(--accent))'}}>✏️</button>
-                    <button onClick={() => del(w)}                                 className="p-2 rounded-xl transition" style={{color:'rgb(var(--danger))'}}>🗑️</button>
+                    {w.phone && <a href={`tel:${w.phone}`} className="p-1.5 text-green-500 rounded-lg">📞</a>}
+                    <button onClick={() => { setForm({...w}); setModal('view') }} className="p-1.5 rounded-lg" style={{color:'rgb(var(--info))'}}>👁️</button>
+                    <button onClick={() => { setForm({...w}); setModal('edit') }} className="p-1.5 rounded-lg" style={{color:'rgb(var(--accent))'}}>✏️</button>
+                    <button onClick={() => del(w)} className="p-1.5 rounded-lg" style={{color:'rgb(var(--danger))'}}>🗑️</button>
                   </div>
                 </div>
               </div>
@@ -141,32 +199,26 @@ function WorkersPage() {
               <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{modal==='add'?ts(lang,'addWorker'):ts(lang,'editWorker')}</h2>
               <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
             </div>
-            <div className="p-5 space-y-5">
-              <section>
-                <SectionTitle>🙍 {ts(lang,'personalInfo')}</SectionTitle>
-                <div className="space-y-3">
-                  <FI label={ts(lang,'name')}  value={form.name}  onChange={v=>setForm({...form,name:v})} required />
-                  <FI label={ts(lang,'phone')} value={form.phone} onChange={v=>setForm({...form,phone:v.replace(/\D/g,'').slice(0,10)})} type="tel" maxLen={10} required hint={`${form.phone.length}/10`} />
-                  <div className="grid grid-cols-2 gap-3">
-                    <FS label={ts(lang,'gender')}   value={form.gender}    opts={['Male','Female']}        labels={[ts(lang,'male'),ts(lang,'female')]}             onChange={v=>setForm({...form,gender:v})} />
-                    <FS label={ts(lang,'workType')} value={form.work_type} opts={['Centring','Brickwork']} labels={[ts(lang,'centring'),ts(lang,'brickwork')]}       onChange={v=>setForm({...form,work_type:v})} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <FS label={ts(lang,'state')} value={form.state} opts={['Telangana','Andhra','Bihar']} labels={[ts(lang,'telangana'),ts(lang,'andhra'),ts(lang,'bihar')]} onChange={v=>setForm({...form,state:v})} />
-                    <FS label={ts(lang,'role')}  value={form.role}  opts={['Mason','Helper']}             labels={[ts(lang,'mason'),ts(lang,'helper')]}                     onChange={v=>setForm({...form,role:v})} />
-                  </div>
+            <div className="p-5 space-y-4">
+              <div className="space-y-3">
+                <FI label={ts(lang,'name')} value={form.name} onChange={v=>setForm({...form,name:v})} required />
+                <FI label={ts(lang,'phone')} value={form.phone} onChange={v=>setForm({...form,phone:v.replace(/\D/g,'').slice(0,10)})} type="tel" maxLen={10} required hint={`${form.phone.length}/10`} />
+                <div className="grid grid-cols-2 gap-3">
+                  <FS label={ts(lang,'gender')} value={form.gender} opts={['Male','Female']} labels={[ts(lang,'male'),ts(lang,'female')]} onChange={v=>setForm({...form,gender:v})} />
+                  <FS label={ts(lang,'workType')} value={form.work_type} opts={['Centring','Brickwork']} labels={[ts(lang,'centring'),ts(lang,'brickwork')]} onChange={v=>setForm({...form,work_type:v})} />
                 </div>
-              </section>
-
-              <section>
-                <SectionTitle>💰 {ts(lang,'wageRates')}</SectionTitle>
+                <div className="grid grid-cols-2 gap-3">
+                  <FS label={ts(lang,'state')} value={form.state} opts={['Telangana','Andhra','Bihar']} labels={[ts(lang,'telangana'),ts(lang,'andhra'),ts(lang,'bihar')]} onChange={v=>setForm({...form,state:v})} />
+                  <FS label={ts(lang,'role')} value={form.role} opts={['Mason','Helper']} labels={[ts(lang,'mason'),ts(lang,'helper')]} onChange={v=>setForm({...form,role:v})} />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest mb-2" style={{color:'rgb(var(--muted))'}}>💰 {ts(lang,'wageRates')}</p>
                 <div className="space-y-2">
                   {DISPLAY_SHIFTS.map(s => (
-                    <div key={s} className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                    <div key={s} className="flex items-center gap-3 rounded-xl px-3 py-2"
                       style={{background:'rgb(var(--surface2))', border:'1px solid rgb(var(--border))'}}>
-                      <span className="text-sm w-24 flex-shrink-0 font-semibold" style={{color:'rgb(var(--text))'}}>
-                        {SHIFT_LABELS[s]}
-                      </span>
+                      <span className="text-sm w-24 flex-shrink-0 font-medium" style={{color:'rgb(var(--text))'}}>{SHIFT_LABELS[s]}</span>
                       <div className="flex-1 relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold pointer-events-none" style={{color:'rgb(var(--accent))'}}>₹</span>
                         <input type="number" inputMode="numeric" className="input pl-7 py-2" placeholder="0"
@@ -176,8 +228,7 @@ function WorkersPage() {
                     </div>
                   ))}
                 </div>
-              </section>
-
+              </div>
               <FI label={ts(lang,'notes')} value={form.notes||''} onChange={v=>setForm({...form,notes:v})} multiline />
               <button onClick={save} disabled={saving} className="btn-primary w-full py-3">
                 {saving ? '⏳ Saving...' : ts(lang,'save')}
@@ -192,7 +243,7 @@ function WorkersPage() {
           <div className="modal-box" onClick={e=>e.stopPropagation()}>
             <div className="modal-header">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-black"
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black"
                   style={{background:'rgba(212,140,40,0.15)', color:'rgb(var(--accent))'}}>
                   {form.name[0]}
                 </div>
@@ -205,12 +256,7 @@ function WorkersPage() {
             </div>
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                {[
-                  [ts(lang,'phone'),  form.phone],
-                  [ts(lang,'gender'), form.gender],
-                  [ts(lang,'state'),  form.state],
-                  [ts(lang,'role'),   form.role],
-                ].map(([l,v]) => (
+                {[[ts(lang,'phone'),form.phone],[ts(lang,'gender'),form.gender],[ts(lang,'state'),form.state],[ts(lang,'role'),form.role]].map(([l,v])=>(
                   <div key={l} className="rounded-xl p-3" style={{background:'rgb(var(--bg))'}}>
                     <p className="text-xs font-semibold uppercase tracking-wide" style={{color:'rgb(var(--muted))'}}>{l}</p>
                     <p className="font-bold mt-0.5" style={{color:'rgb(var(--text))'}}>{v}</p>
@@ -218,24 +264,20 @@ function WorkersPage() {
                 ))}
               </div>
               <div>
-                <SectionTitle>💰 {ts(lang,'wageRates')}</SectionTitle>
+                <p className="text-xs font-black uppercase tracking-widest mb-2" style={{color:'rgb(var(--muted))'}}>💰 {ts(lang,'wageRates')}</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {DISPLAY_SHIFTS.map(s => (
+                  {DISPLAY_SHIFTS.map(s=>(
                     <div key={s} className="flex justify-between items-center rounded-xl px-3 py-2" style={{background:'rgb(var(--bg))'}}>
-                      <span className="text-sm font-medium" style={{color:'rgb(var(--muted))'}}>{SHIFT_LABELS[s]}</span>
-                      <span className="font-bold" style={{color:'rgb(var(--accent))'}}>₹{(form as unknown as Record<string,number>)[rateKey(s)]||0}</span>
+                      <span className="text-xs font-medium" style={{color:'rgb(var(--muted))'}}>{SHIFT_LABELS[s]}</span>
+                      <span className="font-bold text-sm" style={{color:'rgb(var(--accent))'}}>₹{(form as unknown as Record<string,number>)[rateKey(s)]||0}</span>
                     </div>
                   ))}
                 </div>
               </div>
-              {form.notes && (
-                <div className="text-sm rounded-xl p-3" style={{color:'rgb(var(--muted))',background:'rgb(var(--bg))'}}>
-                  {form.notes}
-                </div>
-              )}
+              {form.notes && <div className="text-sm rounded-xl p-3" style={{color:'rgb(var(--muted))',background:'rgb(var(--bg))'}}>{form.notes}</div>}
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={()=>setModal('edit')} className="btn-ghost w-full py-3">✏️ {ts(lang,'edit')}</button>
-                <button onClick={()=>del(form)}        className="btn-danger w-full py-3">🗑️ {ts(lang,'delete')}</button>
+                <button onClick={()=>del(form)} className="btn-danger w-full py-3">🗑️ {ts(lang,'delete')}</button>
               </div>
             </div>
           </div>
@@ -245,20 +287,6 @@ function WorkersPage() {
   )
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-2 mb-3">
-      <div className="w-0.5 h-4 rounded" style={{background:'rgb(var(--accent))'}} />
-      <p className="text-xs font-black uppercase tracking-widest" style={{color:'rgb(var(--muted))'}}>{children}</p>
-    </div>
-  )
-}
-const FilterRow = ({ label, opts, labels, value, onChange }:{ label:string; opts:(string|null)[]; labels:string[]; value:string|null; onChange:(v:string|null)=>void }) => (
-  <div className="flex items-center gap-2 flex-wrap">
-    <span className="text-xs font-semibold w-16 flex-shrink-0" style={{color:'rgb(var(--muted))'}}>{label}:</span>
-    {opts.map((o,i) => (<button key={i} onClick={()=>onChange(o)} className={`chip ${value===o?'chip-active':'chip-idle'}`}>{labels[i]}</button>))}
-  </div>
-)
 const FI = ({ label,value,onChange,type='text',required=false,maxLen,hint,multiline }:{ label:string;value:string;onChange:(v:string)=>void;type?:string;required?:boolean;maxLen?:number;hint?:string;multiline?:boolean }) => (
   <div>
     <div className="flex justify-between">
@@ -272,13 +300,13 @@ const FS = ({ label,value,opts,labels,onChange }:{ label:string;value:string;opt
   <div>
     <label className="label">{label}</label>
     <select value={value} onChange={e=>onChange(e.target.value)} className="input">
-      {opts.map((o,i) => <option key={o} value={o}>{labels[i]}</option>)}
+      {opts.map((o,i)=><option key={o} value={o}>{labels[i]}</option>)}
     </select>
   </div>
 )
 const Spinner = () => (
   <div className="flex justify-center py-16">
-    <div className="animate-spin w-8 h-8 border-4 border-t-transparent rounded-full" style={{borderColor:'rgb(var(--accent))', borderTopColor:'transparent'}} />
+    <div className="animate-spin w-8 h-8 border-4 border-t-transparent rounded-full" style={{borderColor:'rgb(var(--accent))',borderTopColor:'transparent'}} />
   </div>
 )
 const Empty = ({msg,icon}:{msg:string;icon:string}) => (
