@@ -8,7 +8,7 @@ import { SHIFTS, SHIFT_LABELS } from '@/lib/constants'
 import type { Worker } from '@/lib/types'
 
 const DISPLAY_SHIFTS = SHIFTS.filter(s => s !== 'Absent') as string[]
-const empty = (): Worker => ({ name:'', phone:'', gender:'Male', state:'Telangana', role:'Mason', work_type:'Centring', rate_6_6:0, rate_10_6:0, rate_6_10:0, rate_6_2:0, rate_10_2:0, rate_2_6:0 })
+const empty = (): Worker => ({ name:'', phone:'', gender:'Male', state:'Telangana', role:'Mason', work_type:'Centring', rate_6_6:0, rate_10_6:0, rate_6_10:0, rate_6_2:0, rate_10_2:0, rate_2_6:0, worker_status:'Active' })
 
 // FIX 6: all states use same badge style — no more wrapping inconsistency
 const stateColor = (s:string) => s==='Telangana'?'#16a34a':s==='Andhra'?'#2563eb':'#d97706'
@@ -28,7 +28,7 @@ function WorkersPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase.from('workers').select('*').is('deleted_at', null).order('name')
+    const { data } = await supabase.from('workers').select('*').is('deleted_at', null).order('worker_status', {ascending:true}).order('name')
     setWorkers(data ?? [])
     setLoading(false)
   }, [])
@@ -168,8 +168,14 @@ function WorkersPage() {
                     {w.name[0]?.toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm" style={{color:'rgb(var(--text))'}}>{w.name}</p>
-                    {/* FIX 6: consistent single-row badge layout for ALL states */}
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-bold text-sm" style={{color: w.worker_status==='Inactive' ? 'rgb(var(--muted))' : 'rgb(var(--text))'}}>{w.name}</p>
+                      {w.worker_status==='Inactive' && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{background:'rgba(100,116,139,0.15)',color:'rgb(var(--muted))',border:'1px solid rgb(var(--border))'}}>
+                          Inactive
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                       <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
                         style={{background:`${stateColor(w.state)}22`, color:stateColor(w.state), border:`1px solid ${stateColor(w.state)}44`}}>
@@ -230,6 +236,20 @@ function WorkersPage() {
                 </div>
               </div>
               <FI label={ts(lang,'notes')} value={form.notes||''} onChange={v=>setForm({...form,notes:v})} multiline />
+              <div>
+                <label className="label">{lang==='te'?'కార్మికుడి స్థితి':'Worker Status'}</label>
+                <div className="flex gap-2">
+                  {(['Active','Inactive'] as const).map(s => (
+                    <button key={s} onClick={() => setForm({...form, worker_status: s})}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition"
+                      style={form.worker_status===s
+                        ? {background: s==='Active'?'#16a34a':'rgb(var(--muted))', color:'#fff', borderColor:'transparent'}
+                        : {background:'rgb(var(--surface2))', borderColor:'rgb(var(--border))', color:'rgb(var(--muted))'}}>
+                      {s==='Active' ? (lang==='te'?'✅ చురుకు':'✅ Active') : (lang==='te'?'⏸ నిష్క్రియ':'⏸ Inactive')}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <button onClick={save} disabled={saving} className="btn-primary w-full py-3">
                 {saving ? '⏳ Saving...' : ts(lang,'save')}
               </button>
