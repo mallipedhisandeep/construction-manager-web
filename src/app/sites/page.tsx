@@ -74,7 +74,7 @@ function SitesPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase.from('sites').select('*').is('deleted_at',null).order('site_name')
+    const { data, error } = await supabase.from('sites').select('*').is('deleted_at',null).order('status',{ascending:true}).order('site_name')
     if (error) showToast(error.message, false)
     setSites((data??[]) as SiteDetail[])
     setLoading(false)
