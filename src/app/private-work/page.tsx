@@ -27,7 +27,7 @@ function PrivateWorkPage() {
     // FIX: filter by user_id so users only see their own private work
     const userId = await uid()
     const [{ data: w }, { data: pw }, { data: s }] = await Promise.all([
-      supabase.from('private_work').select('*').eq('user_id', userId).is('deleted_at', null).order('created_at',{ascending:false}),
+      supabase.from('private_work').select('*').eq('user_id', userId).is('deleted_at', null).order('status',{ascending:true}).order('created_at',{ascending:false}),
       supabase.from('private_workers').select('*').eq('user_id', userId).is('deleted_at', null).order('name'),
       supabase.from('sites').select('id,site_name').eq('user_id', userId).eq('status','Active').is('deleted_at', null),
     ])
