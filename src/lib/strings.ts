@@ -18,7 +18,7 @@ const en = {
   home:'Home', dashboard:'Dashboard', workers:'Workers',
   attendance:'Attendance', sites:'Sites', suppliers:'Suppliers',
   goods:'Goods Orders', money:'Money', privateWorkers:'Contractors',
-  privateWork:'Contract Work', reports:'Reports', trash:'Recycle Bin',
+  privateWork:'Contract Work', reports:'Reports', trash:'Recycle Bin', profile:'Profile',
 
   // Workers
   addWorker:'Add Worker', editWorker:'Edit Worker',
@@ -98,7 +98,7 @@ const te: typeof en = {
   home:'హోమ్', dashboard:'డాష్బోర్డ్', workers:'కార్మికులు',
   attendance:'హాజరు', sites:'సైట్లు', suppliers:'సరఫరాదారులు',
   goods:'వస్తువుల ఆర్డర్లు', money:'డబ్బు', privateWorkers:'కాంట్రాక్టర్లు',
-  privateWork:'కాంట్రాక్టు పని', reports:'నివేదికలు', trash:'చెత్తబుట్ట',
+  privateWork:'కాంట్రాక్టు పని', reports:'నివేదికలు', trash:'చెత్తబుట్ట', profile:'ప్రొఫైల్',
 
   // Workers — FIX 5: all filter labels translated
   addWorker:'కార్మికుని జోడించు', editWorker:'కార్మికుని సవరించు',

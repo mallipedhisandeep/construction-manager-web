@@ -2,7 +2,10 @@ export interface Worker {
   id?: string; name: string; phone: string; gender: string
   state: string; role: string; work_type: string
   rate_6_6: number; rate_10_6: number; rate_6_10: number
-  rate_6_2: number; rate_10_2: number; rate_2_6: number; notes?: string
+  rate_6_2: number; rate_10_2: number; rate_2_6: number
+  notes?: string
+  // Feature 4: worker status field
+  worker_status?: 'Active' | 'Inactive'
 }
 export interface Attendance {
   id?: string; worker_id: string; site_id?: string; date: string
