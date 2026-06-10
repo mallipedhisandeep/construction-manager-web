@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -17,18 +17,11 @@ const NAV = [
   { href:'/private-workers', emoji:'🔧', key:'privateWorkers' as const },
   { href:'/private-work',    emoji:'📝', key:'privateWork'    as const },
   { href:'/reports',         emoji:'📊', key:'reports'        as const },
+  { href:'/profile',         emoji:'👤', key:'profile'        as const },
   { href:'/trash',           emoji:'🗑️', key:'trash'          as const },
 ]
 
-// FIX 3: bottom nav shows first 4 items + Contract Work instead of "More"
-// "More" (drawer) only lives in the top-right hamburger button
-const BOTTOM_NAV = [
-  NAV[0], // Home
-  NAV[1], // Workers
-  NAV[2], // Attendance
-  NAV[3], // Sites
-  NAV[8], // Contract Work (📝) — replaces the old "More" button
-]
+const BOTTOM_NAV = [NAV[0], NAV[1], NAV[2], NAV[3], NAV[8]]
 
 export default function Nav() {
   const pathname = usePathname()
@@ -36,6 +29,19 @@ export default function Nav() {
   const { lang, toggleLang } = useLang()
   const { theme, toggleTheme } = useTheme()
   const [open, setOpen] = useState(false)
+
+  // Feature 3: 7-tap admin trigger on the CM logo
+  const tapCount = useRef(0)
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleLogoTap = () => {
+    tapCount.current += 1
+    if (tapTimer.current) clearTimeout(tapTimer.current)
+    tapTimer.current = setTimeout(() => { tapCount.current = 0 }, 1500)
+    if (tapCount.current >= 7) {
+      tapCount.current = 0
+      router.push('/admin')
+    }
+  }
 
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
 
@@ -50,11 +56,12 @@ export default function Nav() {
       {/* ── Top bar ── */}
       <header className="fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4"
         style={{background:'rgb(var(--surface))', borderBottom:'1px solid rgb(var(--border))'}}>
-        <Link href="/" className="flex items-center gap-2">
+        {/* Feature 3: 7-tap on logo to open admin */}
+        <button onClick={handleLogoTap} className="flex items-center gap-2 select-none">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center text-base"
             style={{background:'rgba(var(--accent),0.12)'}}>🏗️</div>
           <span className="font-bold text-sm" style={{color:'rgb(var(--text))'}}>{ts(lang,'appName')}</span>
-        </Link>
+        </button>
         <div className="flex items-center gap-1.5">
           <button onClick={toggleLang}
             className="px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition"
@@ -66,7 +73,6 @@ export default function Nav() {
             style={{background:'rgb(var(--surface2))'}}>
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
-          {/* Top-right hamburger — opens drawer */}
           <button onClick={() => setOpen(true)}
             className="w-8 h-8 rounded-lg flex items-center justify-center transition"
             style={{background:'rgb(var(--surface2))', color:'rgb(var(--text))'}}>
@@ -79,7 +85,7 @@ export default function Nav() {
         </div>
       </header>
 
-      {/* ── Bottom tab bar — FIX 3: 5 real nav items, no "More" button ── */}
+      {/* ── Bottom tab bar ── */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 flex"
         style={{background:'rgb(var(--surface))', borderTop:'1px solid rgb(var(--border))', height:'56px'}}>
         {BOTTOM_NAV.map(item => {
