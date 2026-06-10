@@ -246,6 +246,47 @@ function AttendancePage() {
               <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{months[month]} {year}</p>
             </div>
             {sumLoading && <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{borderColor:'rgb(var(--accent))',borderTopColor:'transparent'}}/>}
+            {!sumLoading && sumWorker && (
+              <button
+                onClick={() => {
+                  const days = sumRecords.filter(a => a.attendance_type !== 'Absent').length
+                  const earned = sumRecords.filter(a => a.attendance_type !== 'Absent').reduce((s,a) => s+(a.wage??0), 0)
+                  const adv = sumRecords.reduce((s,a) => s+(a.advance??0), 0)
+                  const bal = sumPrevBal + earned - adv
+                  const text = lang === 'te'
+                    ? `*నిర్మాణ మేనేజర్ - నెలవారీ నివేదిక*
+
+👷 కార్మికుడు: ${sumWorker.name}
+📅 నెల: ${months[month]} ${year}
+
+✅ పని రోజులు: ${days}
+💰 సంపాదించినది: ₹${earned}
+💵 అడ్వాన్స్: ₹${adv}${sumPrevBal !== 0 ? `
+📌 కేరీ ఫార్వర్డ్: ${sumPrevBal > 0 ? '+' : ''}₹${sumPrevBal}` : ''}
+
+${bal > 0 ? `🔴 చెల్లించాల్సింది: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 అతడు ఇవ్వాల్సింది: ₹${Math.abs(bal)}` : '✅ అన్నీ క్లియర్'}`
+                    : `*Construction Manager - Monthly Summary*
+
+👷 Worker: ${sumWorker.name}
+📅 Month: ${months[month]} ${year}
+
+✅ Days Worked: ${days}
+💰 Total Earned: ₹${earned}
+💵 Advance Taken: ₹${adv}${sumPrevBal !== 0 ? `
+📌 Carry Forward: ${sumPrevBal > 0 ? '+' : ''}₹${sumPrevBal}` : ''}
+
+${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker Owes You: ₹${Math.abs(bal)}` : '✅ All Settled'}`
+                  if (navigator.share) {
+                    navigator.share({ text }).catch(() => {})
+                  } else {
+                    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+                  }
+                }}
+                className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+                style={{background:'rgba(37,211,102,0.12)',color:'#25d366',border:'1px solid rgba(37,211,102,0.25)'}}>
+                📤
+              </button>
+            )}
           </div>
         ) : (
           <>
