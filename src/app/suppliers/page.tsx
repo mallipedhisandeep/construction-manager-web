@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import AppShell, { useLang } from '@/components/AppShell'
+import AppShell, { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 // DEAD-4: import GOODS_UNITS from constants instead of re-defining locally
@@ -22,14 +22,12 @@ function SuppliersPage() {
   const [loading,   setLoading]   = useState(true)
   const [modal,     setModal]     = useState<'supplier'|'goods'|'payment'|null>(null)
   const [saving,    setSaving]    = useState(false)
-  const [toast,     setToast]     = useState<{msg:string;ok:boolean}|undefined>()
   const [sForm, setSForm] = useState<Partial<Supplier>>({})
   const [gForm, setGForm] = useState<Partial<SupplierGoods>>({ unit:'bags' })
   const [pForm, setPForm] = useState<Partial<SupplierPayment>>({ payment_type:'payment', mode:'Cash' })
 
-  const showToast = (msg:string, ok=true) => {
-    setToast({msg,ok}); setTimeout(()=>setToast(undefined), 3000)
-  }
+  const { showToast: _showToast } = useToast()
+  const showToast = (msg: string, ok = true) => _showToast(msg, ok ? 'ok' : 'err')
 
   // DATA-4: filter all queries by user_id
   const load = useCallback(async () => {
@@ -109,7 +107,10 @@ function SuppliersPage() {
   }
 
   const savePayment = async () => {
-    if (!pForm.amount || !selected) return
+    if (!selected) return
+    if (!pForm.amount || Number(pForm.amount) <= 0) {
+      showToast(te ? 'మొత్తం సున్నా కంటే ఎక్కువ ఉండాలి' : 'Amount must be greater than zero', false); return
+    }
     setSaving(true)
     try {
       const userId = await uid()
@@ -144,11 +145,6 @@ function SuppliersPage() {
 
   return (
     <div className="page">
-      {toast && (
-        <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.ok?'bg-green-500':'bg-red-500'}`}>
-          {toast.msg}
-        </div>
-      )}
 
       {view === 'list' ? (
         <>
