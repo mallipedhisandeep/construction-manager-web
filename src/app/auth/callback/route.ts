@@ -11,9 +11,7 @@
 //      (The PKCE verifier is in the browser's localStorage, so the exchange
 //       MUST happen in the browser, not in this server route.)
 //   4. On success, the user is redirected to the app home page.
-//
-// SEC-4 / INCON-3 fix: removed misleading comments about implicit flow.
-// The client config uses flowType:'pkce' and this route is written for PKCE.
+
 
 import { NextRequest, NextResponse } from 'next/server'
 
