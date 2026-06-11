@@ -6,7 +6,9 @@ const config: Config = {
     extend: {
       fontFamily: {
         display: ['Syne', 'system-ui', 'sans-serif'],
-        body: ['DM Sans', 'system-ui', 'sans-serif'],
+        // UX-2 fix: was 'DM Sans' but DM Sans was never imported in globals.css.
+        // Changed to 'Inter' which IS imported, so font-body class works correctly.
+        body: ['Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
         accent: {
