@@ -1,11 +1,6 @@
 'use client'
 // auth/confirm — handles the PKCE code exchange when Supabase redirects
 // to /auth/confirm?code=... (magic links, email OTP flows).
-//
-// AUTH-1 / DEAD-2 fix: removed getCookie/deleteCookie helpers for 'cm_oauth_code'
-// — that cookie was never written anywhere in the codebase, making those
-// helpers permanently dead code. The confirm page now only reads the ?code=
-// query param, which is the only real code source.
 
 import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
