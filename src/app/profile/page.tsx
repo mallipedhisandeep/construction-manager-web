@@ -56,9 +56,9 @@ function ProfilePage() {
     const { data: { user: u } } = await supabase.auth.getUser()
     if (!u) return
     const [{ data: workers },{ data: sites },{ data: att }] = await Promise.all([
-      supabase.from('workers').select('*').is('deleted_at',null),
-      supabase.from('sites').select('*').is('deleted_at',null),
-      supabase.from('attendance').select('*'),
+      supabase.from('workers').select('*').eq('user_id', u.id).is('deleted_at',null),
+      supabase.from('sites').select('*').eq('user_id', u.id).is('deleted_at',null),
+      supabase.from('attendance').select('*').eq('user_id', u.id),
     ])
     const blob = new Blob([JSON.stringify({ workers, sites, attendance: att, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' })
     const url  = URL.createObjectURL(blob)
