@@ -17,12 +17,10 @@ function PrivateWorkersPage() {
   const [payForm, setPayForm] = useState({ amount:'', direction:'dad_to_worker', mode:'Cash', notes:'' })
   const [hist,    setHist]    = useState<Array<{date:string;amount:number;isOut:boolean;label:string;sublabel:string;id?:string;canDel:boolean}>>([])
   const [saving,  setSaving]  = useState(false)
-  // FIX M6: typed with | undefined so setToast(undefined) works correctly
-
+  
   const { showToast: _showToast } = useToast()
   const showToast = (msg: string, ok = true) => _showToast(msg, ok ? 'ok' : 'err')
 
-  // DATA-5: filter all queries by user_id
   const load = useCallback(async () => {
     setLoading(true)
     const userId = await uid()
