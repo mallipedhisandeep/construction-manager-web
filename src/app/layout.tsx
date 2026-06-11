@@ -1,14 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
-// DEPLOY-3: force-dynamic is required here because the SW registration
-// script tag inlines BUILD_ID. Without it a cached shell would serve
-// stale SW URLs after a deploy. This is intentional and necessary.
 export const dynamic = 'force-dynamic'
 
-// DEPLOY-2 FIX: Use a fixed fallback string ('dev') instead of Date.now().
-// Date.now() changes on every render → new SW URL on every hot-reload → infinite
-// SW update loop in development. 'dev' is stable across reloads.
+
 const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev'
 
 export const viewport: Viewport = {
@@ -33,14 +28,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* UX-1: No manual viewport tag — Next.js 15 injects one from the Viewport export above */}
+      
         <link rel="preload" as="image" href="/login-bg.jpg" fetchPriority="high" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-        {/* Apply saved/system theme before first paint to avoid flash */}
+        
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             var saved = localStorage.getItem('theme');
