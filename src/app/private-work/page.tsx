@@ -24,7 +24,7 @@ function PrivateWorkPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    // FIX: filter by user_id so users only see their own private work
+   
     const userId = await uid()
     const [{ data: w }, { data: pw }, { data: s }] = await Promise.all([
       supabase.from('private_work').select('*').eq('user_id', userId).is('deleted_at', null).order('status',{ascending:true}).order('created_at',{ascending:false}),
@@ -44,7 +44,7 @@ function PrivateWorkPage() {
     if (!form.worker_id||!form.site_id) { showToast(ts(lang,'required'), false); return }
     const priceCharged = parseFloat(priceStr)||0
     const amountPaid   = parseFloat(paidStr)||0
-    // VAL-4: amount paid cannot exceed the charged price
+    
     if (amountPaid > priceCharged) {
       showToast(lang==='te' ? 'చెల్లింపు చార్జ్ కంటే ఎక్కువగా ఉండకూడదు' : 'Amount paid cannot exceed price charged', false)
       return
@@ -70,7 +70,7 @@ function PrivateWorkPage() {
     setModal(null); load(); showToast(ts(lang,'savedOk'))
   }
 
-  // FIX: soft-delete so it moves to recycle bin instead of hard-delete
+  
   const del = async (w: PrivateWork) => {
     if (!confirm(ts(lang,'deleteConfirm'))) return
     const { error } = await supabase
