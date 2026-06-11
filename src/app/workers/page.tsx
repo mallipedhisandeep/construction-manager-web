@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import AppShell, { useLang } from '@/components/AppShell'
+import AppShell, { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
@@ -24,7 +24,6 @@ function WorkersPage() {
   const [modal,  setModal]  = useState<'add'|'edit'|'view'|null>(null)
   const [form,   setForm]   = useState<Worker>(empty())
   const [saving, setSaving] = useState(false)
-  const [toast,  setToast]  = useState<{msg:string;type:'ok'|'err'}|undefined>()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -39,8 +38,9 @@ function WorkersPage() {
     setLoading(false)
   }, [])
 
+  const { showToast: _showToast } = useToast()
+  const showToast = (msg: string, type: 'ok'|'err' = 'ok') => _showToast(msg, type)
   useEffect(() => { load() }, [load])
-  const showToast = (msg:string, type:'ok'|'err'='ok') => { setToast({msg,type}); setTimeout(()=>setToast(undefined),3500) }
 
   const filtered = workers.filter(w => {
     if (search && !w.name.toLowerCase().includes(search.toLowerCase()) && !w.phone.includes(search)) return false
@@ -90,12 +90,6 @@ function WorkersPage() {
 
   return (
     <div className="min-h-screen pb-24" style={{background:'rgb(var(--bg))'}}>
-      {toast && (
-        <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.type==='ok'?'bg-green-500':'bg-red-500'}`}>
-          {toast.msg}
-        </div>
-      )}
-
       {/* FIX 7: compact filter panel — reduced padding/spacing */}
       <div className="border-b px-4 pt-4 pb-3 sticky top-14 z-30"
         style={{background:'rgb(var(--surface))', borderColor:'rgb(var(--border))'}}>
