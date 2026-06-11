@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
+import { uid } from '@/lib/auth'
 
 interface SiteReport   { id:string; name:string; budget:number; received:number; workerCost:number; goodsCost:number; status:string }
 interface WorkerReport { id:string; name:string; daysWorked:number; totalEarned:number; totalAdv:number; balance:number }
@@ -32,6 +33,8 @@ function ReportsPage() {
     const load = async () => {
       setLoading(true)
       try {
+        // DATA-6: filter ALL queries by user_id — reports must only show the current user's data
+        const userId = await uid()
         const [
           { data: sites },
           { data: allAtt },
@@ -41,13 +44,14 @@ function ReportsPage() {
           { data: spData },
           { data: allWorkers },
         ] = await Promise.all([
-          supabase.from('sites').select('*').is('deleted_at', null),
-          supabase.from('attendance').select('wage,advance,attendance_type,site_id,worker_id').limit(5000),
-          supabase.from('goods_orders').select('total_price,advance_paid,site_id').neq('status','Cancelled'),
-          supabase.from('supplier_payments').select('amount'),
-          supabase.from('private_work').select('price_charged,amount_paid,worker_id'),
-          supabase.from('site_payments').select('amount,direction,site_id'),
-          supabase.from('workers').select('id,name').is('deleted_at', null),
+          supabase.from('sites').select('*').eq('user_id', userId).is('deleted_at', null),
+          // BUG-4: removed .limit(5000) — use server-side pagination or aggregation for large datasets
+          supabase.from('attendance').select('wage,advance,attendance_type,site_id,worker_id').eq('user_id', userId),
+          supabase.from('goods_orders').select('total_price,advance_paid,site_id').eq('user_id', userId).neq('status','Cancelled'),
+          supabase.from('supplier_payments').select('amount').eq('user_id', userId),
+          supabase.from('private_work').select('price_charged,amount_paid,worker_id').eq('user_id', userId),
+          supabase.from('site_payments').select('amount,direction,site_id').eq('user_id', userId),
+          supabase.from('workers').select('id,name').eq('user_id', userId).is('deleted_at', null),
         ])
 
         const workerNameMap: Record<string, string> = {}
