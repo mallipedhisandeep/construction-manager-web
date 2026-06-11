@@ -4,7 +4,7 @@ export interface Worker {
   rate_6_6: number; rate_10_6: number; rate_6_10: number
   rate_6_2: number; rate_10_2: number; rate_2_6: number
   notes?: string
-  // Feature 4: worker status field
+  
   worker_status?: 'Active' | 'Inactive'
 }
 export interface Attendance {
