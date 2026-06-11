@@ -1,35 +1,36 @@
-// Construction Manager Service Worker v6
-// PWA-1 fix: cache name is now versioned via the SW query string (?v=BUILD_ID)
-//            so each deploy gets a fresh cache name derived from the build ID.
-//            The BUILD_ID is injected by layout.tsx as /sw.js?v=<id>.
-//            We extract it here so the CACHE name changes on each deploy.
-// PWA-2 fix: offline fallback now returns /offline.html instead of plain text.
+// Construction Manager Service Worker v7
 
 // Derive cache name from query string so it changes with each deploy
 const swUrl   = new URL(self.location.href)
-const buildId = swUrl.searchParams.get('v') || 'v6'
+const buildId = swUrl.searchParams.get('v') || 'v7'
 const CACHE   = `cm-${buildId}`
 
+// Files to precache — kept minimal so a single missing file
+// doesn't abort the entire SW install.
 const PRECACHE_URLS = [
+  '/offline.html',
   '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/offline.html',   // PWA-2: cache the offline page at install time
 ]
 
+// Install: cache essential files individually so one failure doesn't
+// block the whole install (unlike cache.addAll which is all-or-nothing).
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE)
-      .then(cache => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE).then(async (cache) => {
+      await Promise.allSettled(
+        PRECACHE_URLS.map(url =>
+          cache.add(url).catch(err => console.warn('[SW] precache failed:', url, err))
+        )
+      )
+    }).then(() => self.skipWaiting())
   )
 })
 
+// Activate: delete all old caches
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
-        // PWA-1 fix: delete ALL old cm-* caches, not just ones != CACHE
         keys.filter(k => k !== CACHE).map(k => caches.delete(k))
       ))
       .then(() => self.clients.claim())
@@ -45,7 +46,7 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(e.request.url)
 
-  // Never intercept auth — one-time codes must be fresh
+  // Never intercept auth pages — one-time codes must always be fresh
   if (url.pathname.startsWith('/auth/') || url.pathname === '/login') {
     e.respondWith(fetch(e.request))
     return
@@ -63,7 +64,7 @@ self.addEventListener('fetch', (e) => {
     return
   }
 
-  // Static assets: cache first
+  // Static assets (_next/static, images, fonts): cache first
   if (
     url.pathname.startsWith('/_next/static/') ||
     url.pathname.match(/\.(png|jpg|jpeg|webp|svg|ico|woff2?|ttf)$/)
@@ -76,7 +77,7 @@ self.addEventListener('fetch', (e) => {
             caches.open(CACHE).then(c => c.put(e.request, response.clone()))
           }
           return response
-        })
+        }).catch(() => caches.match(e.request))
       })
     )
     return
@@ -94,9 +95,11 @@ self.addEventListener('fetch', (e) => {
       .catch(async () => {
         const cached = await caches.match(e.request)
         if (cached) return cached
-        // PWA-2 fix: return the proper offline HTML page, not a plain text "Offline"
         const offlinePage = await caches.match('/offline.html')
-        return offlinePage ?? new Response('Offline', { status: 503 })
+        return offlinePage ?? new Response('Offline — please reconnect', {
+          status: 503,
+          headers: { 'Content-Type': 'text/plain' },
+        })
       })
   )
 })
