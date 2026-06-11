@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import AppShell, { useLang, useTheme } from '@/components/AppShell'
+import AppShell, { useLang, useTheme, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { ts } from '@/lib/strings'
 import { useRouter } from 'next/navigation'
@@ -17,10 +17,9 @@ function ProfilePage() {
   const [user,  setUser]  = useState<{ name: string; email: string; avatar?: string } | null>(null)
   const [stats, setStats] = useState<Stats>({ workers:0, sites:0, attendance:0, suppliers:0, privateWorkers:0 })
   const [loading, setLoading] = useState(true)
-  const [toast, setToast] = useState('')
   const [showSignOut, setShowSignOut] = useState(false)
 
-  const showToast = (m: string) => { setToast(m); setTimeout(() => setToast(''), 3000) }
+  const { showToast } = useToast()
 
   useEffect(() => {
     const load = async () => {
@@ -76,7 +75,6 @@ function ProfilePage() {
 
   return (
     <div className="page px-4 pt-4 pb-24">
-      {toast && <div className="fixed top-16 right-4 z-50 bg-green-500 text-white text-sm px-4 py-2 rounded-xl shadow-lg">{toast}</div>}
 
       {/* Profile Card */}
       <div className="card p-5 mb-4 flex items-center gap-4">
