@@ -27,13 +27,11 @@ function ReportsPage() {
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState({ totalBudget:0, totalReceived:0, totalSpend:0, totalGoodsSpend:0, totalWorkerSpend:0, netPL:0 })
   const [outstanding, setOutstanding] = useState({ workers:0, suppliers:0, privateWorkers:0, sitesPending:0 })
-  // FIX: removed unused printRef — the print function opens a new window directly, ref was dead code
-
-  useEffect(() => {
+  
     const load = async () => {
       setLoading(true)
       try {
-        // DATA-6: filter ALL queries by user_id — reports must only show the current user's data
+       
         const userId = await uid()
         const [
           { data: sites },
@@ -45,7 +43,7 @@ function ReportsPage() {
           { data: allWorkers },
         ] = await Promise.all([
           supabase.from('sites').select('*').eq('user_id', userId).is('deleted_at', null),
-          // BUG-4: removed .limit(5000) — use server-side pagination or aggregation for large datasets
+          
           supabase.from('attendance').select('wage,advance,attendance_type,site_id,worker_id').eq('user_id', userId),
           supabase.from('goods_orders').select('total_price,advance_paid,site_id').eq('user_id', userId).neq('status','Cancelled'),
           supabase.from('supplier_payments').select('amount').eq('user_id', userId),
