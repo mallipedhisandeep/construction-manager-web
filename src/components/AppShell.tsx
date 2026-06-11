@@ -8,7 +8,6 @@ import type { Lang } from '@/lib/strings'
 type Theme = 'light' | 'dark'
 interface LangCtx  { lang: Lang; toggleLang: () => void }
 interface ThemeCtx { theme: Theme; toggleTheme: () => void }
-// UX-4: centralized toast context so all pages share one toast slot
 interface ToastCtx { showToast: (msg: string, type?: 'ok' | 'err') => void }
 interface AppCtx   extends LangCtx, ThemeCtx, ToastCtx {}
 
@@ -20,7 +19,7 @@ const Ctx = createContext<AppCtx>({
 
 export const useLang    = (): LangCtx  => { const c = useContext(Ctx); return { lang: c.lang, toggleLang: c.toggleLang } }
 export const useTheme   = (): ThemeCtx => { const c = useContext(Ctx); return { theme: c.theme, toggleTheme: c.toggleTheme } }
-// UX-4: exposed hook for pages — import useToast instead of managing local toast state
+
 export const useToast   = (): ToastCtx => { const c = useContext(Ctx); return { showToast: c.showToast } }
 
 const PUBLIC_PATHS = ['/login', '/signup', '/auth/callback', '/auth/confirm']
@@ -52,7 +51,6 @@ function Splash() {
   )
 }
 
-// FIX 1: detect system theme on first install
 function getInitialTheme(): Theme {
   try {
     const saved = localStorage.getItem('theme') as Theme | null
@@ -77,8 +75,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState]  = useState<'checking'|'authed'|'unauthed'>('checking')
   const [hydrated,  setHydrated]   = useState(false)
 
-  // UX-4: single toast slot with a timer ref so rapid calls replace the current
-  // toast rather than stacking or clearing each other's timeouts.
+ 
   const [toast,    setToast]    = useState<{msg:string; type:'ok'|'err'} | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const showToast = useCallback((msg: string, type: 'ok' | 'err' = 'ok') => {
@@ -91,7 +88,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isPublicPath = PUBLIC_PATHS.some(p => pathname.startsWith(p))
 
-  // FIX 1: init theme + lang from system/localStorage on mount
   useEffect(() => {
     const t = getInitialTheme()
     const l = getInitialLang()
@@ -107,9 +103,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
-    // AUTH-2 fix: use getUser() which validates the token server-side,
-    // instead of getSession() which only reads the locally-cached session
-    // and can be spoofed by a malicious actor patching localStorage.
+   
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!mounted) return
       if (user) { setAuthState('authed') }
@@ -164,7 +158,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={{ lang, toggleLang, theme, toggleTheme, showToast }}>
       {authState === 'authed' && <Nav />}
-      {/* UX-4: single app-level toast — replaces the per-page local toast pattern */}
+     
       {toast && (
         <div
           role="status"
