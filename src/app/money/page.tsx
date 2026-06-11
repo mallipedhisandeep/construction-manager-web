@@ -101,7 +101,9 @@ function MoneyPage() {
     </div>
   )
   if (!data) return (
-    <div className="text-center p-8" style={{color:'rgb(var(--muted))'}}>{te?'డేటా లేదు':'No data available'}</div>
+    <div className="page flex items-center justify-center">
+      <p className="text-center p-8" style={{color:'rgb(var(--muted))'}}>{te?'డేటా లేదు':'No data available'}</p>
+    </div>
   )
 
   const totalExpenses = data.workerWages + data.goodsSpend + data.siteSpend + data.privateWorkerPaid
