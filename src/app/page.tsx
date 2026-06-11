@@ -27,18 +27,17 @@ function Dashboard() {
   const [user,  setUser]  = useState('Admin')
 
   useEffect(() => {
+    // Single getUser() call — extract both name and userId from one network request
     supabase.auth.getUser().then(({ data }) => {
-      const raw = data.user?.email?.split('@')[0] ?? ''
+      const u = data.user
+      if (!u) return
+      const raw = u.email?.split('@')[0] ?? ''
       setUser(raw.replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase()) || 'Admin')
-    })
-    supabase.auth.getUser().then(({ data: userData }) => {
-      const userId = userData.user?.id
-      if (!userId) return
       Promise.all([
-        supabase.from('workers').select('id',{count:'exact',head:true}).eq('user_id',userId).is('deleted_at',null),
-        supabase.from('sites').select('id',{count:'exact',head:true}).eq('user_id',userId).eq('status','Active').is('deleted_at',null),
-        supabase.from('private_workers').select('id',{count:'exact',head:true}).eq('user_id',userId).is('deleted_at',null),
-        supabase.from('suppliers').select('id',{count:'exact',head:true}).eq('user_id',userId).is('deleted_at',null),
+        supabase.from('workers').select('id',{count:'exact',head:true}).eq('user_id',u.id).is('deleted_at',null),
+        supabase.from('sites').select('id',{count:'exact',head:true}).eq('user_id',u.id).eq('status','Active').is('deleted_at',null),
+        supabase.from('private_workers').select('id',{count:'exact',head:true}).eq('user_id',u.id).is('deleted_at',null),
+        supabase.from('suppliers').select('id',{count:'exact',head:true}).eq('user_id',u.id).is('deleted_at',null),
       ]).then(([w,s,p,su]) => setStats({ workers:w.count??0, sites:s.count??0, contractors:p.count??0, suppliers:su.count??0 }))
     })
   }, [])
