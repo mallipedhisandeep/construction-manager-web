@@ -100,8 +100,10 @@ function AttendancePage() {
   const loadMonthMarks = useCallback(async () => {
     const start = `${year}-${pad(month+1)}-01`
     const end   = month === 11 ? `${year+1}-01-01` : `${year}-${pad(month+2)}-01`
+    const userId = await uid()
     const { data } = await supabase.from('attendance')
       .select('date_key,attendance_type')
+      .eq('user_id', userId)
       .gte('date_key', start).lt('date_key', end)
     if (!data) return
     const byDay: Record<string, string[]> = {}
@@ -156,6 +158,7 @@ function AttendancePage() {
       const { data: prevRecs } = await supabase.from('attendance')
         .select('wage,advance,attendance_type')
         .eq('worker_id', modal.id)
+        .eq('user_id', userId)
         .lte('date_key', dKey)
         .neq('date_key', dKey) // exclude current day
       const prevEarned = prevRecs?.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+(a.wage??0),0) ?? 0
@@ -183,11 +186,12 @@ function AttendancePage() {
     const start = `${year}-${pad(month+1)}-01`
     const end   = month === 11 ? `${year+1}-01-01` : `${year}-${pad(month+2)}-01`
 
+    const userId = await uid()
     const [{ data: curr }, { data: prev }] = await Promise.all([
       supabase.from('attendance').select('*')
-        .eq('worker_id', w.id!).gte('date_key', start).lt('date_key', end).order('date_key'),
+        .eq('worker_id', w.id!).eq('user_id', userId).gte('date_key', start).lt('date_key', end).order('date_key'),
       supabase.from('attendance').select('wage,advance,attendance_type')
-        .eq('worker_id', w.id!).lt('date_key', start),
+        .eq('worker_id', w.id!).eq('user_id', userId).lt('date_key', start),
     ])
     setSumRecords(curr ?? [])
     const prevEarned  = prev?.filter(a => a.attendance_type !== 'Absent').reduce((s,a) => s + (a.wage ?? 0), 0) ?? 0
