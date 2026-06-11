@@ -1,7 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 
-// FIX D5: validate env vars at startup so missing config fails loudly
-// instead of silently making all API calls fail with a placeholder URL
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -24,7 +22,6 @@ export const supabase = createClient(url, key, {
     persistSession:   true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    // FIX: consistent storage key across PWA and browser tab contexts
     storageKey:       'cm-auth-token',
   },
 })
