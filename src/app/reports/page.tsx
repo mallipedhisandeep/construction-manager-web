@@ -93,7 +93,7 @@ function ReportsPage() {
       finally { setLoading(false) }
     }
     load()
-  }, [])
+  }
 
   const handlePrint = () => {
     const w = window.open('', '_blank')
