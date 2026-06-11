@@ -4,14 +4,15 @@ import AppShell, { useLang, useTheme } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts, MONTHS } from '@/lib/strings'
+// DEAD-3: use shared constants instead of local re-definitions
+import { SHIFTS, SHIFT_LABELS, PAYMENT_MODES } from '@/lib/constants'
 import type { Worker, Attendance, Site } from '@/lib/types'
 
-const SHIFTS = ['6-6','10-6','6-10','6-2','10-2','2-6','Absent'] as const
 type Shift = typeof SHIFTS[number]
-const SHIFT_LABEL: Record<Shift,string> = {
-  '6-6':'6AM–6PM','10-6':'10AM–6PM','6-10':'6AM–9AM',
-  '6-2':'6AM–2PM','10-2':'10AM–2PM','2-6':'3PM–6PM','Absent':'Absent',
-}
+
+// BUG-3 fix: derive SHIFT_LABEL map from the single source of truth in constants
+const SHIFT_LABEL = SHIFT_LABELS as Record<Shift, string>
+
 const SHIFT_BG: Record<Shift,string> = {
   '6-6':'#16a34a','10-6':'#0d9488','6-10':'#2563eb',
   '6-2':'#7c3aed','10-2':'#db2777','2-6':'#0891b2','Absent':'#dc2626',
@@ -41,6 +42,8 @@ function AttendancePage() {
   const [shiftPick,  setShiftPick]  = useState<Shift>('6-6')
   const [advInput,   setAdvInput]   = useState('')
   const [modalSite,  setModalSite]  = useState('')
+  // BUG-3 fix: payment_mode selector state
+  const [payMode,    setPayMode]    = useState<string>('Cash')
 
   const [view,       setView]       = useState<'day'|'summary'>('day')
   const [sumWorker,  setSumWorker]  = useState<Worker|null>(null)
@@ -66,9 +69,20 @@ function AttendancePage() {
   const wage = (w: Worker, s: Shift) => s === 'Absent' ? 0 : ((w[rateKey(s)] as number) ?? 0)
 
   const loadBase = useCallback(async () => {
+    // DATA-2: filter workers and sites by user_id
+    const userId = await uid()
     const [{ data: ws }, { data: si }] = await Promise.all([
-      supabase.from('workers').select('*').is('deleted_at', null).order('work_type').order('name'),
-      supabase.from('sites').select('id,site_name').eq('status','Active').is('deleted_at',null).order('site_name'),
+      supabase.from('workers').select('*')
+        .eq('user_id', userId)
+        // BUG-2: exclude Inactive workers from the daily attendance view
+        .neq('worker_status', 'Inactive')
+        .is('deleted_at', null)
+        .order('work_type').order('name'),
+      supabase.from('sites').select('id,site_name')
+        .eq('user_id', userId)
+        .eq('status', 'Active')
+        .is('deleted_at', null)
+        .order('site_name'),
     ])
     setWorkers(ws ?? [])
     setSites(si ?? [])
@@ -110,24 +124,28 @@ function AttendancePage() {
     setShiftPick((existing?.attendance_type as Shift) ?? '6-6')
     setAdvInput(existing?.advance?.toString() ?? '')
     setModalSite(existing?.site_id ?? '')
+    // BUG-3 fix: restore saved payment_mode or default to Cash
+    setPayMode(existing?.payment_mode ?? 'Cash')
     setModal(w)
   }
 
   const saveOne = async () => {
-    if (!modal) return
+    // VAL-1 fix: guard against modal with missing id (defensive, in case
+    // openModal is ever called with a partially-constructed worker object)
+    if (!modal || !modal.id) return
     setSaving(true)
     try {
       const userId  = await uid()
-      const existing = attMap[modal.id!]
+      const existing = attMap[modal.id]
       const workerWage = wage(modal, shiftPick)
       const payload = {
-        worker_id:       modal.id!,
+        worker_id:       modal.id,
         date_key:        dKey,
         date:            new Date(year, month, day).toISOString(),
         attendance_type: shiftPick,
         wage:            workerWage,
         advance:         parseFloat(advInput) || 0,
-        payment_mode:    'Cash',          // FIX m2: include payment_mode
+        payment_mode:    payMode,          // BUG-3 fix: use selected payment mode
         // FIX M4: compute running balance_after = all previous earned - all previous advances
         // We fetch the current running total from existing attendance for this worker
         balance_after:   0,               // set to 0 for now; updated below after insert
@@ -137,7 +155,7 @@ function AttendancePage() {
       // Compute balance_after: sum of all wages minus all advances for this worker up to this date
       const { data: prevRecs } = await supabase.from('attendance')
         .select('wage,advance,attendance_type')
-        .eq('worker_id', modal.id!)
+        .eq('worker_id', modal.id)
         .lte('date_key', dKey)
         .neq('date_key', dKey) // exclude current day
       const prevEarned = prevRecs?.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+(a.wage??0),0) ?? 0
@@ -606,6 +624,24 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                 <input type="number" inputMode="decimal"
                   value={advInput} onChange={e => setAdvInput(e.target.value)}
                   placeholder="0" className="input"/>
+              </div>
+
+              {/* BUG-3 fix: payment mode selector */}
+              <div>
+                <label className="label">{lang==='te' ? 'చెల్లింపు పద్ధతి' : 'Payment Mode'}</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {PAYMENT_MODES.map(m => (
+                    <button key={m} onClick={() => setPayMode(m)}
+                      className="py-2 rounded-xl text-xs font-bold transition"
+                      style={{
+                        background: payMode === m ? 'rgb(var(--accent))' : 'rgb(var(--surface2))',
+                        color:      payMode === m ? '#fff' : 'rgb(var(--muted))',
+                        border:     payMode === m ? '1px solid rgb(var(--accent))' : '1px solid rgb(var(--border))',
+                      }}>
+                      {m}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <button onClick={saveOne} disabled={saving} className="btn-primary btn-full">
