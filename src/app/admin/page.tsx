@@ -3,20 +3,13 @@
 // Access: tap the CM logo in the top-left 7 times → password prompt appears
 // Only the account whose email matches NEXT_PUBLIC_ADMIN_EMAIL can enter.
 // This page is at /admin — not linked anywhere in the UI.
-//
-// SEC-2 fix: no hardcoded fallback email. If the env var is unset, ALL logins
-//            are rejected, which is the safe default.
-// SEC-3 fix: the server-side auth check (getUser) still runs first; client-side
-//            rendering is only used for the UI gate after the async check.
-// BUG-1 fix: default tab changed from 'users' (which had no panel) to 'data'.
-// INCON-5 fix: wrapped in a local theme/dark-mode aware shell so dark mode works.
+
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-// SEC-2: No hardcoded fallback. If the env var is absent, ADMIN_EMAIL is an
-// empty string which will never equal any real user email → all access denied.
+
 const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? '').trim()
 
 interface TableCount { name: string; count: number }
@@ -25,14 +18,12 @@ export default function AdminPage() {
   const router = useRouter()
   const [authed,   setAuthed]   = useState(false)
   const [checking, setChecking] = useState(true)
-  // BUG-1 fix: default to 'data' — there is no 'users' panel
   const [tab,      setTab]      = useState<'data' | 'info'>('data')
   const [counts,   setCounts]   = useState<TableCount[]>([])
   const [loading,  setLoading]  = useState(false)
 
   useEffect(() => {
-    // SEC-3: use getUser() — makes a network request to validate the token
-    // server-side rather than trusting the locally cached session.
+   
     supabase.auth.getUser().then(({ data: { user } }) => {
       // If the env var is missing ADMIN_EMAIL is '' → this check always fails.
       if (ADMIN_EMAIL && user?.email === ADMIN_EMAIL) {
@@ -75,7 +66,7 @@ export default function AdminPage() {
 
   const totalRecords = counts.reduce((s, c) => s + c.count, 0)
 
-  // INCON-5: inline dark-mode styles so the page is usable without AppShell
+  
   return (
     <div className="min-h-screen pb-16 bg-[#0c0c0e] text-[#dedad2]">
       {/* Header */}
@@ -141,7 +132,7 @@ export default function AdminPage() {
         {tab === 'info' && (
           <div className="space-y-3">
             {[
-              // SEC-2: show masked email so admin can confirm config without exposing it
+             
               { label: 'Admin Email',  val: ADMIN_EMAIL ? `${ADMIN_EMAIL.slice(0, 3)}***` : '(not configured)' },
               { label: 'App Version',  val: 'v1.0.0' },
               { label: 'Framework',    val: 'Next.js 15' },
