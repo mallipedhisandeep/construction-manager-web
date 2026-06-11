@@ -21,13 +21,14 @@ function PrivateWorkersPage() {
 
   const showToast = (msg:string, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(undefined),3000) }
 
-  // FIX P2: bulk query instead of N+1 — fetch all work+payments once, calculate per worker in JS
+  // DATA-5: filter all queries by user_id
   const load = useCallback(async () => {
     setLoading(true)
+    const userId = await uid()
     const [{ data: workers }, { data: allWork }, { data: allPays }] = await Promise.all([
-      supabase.from('private_workers').select('*').is('deleted_at', null).order('name'),
-      supabase.from('private_work').select('worker_id,price_charged,amount_paid'),
-      supabase.from('private_worker_payments').select('worker_id,amount,direction'),
+      supabase.from('private_workers').select('*').eq('user_id', userId).is('deleted_at', null).order('name'),
+      supabase.from('private_work').select('worker_id,price_charged,amount_paid').eq('user_id', userId),
+      supabase.from('private_worker_payments').select('worker_id,amount,direction').eq('user_id', userId),
     ])
     if (!workers) { setLoading(false); return }
 
