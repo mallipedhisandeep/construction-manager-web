@@ -50,7 +50,10 @@ function GoodsPage() {
 
   const onSupplierChange = async (supId: string) => {
     setForm(f=>({...f, supplier_id:supId, goods_name:'', unit:'', priceStr:''}))
-    const { data } = await supabase.from('supplier_goods').select('*').eq('supplier_id', supId).order('goods_name')
+    const userId = await uid()
+    // Filter by both supplier_id and user_id to prevent cross-user catalog leakage
+    const { data } = await supabase.from('supplier_goods').select('*')
+      .eq('supplier_id', supId).eq('user_id', userId).order('goods_name')
     setCatalog(data??[])
   }
 
