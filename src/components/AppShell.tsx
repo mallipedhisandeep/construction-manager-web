@@ -140,8 +140,26 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
-  if (authState === 'checking' && !isPublicPath) return <Splash />
-  if (authState === 'unauthed' && !isPublicPath) return null
+  // On public paths (login, auth/callback, etc.), always render children.
+  // Auth state changes will be handled by redirects within those pages themselves.
+  if (isPublicPath) {
+    return (
+      <Ctx.Provider value={{ lang, toggleLang, theme, toggleTheme, showToast }}>
+        {toast && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="fixed top-4 right-4 z-[200] max-w-[80vw] px-4 py-2.5 rounded-xl shadow-lg text-white text-sm font-semibold pointer-events-none"
+            style={{ background: toast.type === 'ok' ? '#16a34a' : '#dc2626' }}>
+            {toast.msg}
+          </div>
+        )}
+        <main>{children}</main>
+      </Ctx.Provider>
+    )
+  }
+  if (authState === 'checking') return <Splash />
+  if (authState === 'unauthed') return null
 
   return (
     <Ctx.Provider value={{ lang, toggleLang, theme, toggleTheme, showToast }}>
@@ -156,7 +174,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {toast.msg}
         </div>
       )}
-      <main className={authState === 'authed' ? 'pt-14 pb-16' : ''}>
+      <main className="pt-14 pb-16">
         {children}
       </main>
     </Ctx.Provider>
