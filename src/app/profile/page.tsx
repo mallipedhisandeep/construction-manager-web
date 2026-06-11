@@ -31,7 +31,6 @@ function ProfilePage() {
           email:  u.email ?? '',
           avatar: u.user_metadata?.avatar_url,
         })
-        // DATA-8: filter stats by user_id — show only the current user's counts
         const [{ count: w },{ count: s },{ count: a },{ count: su },{ count: pw }] = await Promise.all([
           supabase.from('workers').select('id',{count:'exact',head:true}).eq('user_id', u.id).is('deleted_at',null),
           supabase.from('sites').select('id',{count:'exact',head:true}).eq('user_id', u.id).is('deleted_at',null),
