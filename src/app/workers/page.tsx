@@ -28,7 +28,13 @@ function WorkersPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase.from('workers').select('*').is('deleted_at', null).order('worker_status', {ascending:true}).order('name')
+    // DATA-1: filter by user_id so each user only sees their own workers
+    const userId = await uid()
+    const { data } = await supabase.from('workers').select('*')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .order('worker_status', { ascending: true })
+      .order('name')
     setWorkers(data ?? [])
     setLoading(false)
   }, [])
@@ -48,10 +54,21 @@ function WorkersPage() {
 
   const save = async () => {
     if (!form.name.trim()) { showToast('Name required','err'); return }
-    if (form.phone.length !== 10) { showToast(ts(lang,'invalidPhone'),'err'); return }
+    if (form.phone.length !== 10 || !/^[6-9]/.test(form.phone)) {
+      showToast(ts(lang,'invalidPhone'),'err'); return
+    }
     setSaving(true)
     try {
       const userId = await uid()
+      // VAL-6: duplicate check — same name + phone combination
+      if (modal === 'add') {
+        const { data: existing } = await supabase.from('workers')
+          .select('id').eq('user_id', userId).eq('phone', form.phone).is('deleted_at', null).limit(1)
+        if (existing && existing.length > 0) {
+          showToast('A worker with this phone number already exists','err')
+          setSaving(false); return
+        }
+      }
       const { error } = modal==='add'
         ? await supabase.from('workers').insert({ ...form, user_id: userId })
         : await supabase.from('workers').update(form).eq('id', form.id!)
@@ -237,7 +254,7 @@ function WorkersPage() {
               </div>
               <FI label={ts(lang,'notes')} value={form.notes||''} onChange={v=>setForm({...form,notes:v})} multiline />
               <div>
-                <label className="label">{lang==='te'?'కార్మికుడి స్థితి':'Worker Status'}</label>
+                <label className="label">{ts(lang,'workerStatus')}</label>
                 <div className="flex gap-2">
                   {(['Active','Inactive'] as const).map(s => (
                     <button key={s} onClick={() => setForm({...form, worker_status: s})}
@@ -245,7 +262,7 @@ function WorkersPage() {
                       style={form.worker_status===s
                         ? {background: s==='Active'?'#16a34a':'rgb(var(--muted))', color:'#fff', borderColor:'transparent'}
                         : {background:'rgb(var(--surface2))', borderColor:'rgb(var(--border))', color:'rgb(var(--muted))'}}>
-                      {s==='Active' ? (lang==='te'?'✅ చురుకు':'✅ Active') : (lang==='te'?'⏸ నిష్క్రియ':'⏸ Inactive')}
+                      {s==='Active' ? ts(lang,'activeStatus') : ts(lang,'inactiveStatus')}
                     </button>
                   ))}
                 </div>
