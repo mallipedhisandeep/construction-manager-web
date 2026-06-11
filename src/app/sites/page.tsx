@@ -27,8 +27,7 @@ function storageKey(filePath: string): string {
   return idx >= 0 ? filePath.slice(idx + marker.length) : filePath
 }
 
-// FIX P7: batch sign all URLs in one API call instead of N individual calls
-// createSignedUrls (plural) returns all signed URLs in a single round-trip.
+
 async function signRows(rows: FileRow[]): Promise<FileRow[]> {
   if (rows.length === 0) return []
   const keys = rows.map(r => storageKey(r.file_path))
@@ -74,7 +73,8 @@ function SitesPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    // DATA-3: filter by user_id so each user only sees their own sites
+
+    
     const userId = await uid()
     const { data, error } = await supabase.from('sites').select('*')
       .eq('user_id', userId)
