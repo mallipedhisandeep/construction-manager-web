@@ -77,8 +77,6 @@ function ReportsPage() {
         const totalPwCharged  = allPw?.reduce((s,p)=>s+p.price_charged,0) ?? 0
         const totalPwPaid     = allPw?.reduce((s,p)=>s+p.amount_paid,0) ?? 0
         const sitesPending    = (sites ?? []).filter(s=>s.status==='Active').length
-        // suppress unused var warnings for totalAdv — it's used in balance calc below
-        void totalAdv
         setOutstanding({ workers:Math.max(0,totalWorkerCost-totalAdv), suppliers:Math.max(0,totalGoodsOwed-totalSupPaid), privateWorkers:Math.max(0,totalPwCharged-totalPwPaid), sitesPending })
 
         const workerIds = [...new Set(allAtt?.map(a=>a.worker_id) ?? [])]
