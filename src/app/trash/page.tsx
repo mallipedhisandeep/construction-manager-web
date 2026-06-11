@@ -2,17 +2,36 @@
 import { useEffect, useState, useCallback } from 'react'
 import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
-import { tss } from '@/lib/strings'
+import { uid } from '@/lib/auth'
+import { ts } from '@/lib/strings'
 
 interface TrashItem {
   id: string; table: string; label: string; subtitle: string; deleted_at: string
 }
 
+// DB-3/DB-4 fix: only query tables that actually have a deleted_at column.
+// site_payments and payment tables are excluded because they lacked deleted_at
+// in the original schema. They are now added via migration (supabase_new_tables.sql).
+// Tables with soft-delete support:
+const TRASH_TABLES = [
+  { name:'workers',          labelField:'name',         subtitleField:'work_type',    display:'Worker' },
+  { name:'sites',            labelField:'site_name',    subtitleField:'status',        display:'Site' },
+  { name:'suppliers',        labelField:'name',         subtitleField:'shop_name',     display:'Supplier' },
+  { name:'private_workers',  labelField:'name',         subtitleField:'work_type',     display:'Contractor' },
+  { name:'goods_orders',     labelField:'goods_name',   subtitleField:'supplier_name', display:'Goods Order' },
+  { name:'private_work',     labelField:'worker_name',  subtitleField:'site_name',     display:'Contract Work' },
+  // Payment tables included only if the migration has been run (deleted_at column added)
+  { name:'site_payments',    labelField:'description',  subtitleField:'amount',        display:'Site Payment' },
+  { name:'supplier_payments',labelField:'payment_type', subtitleField:'amount',        display:'Supplier Payment' },
+] as const
+
 function TrashPage() {
   const { lang } = useLang()
-  const [items,   setItems]   = useState<TrashItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [toast,   setToast]   = useState<{msg:string;ok:boolean}|undefined>()
+  const [items,    setItems]    = useState<TrashItem[]>([])
+  const [loading,  setLoading]  = useState(true)
+  // UX-5 fix: track in-flight action item so we can disable buttons
+  const [actioning, setActioning] = useState<string | null>(null)
+  const [toast,    setToast]    = useState<{msg:string;ok:boolean}|undefined>()
 
   const showToast = (msg:string, ok=true) => {
     setToast({msg,ok}); setTimeout(()=>setToast(undefined),3000)
@@ -20,38 +39,34 @@ function TrashPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    // DATA-7 fix: filter all queries by user_id
+    const userId = await uid()
+
+    // PERF-1 fix: fire all queries in parallel with Promise.all instead of sequential for...of
+    // DB-3/DB-4 fix: silently skip tables that return a PostgREST error for missing deleted_at
+    const allResults = await Promise.all(
+      TRASH_TABLES.map(t =>
+        supabase.from(t.name).select('*')
+          .eq('user_id', userId)
+          .not('deleted_at', 'is', null)
+          .order('deleted_at', { ascending: false })
+          .then(({ data, error }) => ({ t, data, error }))
+      )
+    )
+
     const results: TrashItem[] = []
-
-    const tables = [
-      { name:'workers',                labelField:'name',         subtitleField:'work_type',    display:'Worker' },
-      { name:'sites',                  labelField:'site_name',    subtitleField:'status',        display:'Site' },
-      { name:'suppliers',              labelField:'name',         subtitleField:'shop_name',     display:'Supplier' },
-      { name:'private_workers',        labelField:'name',         subtitleField:'work_type',     display:'Contractor' },
-      { name:'goods_orders',           labelField:'goods_name',   subtitleField:'supplier_name', display:'Goods Order' },
-      { name:'site_payments',          labelField:'description',  subtitleField:'amount',        display:'Site Payment' },
-      { name:'supplier_payments',      labelField:'payment_type', subtitleField:'amount',        display:'Supplier Payment' },
-      { name:'private_worker_payments',labelField:'direction',    subtitleField:'amount',        display:'Contractor Payment' },
-      { name:'private_work',           labelField:'worker_name',  subtitleField:'site_name',     display:'Contract Work' },
-    ]
-
-    for (const t of tables) {
-      const { data, error } = await supabase
-        .from(t.name)
-        .select('*')
-        .not('deleted_at','is',null)
-        .order('deleted_at', { ascending: false })
-
-      if (!error && data) {
-        data.forEach((row: Record<string,unknown>) => {
-          results.push({
-            id:         row.id as string,
-            table:      t.name,
-            label:      `${t.display}: ${row[t.labelField]}`,
-            subtitle:   (row[t.subtitleField] ?? '') as string,
-            deleted_at: row.deleted_at as string,
-          })
+    for (const { t, data, error } of allResults) {
+      // Skip tables where the column doesn't exist yet (PostgREST returns an error)
+      if (error || !data) continue
+      data.forEach((row: Record<string,unknown>) => {
+        results.push({
+          id:         row.id as string,
+          table:      t.name,
+          label:      `${t.display}: ${row[t.labelField]}`,
+          subtitle:   String(row[t.subtitleField] ?? ''),
+          deleted_at: row.deleted_at as string,
         })
-      }
+      })
     }
 
     results.sort((a,b) => b.deleted_at.localeCompare(a.deleted_at))
@@ -62,37 +77,42 @@ function TrashPage() {
   useEffect(() => { load() }, [load])
 
   const restore = async (item: TrashItem) => {
+    // UX-5 fix: disable button during action
+    setActioning(item.id)
     const { error } = await supabase
       .from(item.table)
       .update({ deleted_at: null })
       .eq('id', item.id)
+    setActioning(null)
     if (error) showToast(error.message, false)
-    else { showToast(tss(lang,'restore') + '!'); load() }
+    else { showToast(ts(lang,'restore') + '!'); load() }
   }
 
   const deletePermanent = async (item: TrashItem) => {
     if (!confirm('Permanently delete? This cannot be undone.')) return
+    setActioning(item.id)
     const { error } = await supabase.from(item.table).delete().eq('id', item.id)
+    setActioning(null)
     if (error) showToast(error.message, false)
     else { showToast('Permanently deleted'); load() }
   }
 
   const emptyTrash = async () => {
     if (!confirm('Empty entire recycle bin? All items will be permanently deleted.')) return
-    for (const item of items) {
-      await supabase.from(item.table).delete().eq('id', item.id)
-    }
+    setActioning('all')
+    await Promise.all(items.map(item => supabase.from(item.table).delete().eq('id', item.id)))
+    setActioning(null)
     showToast('Recycle bin emptied'); load()
   }
 
   const daysSince = (d:string) =>
     Math.floor((Date.now() - new Date(d).getTime()) / 86400000)
 
-  // Icon per table type
-  const icon = (table:string) => ({
+  const icon = (table:string) => (({
     workers:'👷', sites:'🏗️', suppliers:'🏪',
     private_workers:'🔧', goods_orders:'📦',
-  }[table] ?? '🗑️')
+    private_work:'🔨', site_payments:'💰', supplier_payments:'🧾',
+  } as Record<string,string>)[table] ?? '🗑️')
 
   return (
     <div className="page">
@@ -106,15 +126,18 @@ function TrashPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>
-              🗑️ {tss(lang,'trash')}
+              🗑️ {ts(lang,'trash')}
             </h1>
             <p className="text-xs mt-0.5" style={{color:'rgb(var(--muted))'}}>
-              {tss(lang,'trashNote')}
+              {ts(lang,'trashNote')}
             </p>
           </div>
           {items.length > 0 && (
-            <button onClick={emptyTrash} className="btn-danger btn-sm">
-              Empty All
+            <button
+              onClick={emptyTrash}
+              disabled={actioning !== null}
+              className="btn-danger btn-sm disabled:opacity-50">
+              {actioning === 'all' ? '⏳ Deleting...' : 'Empty All'}
             </button>
           )}
         </div>
@@ -129,7 +152,7 @@ function TrashPage() {
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="text-5xl mb-4 opacity-20">🗑️</div>
             <p className="font-bold" style={{color:'rgb(var(--muted))'}}>
-              {tss(lang,'noTrash')}
+              {ts(lang,'noTrash')}
             </p>
             <p className="text-sm mt-1" style={{color:'rgb(var(--muted))'}}>
               Deleted workers, sites, suppliers, contractors and goods orders appear here
@@ -155,10 +178,17 @@ function TrashPage() {
               </p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
-              <button onClick={()=>restore(item)} className="btn-ghost btn-sm text-green-500">
-                ↩ {tss(lang,'restore')}
+              {/* UX-5 fix: disabled state during async action */}
+              <button
+                onClick={() => restore(item)}
+                disabled={actioning !== null}
+                className="btn-ghost btn-sm text-green-500 disabled:opacity-50">
+                {actioning === item.id ? '⏳' : `↩ ${ts(lang,'restore')}`}
               </button>
-              <button onClick={()=>deletePermanent(item)} className="btn-danger btn-sm">
+              <button
+                onClick={() => deletePermanent(item)}
+                disabled={actioning !== null}
+                className="btn-danger btn-sm disabled:opacity-50">
                 🗑️
               </button>
             </div>
