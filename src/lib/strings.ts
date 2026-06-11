@@ -101,7 +101,7 @@ const te: typeof en = {
   goods:'వస్తువుల ఆర్డర్లు', money:'డబ్బు', privateWorkers:'కాంట్రాక్టర్లు',
   privateWork:'కాంట్రాక్టు పని', reports:'నివేదికలు', trash:'చెత్తబుట్ట', profile:'ప్రొఫైల్',
 
-  // Workers — FIX 5: all filter labels translated
+  // Workers 
   addWorker:'కార్మికుని జోడించు', editWorker:'కార్మికుని సవరించు',
   noWorkers:'కార్మికులు కనుగొనబడలేదు', workerAdded:'కార్మికుడు జోడించబడ్డారు!', workerUpdated:'కార్మికుడు అప్డేట్ అయ్యారు!',
   name:'పూర్తి పేరు', phone:'మొబైల్ నంబర్', gender:'లింగం',
@@ -173,7 +173,5 @@ export const strings = { en, te }
 export const ts  = (lang: Lang, key: keyof typeof en): string =>
   (strings[lang][key] ?? strings['en'][key] ?? key) as string
 
-// DEAD-1: tss is an identical alias for ts. Kept for backwards compatibility with
-// existing imports but new code should use ts. Prefer `import { ts }` everywhere.
-// @deprecated Use ts instead.
+
 export const tss = ts
