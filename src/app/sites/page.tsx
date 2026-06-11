@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
-import { tss } from '@/lib/strings'
+import { ts } from '@/lib/strings'
 import type { Site } from '@/lib/types'
 
 // FileRow now stores the storage object path (for signing) + a runtime signedUrl
@@ -47,7 +47,7 @@ async function signRows(rows: FileRow[]): Promise<FileRow[]> {
 
 function SitesPage() {
   const { lang } = useLang()
-  const t = (k: Parameters<typeof tss>[1]) => tss(lang, k)
+  const t = (k: Parameters<typeof ts>[1]) => ts(lang, k)
   const [sites,        setSites]        = useState<SiteDetail[]>([])
   const [loading,      setLoading]      = useState(true)
   const [filter,       setFilter]       = useState<'All'|'Active'|'Completed'>('All')
@@ -74,9 +74,15 @@ function SitesPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase.from('sites').select('*').is('deleted_at',null).order('status',{ascending:true}).order('site_name')
+    // DATA-3: filter by user_id so each user only sees their own sites
+    const userId = await uid()
+    const { data, error } = await supabase.from('sites').select('*')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .order('status', { ascending: true })
+      .order('site_name')
     if (error) showToast(error.message, false)
-    setSites((data??[]) as SiteDetail[])
+    setSites((data ?? []) as SiteDetail[])
     setLoading(false)
   }, [])
 
@@ -298,10 +304,10 @@ function SitesPage() {
               ))}
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="label">{t('budget')}</label>
-                  <input type="number" value={form.budget?.toString()??''} onChange={e=>setForm({...form,budget:+e.target.value})} className="input"/>
+                  <input type="number" min="0" value={form.budget?.toString()??''} onChange={e=>setForm({...form,budget:Math.max(0,+e.target.value)})} className="input"/>
                 </div>
                 <div><label className="label">{t('floors')}</label>
-                  <input type="number" value={form.floors_count?.toString()??''} onChange={e=>setForm({...form,floors_count:+e.target.value})} className="input"/>
+                  <input type="number" min="1" value={form.floors_count?.toString()??''} onChange={e=>setForm({...form,floors_count:Math.max(1,+e.target.value)})} className="input"/>
                 </div>
               </div>
               <div>
