@@ -30,7 +30,6 @@ export default function Nav() {
   const { theme, toggleTheme } = useTheme()
   const [open, setOpen] = useState(false)
 
-  // Feature 3: 7-tap admin trigger on the CM logo
   const tapCount = useRef(0)
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleLogoTap = () => {
@@ -56,7 +55,7 @@ export default function Nav() {
       {/* ── Top bar ── */}
       <header className="fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4"
         style={{background:'rgb(var(--surface))', borderBottom:'1px solid rgb(var(--border))'}}>
-        {/* Feature 3: 7-tap on logo to open admin */}
+        
         <button onClick={handleLogoTap} className="flex items-center gap-2 select-none">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center text-base"
             style={{background:'rgba(var(--accent),0.12)'}}>🏗️</div>
