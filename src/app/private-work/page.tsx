@@ -42,6 +42,13 @@ function PrivateWorkPage() {
 
   const save = async () => {
     if (!form.worker_id||!form.site_id) { showToast(ts(lang,'required'), false); return }
+    const priceCharged = parseFloat(priceStr)||0
+    const amountPaid   = parseFloat(paidStr)||0
+    // VAL-4: amount paid cannot exceed the charged price
+    if (amountPaid > priceCharged) {
+      showToast(lang==='te' ? 'చెల్లింపు చార్జ్ కంటే ఎక్కువగా ఉండకూడదు' : 'Amount paid cannot exceed price charged', false)
+      return
+    }
     setSaving(true)
     const worker = pWorkers.find(w=>w.id===form.worker_id)
     const site   = sites.find(s=>s.id===form.site_id)
@@ -52,8 +59,8 @@ function PrivateWorkPage() {
       work_type:     worker?.work_type??'',
       site_name:     site?.site_name??'',
       work_date:     form.work_date ?? new Date().toISOString().split('T')[0],
-      price_charged: parseFloat(priceStr)||0,
-      amount_paid:   parseFloat(paidStr)||0,
+      price_charged: priceCharged,
+      amount_paid:   amountPaid,
     }
     const { error } = modal==='add'
       ? await supabase.from('private_work').insert({ ...data, user_id: userId })
