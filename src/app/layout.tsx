@@ -1,8 +1,19 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
+// DEPLOY-3: force-dynamic opts every route out of static rendering.
+// This is required here because layout.tsx injects the BUILD_ID into the
+// SW registration script tag. If the layout were statically cached, every
+// user would get the same stale BUILD_ID, breaking SW cache invalidation.
+// To reduce Vercel serverless invocations: move the SW registration to a
+// separate <Script> component in a client component and remove this export.
 export const dynamic = 'force-dynamic'
 
+// DEPLOY-2: If NEXT_PUBLIC_BUILD_ID is not set (e.g. in development or a
+// Vercel preview without the env var), BUILD_ID falls back to Date.now().
+// This is fine locally but will cause a new SW registration on every page
+// load in development, flooding the browser's SW update mechanism.
+// Set NEXT_PUBLIC_BUILD_ID in your Vercel environment (see env.example).
 const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? Date.now().toString()
 
 export const viewport: Viewport = {
@@ -27,7 +38,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+        {/* UX-1 fix: removed manual <meta name="viewport"> — Next.js 15 already injects
+            one from the `export const viewport: Viewport` above. Two viewport tags
+            conflict and can cause unexpected zoom/scaling on mobile. */}
         {/* Preload login bg for fast first paint on login page */}
         <link rel="preload" as="image" href="/login-bg.jpg" fetchPriority="high" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
