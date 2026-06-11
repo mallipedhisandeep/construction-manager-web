@@ -29,8 +29,9 @@ const en = {
   role:'Role', mason:'Mason', helper:'Helper',
   workType:'Work Type', centring:'Centring', brickwork:'Brickwork',
   wageRates:'Wage Rates (₹)', notes:'Notes', personalInfo:'Personal Info',
-  invalidPhone:'Enter 10-digit number',
+  invalidPhone:'Enter 10-digit number starting with 6–9',
   allStates:'All', allTypes:'All', allRoles:'All',
+  workerStatus:'Worker Status', activeStatus:'✅ Active', inactiveStatus:'⏸ Inactive',
 
   // Sites
   addSite:'Add Site', noSites:'No sites found',
@@ -109,8 +110,9 @@ const te: typeof en = {
   role:'పాత్ర', mason:'మేస్త్రీ', helper:'హెల్పర్',
   workType:'పని రకం', centring:'సెంట్రింగ్', brickwork:'ఇటుక పని',
   wageRates:'వేతన రేట్లు (రూ)', notes:'గమనికలు', personalInfo:'వ్యక్తిగత వివరాలు',
-  invalidPhone:'10 అంకెల నంబర్ నమోదు చేయండి',
+  invalidPhone:'6–9తో మొదలయ్యే 10 అంకెల నంబర్ నమోదు చేయండి',
   allStates:'అన్నీ', allTypes:'అన్నీ', allRoles:'అన్నీ',
+  workerStatus:'కార్మికుడి స్థితి', activeStatus:'✅ చురుకు', inactiveStatus:'⏸ నిష్క్రియ',
 
   // Sites
   addSite:'సైటు జోడించు', noSites:'సైట్లు కనుగొనబడలేదు',
@@ -170,4 +172,8 @@ export const strings = { en, te }
 // Safe getter — never returns undefined, falls back to English key
 export const ts  = (lang: Lang, key: keyof typeof en): string =>
   (strings[lang][key] ?? strings['en'][key] ?? key) as string
+
+// DEAD-1: tss is an identical alias for ts. Kept for backwards compatibility with
+// existing imports but new code should use ts. Prefer `import { ts }` everywhere.
+// @deprecated Use ts instead.
 export const tss = ts
