@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useRef } from 'react'
-import AppShell, { useLang } from '@/components/AppShell'
+import AppShell, { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
@@ -55,7 +55,6 @@ function SitesPage() {
   const [selected,     setSelected]     = useState<SiteDetail|null>(null)
   const [form,         setForm]         = useState<Partial<Site>>({status:'Active',floors_count:1,budget:0})
   const [saving,       setSaving]       = useState(false)
-  const [toast,        setToast]        = useState<{msg:string;ok:boolean}|undefined>()
   const [tab,          setTab]          = useState<TabType>('info')
   const [agreements,   setAgreements]   = useState<FileRow[]>([])
   const [floorFiles,   setFloorFiles]   = useState<FileRow[]>([])
@@ -70,7 +69,8 @@ function SitesPage() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [pendingUpload, setPendingUpload] = useState<{type:'agreement'|'floor'|'elevation';floor?:number}|null>(null)
 
-  const showToast = (msg:string, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(undefined),3500) }
+  const { showToast: _showToast } = useToast()
+  const showToast = (msg: string, ok = true) => _showToast(msg, ok ? 'ok' : 'err')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -195,7 +195,10 @@ function SitesPage() {
   }
 
   const savePayment = async () => {
-    if (!pForm.amount || !selected) return
+    if (!selected) return
+    if (!pForm.amount || parseFloat(pForm.amount) <= 0) {
+      showToast('Amount must be greater than zero', false); return
+    }
     const userId = await uid()
     const { error } = await supabase.from('site_payments').insert({
       site_id:      selected.id,
@@ -220,11 +223,6 @@ function SitesPage() {
 
   return (
     <div className="page">
-      {toast && (
-        <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.ok?'bg-green-500':'bg-red-500'}`}>
-          {toast.msg}
-        </div>
-      )}
       <input ref={fileRef} type="file" className="hidden" onChange={handleFileSelected}
         accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
 
