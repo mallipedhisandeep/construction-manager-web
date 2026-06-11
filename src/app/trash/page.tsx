@@ -9,10 +9,7 @@ interface TrashItem {
   id: string; table: string; label: string; subtitle: string; deleted_at: string
 }
 
-// DB-3/DB-4 fix: only query tables that actually have a deleted_at column.
-// site_payments and payment tables are excluded because they lacked deleted_at
-// in the original schema. They are now added via migration (supabase_new_tables.sql).
-// Tables with soft-delete support:
+
 const TRASH_TABLES = [
   { name:'workers',          labelField:'name',         subtitleField:'work_type',    display:'Worker' },
   { name:'sites',            labelField:'site_name',    subtitleField:'status',        display:'Site' },
@@ -29,7 +26,7 @@ function TrashPage() {
   const { lang } = useLang()
   const [items,    setItems]    = useState<TrashItem[]>([])
   const [loading,  setLoading]  = useState(true)
-  // UX-5 fix: track in-flight action item so we can disable buttons
+  
   const [actioning, setActioning] = useState<string | null>(null)
 
   const { showToast: _showToast } = useToast()
@@ -37,11 +34,10 @@ function TrashPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    // DATA-7 fix: filter all queries by user_id
+    
     const userId = await uid()
 
-    // PERF-1 fix: fire all queries in parallel with Promise.all instead of sequential for...of
-    // DB-3/DB-4 fix: silently skip tables that return a PostgREST error for missing deleted_at
+    
     const allResults = await Promise.all(
       TRASH_TABLES.map(t =>
         supabase.from(t.name).select('*')
@@ -75,7 +71,7 @@ function TrashPage() {
   useEffect(() => { load() }, [load])
 
   const restore = async (item: TrashItem) => {
-    // UX-5 fix: disable button during action
+   
     setActioning(item.id)
     const { error } = await supabase
       .from(item.table)
@@ -171,7 +167,7 @@ function TrashPage() {
               </p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
-              {/* UX-5 fix: disabled state during async action */}
+              
               <button
                 onClick={() => restore(item)}
                 disabled={actioning !== null}
