@@ -1,19 +1,27 @@
 {
   "name": "Construction Manager",
   "short_name": "CM App",
-  "description": "Site and worker management",
+  "description": "Site and worker management for construction businesses",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#0c0c0e",
   "theme_color": "#0c0c0e",
+  "lang": "en",
+  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon-512.png",

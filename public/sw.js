@@ -1,15 +1,20 @@
-// Construction Manager Service Worker v5
-// Fix: install event must NOT pre-cache '/' — that's a dynamic Next.js
-// page and fetching it during SW install can fail/hang, which causes
-// the entire SW installation to fail silently (the "Installing..." bug).
+// Construction Manager Service Worker v6
+// PWA-1 fix: cache name is now versioned via the SW query string (?v=BUILD_ID)
+//            so each deploy gets a fresh cache name derived from the build ID.
+//            The BUILD_ID is injected by layout.tsx as /sw.js?v=<id>.
+//            We extract it here so the CACHE name changes on each deploy.
+// PWA-2 fix: offline fallback now returns /offline.html instead of plain text.
 
-const CACHE = 'cm-v5'
+// Derive cache name from query string so it changes with each deploy
+const swUrl   = new URL(self.location.href)
+const buildId = swUrl.searchParams.get('v') || 'v6'
+const CACHE   = `cm-${buildId}`
 
-// Only cache truly static files that are guaranteed to exist
 const PRECACHE_URLS = [
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
+  '/offline.html',   // PWA-2: cache the offline page at install time
 ]
 
 self.addEventListener('install', (e) => {
@@ -24,6 +29,7 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
+        // PWA-1 fix: delete ALL old cm-* caches, not just ones != CACHE
         keys.filter(k => k !== CACHE).map(k => caches.delete(k))
       ))
       .then(() => self.clients.claim())
@@ -85,8 +91,12 @@ self.addEventListener('fetch', (e) => {
         }
         return response
       })
-      .catch(() => caches.match(e.request)
-        .then(cached => cached ?? new Response('Offline', { status: 503 }))
-      )
+      .catch(async () => {
+        const cached = await caches.match(e.request)
+        if (cached) return cached
+        // PWA-2 fix: return the proper offline HTML page, not a plain text "Offline"
+        const offlinePage = await caches.match('/offline.html')
+        return offlinePage ?? new Response('Offline', { status: 503 })
+      })
   )
 })
