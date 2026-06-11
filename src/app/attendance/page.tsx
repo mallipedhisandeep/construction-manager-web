@@ -4,13 +4,11 @@ import AppShell, { useLang, useTheme, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts, MONTHS } from '@/lib/strings'
-// DEAD-3: use shared constants instead of local re-definitions
 import { SHIFTS, SHIFT_LABELS, PAYMENT_MODES } from '@/lib/constants'
 import type { Worker, Attendance, Site } from '@/lib/types'
 
 type Shift = typeof SHIFTS[number]
 
-// BUG-3 fix: derive SHIFT_LABEL map from the single source of truth in constants
 const SHIFT_LABEL = SHIFT_LABELS as Record<Shift, string>
 
 const SHIFT_BG: Record<Shift,string> = {
@@ -41,13 +39,12 @@ function AttendancePage() {
   const [shiftPick,  setShiftPick]  = useState<Shift>('6-6')
   const [advInput,   setAdvInput]   = useState('')
   const [modalSite,  setModalSite]  = useState('')
-  // BUG-3 fix: payment_mode selector state
   const [payMode,    setPayMode]    = useState<string>('Cash')
 
   const [view,       setView]       = useState<'day'|'summary'>('day')
   const [sumWorker,  setSumWorker]  = useState<Worker|null>(null)
   const [sumRecords, setSumRecords] = useState<Attendance[]>([])
-  const [sumPrevBal, setSumPrevBal] = useState(0)   // FIX F2: carry-forward
+  const [sumPrevBal, setSumPrevBal] = useState(0)   
   const [sumLoading, setSumLoading] = useState(false)
 
   const months      = MONTHS[lang]
@@ -67,12 +64,10 @@ function AttendancePage() {
   const wage = (w: Worker, s: Shift) => s === 'Absent' ? 0 : ((w[rateKey(s)] as number) ?? 0)
 
   const loadBase = useCallback(async () => {
-    // DATA-2: filter workers and sites by user_id
     const userId = await uid()
     const [{ data: ws }, { data: si }] = await Promise.all([
       supabase.from('workers').select('*')
         .eq('user_id', userId)
-        // BUG-2: exclude Inactive workers from the daily attendance view
         .neq('worker_status', 'Inactive')
         .is('deleted_at', null)
         .order('work_type').order('name'),
@@ -127,14 +122,11 @@ function AttendancePage() {
     setShiftPick((existing?.attendance_type as Shift) ?? '6-6')
     setAdvInput(existing?.advance?.toString() ?? '')
     setModalSite(existing?.site_id ?? '')
-    // BUG-3 fix: restore saved payment_mode or default to Cash
     setPayMode(existing?.payment_mode ?? 'Cash')
     setModal(w)
   }
 
   const saveOne = async () => {
-    // VAL-1 fix: guard against modal with missing id (defensive, in case
-    // openModal is ever called with a partially-constructed worker object)
     if (!modal || !modal.id) return
     setSaving(true)
     try {
@@ -148,10 +140,8 @@ function AttendancePage() {
         attendance_type: shiftPick,
         wage:            workerWage,
         advance:         parseFloat(advInput) || 0,
-        payment_mode:    payMode,          // BUG-3 fix: use selected payment mode
-        // FIX M4: compute running balance_after = all previous earned - all previous advances
-        // We fetch the current running total from existing attendance for this worker
-        balance_after:   0,               // set to 0 for now; updated below after insert
+        payment_mode:    payMode,          
+        balance_after:   0,               
         site_id:         modalSite || null,
         user_id:         userId,
       }
@@ -181,7 +171,6 @@ function AttendancePage() {
     } finally { setSaving(false) }
   }
 
-  // FIX F2: carry-forward — fetch previous months to compute opening balance
   const openSummary = async (w: Worker) => {
     setSumWorker(w); setView('summary'); setSumRecords([]); setSumPrevBal(0); setSumLoading(true)
     const start = `${year}-${pad(month+1)}-01`
@@ -201,7 +190,6 @@ function AttendancePage() {
     setSumLoading(false)
   }
 
-  // FIX C3: theme-aware date sidebar colours
   const dotStyle = (d: number) => {
     const dk        = `${year}-${pad(month+1)}-${pad(d)}`
     const isToday   = d === now.getDate() && month === now.getMonth() && year === now.getFullYear()
@@ -231,7 +219,7 @@ function AttendancePage() {
       dot:  '',
     }
 
-    // Normal day — FIX C3: use solid readable colour instead of near-white
+    
     return {
       bg:   'transparent',
       text: isDark ? 'rgba(220,218,210,0.6)' : 'rgba(30,27,20,0.65)', // off-white dark / near-black light
@@ -244,8 +232,7 @@ function AttendancePage() {
 
   const sumEarned   = sumRecords.filter(a => a.attendance_type !== 'Absent').reduce((s,a) => s + (a.wage ?? 0), 0)
   const sumAdv      = sumRecords.reduce((s,a) => s + (a.advance ?? 0), 0)
-  const sumBalance  = sumPrevBal + sumEarned - sumAdv   // FIX F2: includes carry-forward
-
+  const sumBalance  = sumPrevBal + sumEarned - sumAdv   
   const siteName = (id: string | undefined | null) =>
     id ? (sites.find(s => s.id === id)?.site_name ?? null) : null
 
@@ -362,7 +349,7 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                 ))}
               </div>
 
-              {/* FIX F2: Show carry-forward if non-zero */}
+              
               {sumPrevBal !== 0 && (
                 <div className="card px-4 py-3 mb-3 flex items-center justify-between"
                   style={{borderColor: sumPrevBal > 0 ? 'rgba(22,163,74,0.3)' : 'rgba(220,38,38,0.3)'}}>
@@ -440,7 +427,7 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
       {view === 'day' && (
         <div className="flex flex-1 overflow-hidden" style={{ height:'calc(100vh - 148px)' }}>
 
-          {/* LEFT — vertical date sidebar — FIX C3 applied in dotStyle() */}
+          {/* LEFT — vertical date sidebar  */}
           <div className="overflow-y-auto flex-shrink-0 border-r"
             style={{ width:52, background:'rgb(var(--surface))', borderColor:'rgb(var(--border))' }}>
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
@@ -575,7 +562,7 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
             </div>
 
             <div className="p-5 space-y-4">
-              {/* Shift grid — FIX U9: 4+3 grid, wrap naturally */}
+              {/* Shift grid — */}
               <div>
                 <p className="label mb-2">{lang==='te' ? 'షిఫ్ట్ / హాజరు' : 'Shift / Attendance'}</p>
                 <div className="grid grid-cols-3 gap-2">
@@ -617,7 +604,7 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                 </div>
               )}
 
-              {/* FIX: advance allowed even when Absent — worker may receive advance on off-day */}
+              
               <div>
                 <label className="label">{lang==='te' ? 'అడ్వాన్స్ ₹ ' : 'Advance ₹ '}</label>
                 <input type="number" inputMode="decimal"
@@ -625,7 +612,7 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                   placeholder="0" className="input"/>
               </div>
 
-              {/* BUG-3 fix: payment mode selector */}
+            
               <div>
                 <label className="label">{lang==='te' ? 'చెల్లింపు పద్ధతి' : 'Payment Mode'}</label>
                 <div className="grid grid-cols-4 gap-2">
