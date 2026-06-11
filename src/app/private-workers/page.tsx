@@ -45,9 +45,10 @@ function PrivateWorkersPage() {
   useEffect(() => { load() }, [load])
 
   const loadHist = async (workerId: string) => {
+    const userId = await uid()
     const [{ data: pays }, { data: work }] = await Promise.all([
-      supabase.from('private_worker_payments').select('*').eq('worker_id', workerId).is('deleted_at',null).order('created_at',{ascending:false}),
-      supabase.from('private_work').select('*').eq('worker_id', workerId).gt('amount_paid',0).order('work_date',{ascending:false}),
+      supabase.from('private_worker_payments').select('*').eq('worker_id', workerId).eq('user_id', userId).is('deleted_at',null).order('created_at',{ascending:false}),
+      supabase.from('private_work').select('*').eq('worker_id', workerId).eq('user_id', userId).gt('amount_paid',0).order('work_date',{ascending:false}),
     ])
     const entries: typeof hist = []
     pays?.forEach(p => entries.push({ date:p.date, amount:p.amount, isOut:p.direction==='dad_to_worker', label:p.direction==='dad_to_worker'?ts(lang,'youToWorker'):ts(lang,'workerToYou'), sublabel:`${p.mode}${p.notes?` · ${p.notes}`:''}`, id:p.id, canDel:true }))
