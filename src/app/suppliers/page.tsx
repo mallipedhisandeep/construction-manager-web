@@ -3,9 +3,10 @@ import { useEffect, useState, useCallback } from 'react'
 import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
+// DEAD-4: import GOODS_UNITS from constants instead of re-defining locally
+import { GOODS_UNITS } from '@/lib/constants'
 import type { Supplier, SupplierGoods, SupplierPayment } from '@/lib/types'
 
-const UNITS = ['bags','tons','pieces','sq.ft','cu.ft','liters','kg','loads','rods','tiles','Nos']
 type SupplierFull = Supplier & { id: string; balance?: number; goodsCount?: number }
 
 function SuppliersPage() {
@@ -30,17 +31,18 @@ function SuppliersPage() {
     setToast({msg,ok}); setTimeout(()=>setToast(undefined), 3000)
   }
 
-  // FIX C4+C5+P1: single bulk query for all suppliers, exclude cancelled+deleted goods orders
+  // DATA-4: filter all queries by user_id
   const load = useCallback(async () => {
     setLoading(true)
+    const userId = await uid()
     const [{ data }, { data: allPays }, { data: allOrders }, { data: allCounts }] = await Promise.all([
-      supabase.from('suppliers').select('*').is('deleted_at', null).order('name'),
-      supabase.from('supplier_payments').select('supplier_id,amount'),
-      // FIX C4: exclude cancelled orders  FIX C5: exclude soft-deleted orders
+      supabase.from('suppliers').select('*').eq('user_id', userId).is('deleted_at', null).order('name'),
+      supabase.from('supplier_payments').select('supplier_id,amount').eq('user_id', userId),
       supabase.from('goods_orders').select('supplier_id,total_price')
+        .eq('user_id', userId)
         .neq('status','Cancelled')
         .is('deleted_at', null),
-      supabase.from('supplier_goods').select('supplier_id'),
+      supabase.from('supplier_goods').select('supplier_id').eq('user_id', userId),
     ])
     if (!data) { setLoading(false); return }
 
@@ -65,9 +67,11 @@ function SuppliersPage() {
 
   const loadDetail = async (sup: SupplierFull) => {
     setSelected(sup); setView('detail'); setTab('goods')
+    const userId = await uid()
     const [{ data:g }, { data:p }] = await Promise.all([
-      supabase.from('supplier_goods').select('*').eq('supplier_id', sup.id).order('goods_name'),
-      supabase.from('supplier_payments').select('*').eq('supplier_id', sup.id).is('deleted_at',null).order('created_at',{ascending:false}),
+      supabase.from('supplier_goods').select('*').eq('supplier_id', sup.id).eq('user_id', userId).order('goods_name'),
+      // INCON-2: supplier_payments may not have deleted_at column — filter by user_id only
+      supabase.from('supplier_payments').select('*').eq('supplier_id', sup.id).eq('user_id', userId).order('created_at',{ascending:false}),
     ])
     setGoods(g??[]); setPayments(p??[])
   }
@@ -388,7 +392,7 @@ function SuppliersPage() {
                 <div>
                   <label className="label">{te?'యూనిట్':'Unit'}</label>
                   <select value={gForm.unit??'bags'} onChange={e=>setGForm({...gForm,unit:e.target.value})} className="input">
-                    {UNITS.map(u=><option key={u}>{u}</option>)}
+                    {GOODS_UNITS.map(u=><option key={u}>{u}</option>)}
                   </select>
                 </div>
               </div>
