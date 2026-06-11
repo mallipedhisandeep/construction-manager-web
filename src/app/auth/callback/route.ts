@@ -1,30 +1,25 @@
 // src/app/auth/callback/route.ts
 //
-// WHY THIS WAS BROKEN:
-// The previous version called supabase.auth.exchangeCodeForSession(code) using
-// the basic @supabase/supabase-js client. That exchange requires the SAME client
-// instance that initiated the PKCE flow (it needs the verifier stored in the
-// browser's localStorage). A server-side route.ts has no access to the browser's
-// localStorage, so exchangeCodeForSession always failed → redirected to
-// /login?error=auth_failed.
+// This route handles the server-side leg of the OAuth redirect.
+// The Supabase client is configured with flowType: 'pkce' (see src/lib/supabase.ts).
 //
-// THE FIX:
-// Switch the OAuth flow from 'pkce' to 'implicit' on the client side (see
-// supabase.ts), so Supabase returns the session tokens in the URL hash (#access_token=...)
-// directly to the browser instead of sending a ?code= to the server.
-// This means we no longer need server-side code exchange at all.
+// PKCE flow:
+//   1. User clicks "Sign in with Google" → Supabase redirects to Google.
+//   2. Google redirects back to /auth/callback?code=<authorization_code>.
+//   3. This route receives the code and forwards it to /auth/confirm, where
+//      the browser-side Supabase client calls exchangeCodeForSession(code).
+//      (The PKCE verifier is in the browser's localStorage, so the exchange
+//       MUST happen in the browser, not in this server route.)
+//   4. On success, the user is redirected to the app home page.
 //
-// This route.ts now only handles the edge case where Supabase sends ?code=
-// (e.g. magic-link or email OTP flows). For Google OAuth with implicit flow,
-// the browser-side supabase client picks up the hash tokens automatically
-// via detectSessionInUrl: true.
+// SEC-4 / INCON-3 fix: removed misleading comments about implicit flow.
+// The client config uses flowType:'pkce' and this route is written for PKCE.
 
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
 
-  // If there's an error param from Supabase, redirect to login with error
   const error = searchParams.get('error')
   const errorDescription = searchParams.get('error_description')
   if (error) {
@@ -32,23 +27,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=auth_failed`)
   }
 
-  // For implicit flow: the browser handles the hash fragment directly.
-  // Supabase JS client (with detectSessionInUrl:true) will read #access_token
-  // from the URL automatically when this page loads in the browser.
-  // We just redirect to a client page that lets Supabase JS do its work.
   const next = searchParams.get('next') ?? '/'
-
-  // If there's a ?code= (email OTP / magic link), redirect to the
-  // client-side handler page which can do the exchange in the browser.
   const code = searchParams.get('code')
+
   if (code) {
-    // Redirect to a client page with the code so browser-side Supabase can handle it
+    // Forward to the client-side confirm page which can do the PKCE exchange
+    // in the browser (where the code verifier is stored in localStorage).
     return NextResponse.redirect(
       `${origin}/auth/confirm?code=${code}&next=${encodeURIComponent(next)}`
     )
   }
 
-  // Normal implicit flow: Supabase redirects here with hash tokens.
-  // Browser will handle them. Just redirect to home — AppShell guards the route.
+  // No code — redirect to home; AppShell will handle auth state.
   return NextResponse.redirect(`${origin}${next}`)
 }
