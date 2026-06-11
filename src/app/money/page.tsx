@@ -22,7 +22,7 @@ function MoneyPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      // FIX M2: filter all queries by user_id
+      
       const userId = await uid()
       if (!userId) { setLoading(false); return }
 
@@ -43,7 +43,7 @@ function MoneyPage() {
         supabase.from('site_payments').select('amount,direction').eq('user_id',userId).gte('payment_date', dateFilter),
         supabase.from('goods_orders').select('total_price,advance_paid').eq('user_id',userId).neq('status','Cancelled').is('deleted_at',null).gte('delivery_date', dateFilter),
         supabase.from('supplier_payments').select('amount').eq('user_id',userId).gte('payment_date', dateFilter),
-        // BUG-5 fix: filter by 'date' (user-entered payment date), not created_at (insert timestamp)
+        
         supabase.from('private_worker_payments').select('amount,direction').eq('user_id',userId).gte('date', dateFilter),
         supabase.from('sites').select('id,site_name').eq('user_id',userId).is('deleted_at', null),
         // All-time for outstanding balances
