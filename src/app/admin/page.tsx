@@ -1,5 +1,5 @@
 'use client'
- Feature 3: Hidden Admin Panel
+ //Feature 3: Hidden Admin Panel
 // Access: tap the CM logo in the top-left 7 times → password prompt appears
 // Only the account whose email matches NEXT_PUBLIC_ADMIN_EMAIL can enter.
 // This page is at /admin — not linked anywhere in the UI.
