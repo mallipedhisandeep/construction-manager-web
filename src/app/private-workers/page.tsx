@@ -1,9 +1,10 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import AppShell, { useLang } from '@/components/AppShell'
+import AppShell, { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
+import { PAYMENT_MODES } from '@/lib/constants'
 import type { PrivateWorker, PrivateWorkerPayment } from '@/lib/types'
 
 function PrivateWorkersPage() {
@@ -17,9 +18,9 @@ function PrivateWorkersPage() {
   const [hist,    setHist]    = useState<Array<{date:string;amount:number;isOut:boolean;label:string;sublabel:string;id?:string;canDel:boolean}>>([])
   const [saving,  setSaving]  = useState(false)
   // FIX M6: typed with | undefined so setToast(undefined) works correctly
-  const [toast,   setToast]   = useState<{msg:string;ok:boolean}|undefined>()
 
-  const showToast = (msg:string, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(undefined),3000) }
+  const { showToast: _showToast } = useToast()
+  const showToast = (msg: string, ok = true) => _showToast(msg, ok ? 'ok' : 'err')
 
   // DATA-5: filter all queries by user_id
   const load = useCallback(async () => {
@@ -92,7 +93,6 @@ function PrivateWorkersPage() {
 
   return (
     <div className="page">
-      {toast && <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.ok?'bg-green-500':'bg-red-500'}`}>{toast.msg}</div>}
 
       <div className="page-header">
         <div className="flex items-center justify-between">
@@ -149,9 +149,9 @@ function PrivateWorkersPage() {
               <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
             </div>
             <div className="p-5 space-y-3">
-              {(['name','work_type','phone'] as const).map(k=>(
-                <div key={k}><label className="label">{k.replace('_',' ')}</label><input value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} maxLength={k==='phone'?10:undefined} className="input"/></div>
-              ))}
+              <div><label className="label">{ts(lang,'name')}</label><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} className="input"/></div>
+              <div><label className="label">{ts(lang,'workType')}</label><input value={form.work_type} onChange={e=>setForm({...form,work_type:e.target.value})} className="input"/></div>
+              <div><label className="label">{ts(lang,'phone')}</label><input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value.replace(/\D/g,'').slice(0,10)})} maxLength={10} inputMode="tel" className="input"/></div>
               <div><label className="label">{ts(lang,'notes')}</label><input value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} className="input"/></div>
               <button onClick={saveWorker} disabled={saving} className="btn-primary btn-full">{saving?'⏳...':ts(lang,'save')}</button>
             </div>
@@ -187,7 +187,7 @@ function PrivateWorkersPage() {
                 <div><label className="label">₹ Amount</label><input type="number" value={payForm.amount} onChange={e=>setPayForm({...payForm,amount:e.target.value})} className="input"/></div>
                 <div><label className="label">{ts(lang,'paymentMode')}</label>
                   <select value={payForm.mode} onChange={e=>setPayForm({...payForm,mode:e.target.value})} className="input">
-                    {['Cash','Online'].map(m=><option key={m}>{m}</option>)}
+                    {PAYMENT_MODES.map(m=><option key={m}>{m}</option>)}
                   </select>
                 </div>
               </div>
