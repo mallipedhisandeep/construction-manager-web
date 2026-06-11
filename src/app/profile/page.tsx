@@ -32,13 +32,13 @@ function ProfilePage() {
           email:  u.email ?? '',
           avatar: u.user_metadata?.avatar_url,
         })
-        // Load stats
+        // DATA-8: filter stats by user_id — show only the current user's counts
         const [{ count: w },{ count: s },{ count: a },{ count: su },{ count: pw }] = await Promise.all([
-          supabase.from('workers').select('id',{count:'exact',head:true}).is('deleted_at',null),
-          supabase.from('sites').select('id',{count:'exact',head:true}).is('deleted_at',null),
-          supabase.from('attendance').select('id',{count:'exact',head:true}),
-          supabase.from('suppliers').select('id',{count:'exact',head:true}).is('deleted_at',null),
-          supabase.from('private_workers').select('id',{count:'exact',head:true}).is('deleted_at',null),
+          supabase.from('workers').select('id',{count:'exact',head:true}).eq('user_id', u.id).is('deleted_at',null),
+          supabase.from('sites').select('id',{count:'exact',head:true}).eq('user_id', u.id).is('deleted_at',null),
+          supabase.from('attendance').select('id',{count:'exact',head:true}).eq('user_id', u.id),
+          supabase.from('suppliers').select('id',{count:'exact',head:true}).eq('user_id', u.id).is('deleted_at',null),
+          supabase.from('private_workers').select('id',{count:'exact',head:true}).eq('user_id', u.id).is('deleted_at',null),
         ])
         setStats({ workers:w??0, sites:s??0, attendance:a??0, suppliers:su??0, privateWorkers:pw??0 })
       }
