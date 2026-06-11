@@ -346,8 +346,7 @@ option { background-color: rgb(var(--surface)); color: rgb(var(--text)); }
 .gold-glow    { box-shadow: 0 0 20px rgba(var(--accent), 0.2); }
 .gold-glow-sm { box-shadow: 0 0 10px rgba(var(--accent), 0.15); }
 
-/* FIX U6: drag handle for mobile bottom sheets */
-.modal-box { padding-top: 12px; }
+/* Drag handle for mobile bottom sheets only */
 .modal-box::before {
   content: '';
   display: block;
@@ -355,6 +354,10 @@ option { background-color: rgb(var(--surface)); color: rgb(var(--text)); }
   height: 4px;
   border-radius: 2px;
   background-color: rgb(var(--border));
-  margin: 0 auto 8px;
+  margin: 8px auto 4px;
 }
-@media (min-width: 768px) { .modal-box::before { display: none; } }
+@media (min-width: 768px) {
+  .modal-box::before { display: none; }
+  /* Remove the drag-handle top spacing on desktop */
+  .modal-box { padding-top: 0; }
+}
