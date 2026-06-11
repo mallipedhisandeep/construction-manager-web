@@ -33,7 +33,6 @@ function GoodsPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    // BUG-6: filter goods, suppliers, and sites by user_id
     const userId = await uid()
     const [{ data:o },{ data:s },{ data:si }] = await Promise.all([
       supabase.from('goods_orders').select('*').eq('user_id', userId).is('deleted_at', null).order('created_at',{ascending:false}),
@@ -69,15 +68,12 @@ function GoodsPage() {
     }
     const qty   = parseFloat(form.qtyStr||'0')
     const price = parseFloat(form.priceStr||'0')
-    // VAL-2: prevent zero/negative quantity or price
     if (qty <= 0) { showToast(te ? 'పరిమాణం 0 కంటే ఎక్కువ ఉండాలి' : 'Quantity must be greater than 0', false); return }
     if (price <= 0) { showToast(te ? 'ధర 0 కంటే ఎక్కువ ఉండాలి' : 'Price must be greater than 0', false); return }
     setSaving(true)
     const sup  = suppliers.find(s=>s.id===form.supplier_id)
     const site = sites.find(s=>s.id===form.site_id)
     const adv   = parseFloat(form.advStr||'0')
-    // DB-2: total_price is always recomputed from qty × price at save time.
-    // Never read from a stale stored value to avoid denormalization drift.
     const total = qty * price
 
     try {
@@ -117,7 +113,7 @@ function GoodsPage() {
     load()
   }
 
-  // ── FIX: soft-delete instead of hard-delete so item appears in Recycle Bin ──
+ 
   const delOrder = async (id:string) => {
     if (!confirm(te ? 'ఈ ఆర్డర్‌ని చెత్తబుట్టకు తరలించాలా?' : 'Move this order to recycle bin?')) return
     const { error } = await supabase
@@ -235,7 +231,7 @@ function GoodsPage() {
                 </button>
               )}
               <div className="w-px" style={{background:'rgb(var(--border))'}}/>
-              {/* FIX: now calls soft-delete (sets deleted_at) instead of hard-delete */}
+          
               <button onClick={()=>delOrder(o.id!)}
                 className="px-4 py-2 text-xs font-bold text-red-400 hover:bg-red-500/10 transition">
                 🗑️
