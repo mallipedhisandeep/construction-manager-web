@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback } from 'react'
 import AppShell, { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
-// DEAD-4: import GOODS_UNITS from constants instead of re-defining locally
 import { GOODS_UNITS } from '@/lib/constants'
 import type { Supplier, SupplierGoods, SupplierPayment } from '@/lib/types'
 
@@ -29,7 +28,6 @@ function SuppliersPage() {
   const { showToast: _showToast } = useToast()
   const showToast = (msg: string, ok = true) => _showToast(msg, ok ? 'ok' : 'err')
 
-  // DATA-4: filter all queries by user_id
   const load = useCallback(async () => {
     setLoading(true)
     const userId = await uid()
@@ -68,7 +66,7 @@ function SuppliersPage() {
     const userId = await uid()
     const [{ data:g }, { data:p }] = await Promise.all([
       supabase.from('supplier_goods').select('*').eq('supplier_id', sup.id).eq('user_id', userId).order('goods_name'),
-      // INCON-2: supplier_payments may not have deleted_at column — filter by user_id only
+     
       supabase.from('supplier_payments').select('*').eq('supplier_id', sup.id).eq('user_id', userId).order('created_at',{ascending:false}),
     ])
     setGoods(g??[]); setPayments(p??[])
