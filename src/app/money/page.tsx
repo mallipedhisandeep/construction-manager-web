@@ -96,16 +96,12 @@ function MoneyPage() {
   useEffect(() => { load() }, [load])
 
   if (loading) return (
-    <AppShell>
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin w-10 h-10 border-4 border-t-transparent rounded-full" style={{borderColor:'rgb(var(--accent))',borderTopColor:'transparent'}}/>
-      </div>
-    </AppShell>
+    <div className="flex justify-center items-center h-64">
+      <div className="animate-spin w-10 h-10 border-4 border-t-transparent rounded-full" style={{borderColor:'rgb(var(--accent))',borderTopColor:'transparent'}}/>
+    </div>
   )
   if (!data) return (
-    <AppShell>
-      <div className="text-center p-8" style={{color:'rgb(var(--muted))'}}>{te?'డేటా లేదు':'No data available'}</div>
-    </AppShell>
+    <div className="text-center p-8" style={{color:'rgb(var(--muted))'}}>{te?'డేటా లేదు':'No data available'}</div>
   )
 
   const totalExpenses = data.workerWages + data.goodsSpend + data.siteSpend + data.privateWorkerPaid
