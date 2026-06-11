@@ -10,7 +10,7 @@ import type { Worker } from '@/lib/types'
 const DISPLAY_SHIFTS = SHIFTS.filter(s => s !== 'Absent') as string[]
 const empty = (): Worker => ({ name:'', phone:'', gender:'Male', state:'Telangana', role:'Mason', work_type:'Centring', rate_6_6:0, rate_10_6:0, rate_6_10:0, rate_6_2:0, rate_10_2:0, rate_2_6:0, worker_status:'Active' })
 
-// FIX 6: all states use same badge style — no more wrapping inconsistency
+
 const stateColor = (s:string) => s==='Telangana'?'#16a34a':s==='Andhra'?'#2563eb':'#d97706'
 
 function WorkersPage() {
@@ -27,7 +27,7 @@ function WorkersPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    // DATA-1: filter by user_id so each user only sees their own workers
+    
     const userId = await uid()
     const { data } = await supabase.from('workers').select('*')
       .eq('user_id', userId)
@@ -60,7 +60,7 @@ function WorkersPage() {
     setSaving(true)
     try {
       const userId = await uid()
-      // VAL-6: duplicate check — same name + phone combination
+      
       if (modal === 'add') {
         const { data: existing } = await supabase.from('workers')
           .select('id').eq('user_id', userId).eq('phone', form.phone).is('deleted_at', null).limit(1)
@@ -90,7 +90,7 @@ function WorkersPage() {
 
   return (
     <div className="min-h-screen pb-24" style={{background:'rgb(var(--bg))'}}>
-      {/* FIX 7: compact filter panel — reduced padding/spacing */}
+      
       <div className="border-b px-4 pt-4 pb-3 sticky top-14 z-30"
         style={{background:'rgb(var(--surface))', borderColor:'rgb(var(--border))'}}>
         <div className="flex items-center justify-between mb-2.5">
@@ -102,7 +102,7 @@ function WorkersPage() {
         <input value={search} onChange={e=>setSearch(e.target.value)}
           placeholder={ts(lang,'search')} className="input mb-2.5 py-2 text-sm" />
 
-        {/* FIX 2+7: filters on single rows, no wrapping, compact */}
+        
         <div className="space-y-1.5">
           {/* Work Type row */}
           <div className="flex items-center gap-1.5">
@@ -122,7 +122,7 @@ function WorkersPage() {
               ))}
             </div>
           </div>
-          {/* State row — FIX 2: nowrap so Bihar never wraps */}
+         
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wide flex-shrink-0 w-14"
               style={{color:'rgb(var(--muted))'}}>
