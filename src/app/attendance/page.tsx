@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import AppShell, { useLang, useTheme } from '@/components/AppShell'
+import AppShell, { useLang, useTheme, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts, MONTHS } from '@/lib/strings'
@@ -36,7 +36,6 @@ function AttendancePage() {
   const [markedDays, setMarkedDays] = useState<Record<string,'full'|'partial'|'absent'>>({})
   const [loading,    setLoading]    = useState(true)
   const [saving,     setSaving]     = useState(false)
-  const [toast,      setToast]      = useState<{msg:string;ok:boolean}|undefined>()
 
   const [modal,      setModal]      = useState<Worker | null>(null)
   const [shiftPick,  setShiftPick]  = useState<Shift>('6-6')
@@ -55,9 +54,8 @@ function AttendancePage() {
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const dKey        = `${year}-${pad(month+1)}-${pad(day)}`
 
-  const showToast = (msg: string, ok = true) => {
-    setToast({ msg, ok }); setTimeout(() => setToast(undefined), 3000)
-  }
+  const { showToast: _showToast } = useToast()
+  const showToast = (msg: string, ok = true) => _showToast(msg, ok ? 'ok' : 'err')
 
   const rateKey = (s: Shift): keyof Worker => {
     const m: Record<Shift,keyof Worker> = {
@@ -90,7 +88,10 @@ function AttendancePage() {
 
   const loadDay = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase.from('attendance').select('*').eq('date_key', dKey)
+    const userId = await uid()
+    const { data } = await supabase.from('attendance').select('*')
+      .eq('date_key', dKey)
+      .eq('user_id', userId)
     const m: Record<string, Attendance> = {}
     data?.forEach(a => { m[a.worker_id] = a })
     setAttMap(m)
@@ -250,12 +251,6 @@ function AttendancePage() {
 
   return (
     <div className="page" style={{ display:'flex', flexDirection:'column' }}>
-      {toast && (
-        <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.ok ? 'bg-green-500' : 'bg-red-500'}`}>
-          {toast.msg}
-        </div>
-      )}
-
       {/* ── Top bar ── */}
       <div className="page-header">
         {view === 'summary' ? (
