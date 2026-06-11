@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
+import { GOODS_UNITS } from '@/lib/constants'
 import type { GoodsOrder, Supplier, SupplierGoods, Site } from '@/lib/types'
 
 const STATUS_STYLE: Record<string,string> = {
@@ -34,11 +35,12 @@ function GoodsPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    // BUG-6: filter goods, suppliers, and sites by user_id
+    const userId = await uid()
     const [{ data:o },{ data:s },{ data:si }] = await Promise.all([
-      // FIX: only show orders that are NOT soft-deleted
-      supabase.from('goods_orders').select('*').is('deleted_at', null).order('created_at',{ascending:false}),
-      supabase.from('suppliers').select('*').is('deleted_at', null).order('name'),
-      supabase.from('sites').select('id,site_name,status').eq('status','Active').is('deleted_at', null),
+      supabase.from('goods_orders').select('*').eq('user_id', userId).is('deleted_at', null).order('created_at',{ascending:false}),
+      supabase.from('suppliers').select('*').eq('user_id', userId).is('deleted_at', null).order('name'),
+      supabase.from('sites').select('id,site_name,status').eq('user_id', userId).eq('status','Active').is('deleted_at', null),
     ])
     setOrders(o??[]); setSuppliers(s??[]); setSites((si??[]) as typeof si & [])
     setLoading(false)
@@ -64,12 +66,17 @@ function GoodsPage() {
       showToast(te ? 'అవసరమైన ఫీల్డ్‌లు నింపండి' : 'Please fill required fields', false)
       return
     }
+    const qty   = parseFloat(form.qtyStr||'0')
+    const price = parseFloat(form.priceStr||'0')
+    // VAL-2: prevent zero/negative quantity or price
+    if (qty <= 0) { showToast(te ? 'పరిమాణం 0 కంటే ఎక్కువ ఉండాలి' : 'Quantity must be greater than 0', false); return }
+    if (price <= 0) { showToast(te ? 'ధర 0 కంటే ఎక్కువ ఉండాలి' : 'Price must be greater than 0', false); return }
     setSaving(true)
     const sup  = suppliers.find(s=>s.id===form.supplier_id)
     const site = sites.find(s=>s.id===form.site_id)
-    const qty   = parseFloat(form.qtyStr||'0')
-    const price = parseFloat(form.priceStr||'0')
     const adv   = parseFloat(form.advStr||'0')
+    // DB-2: total_price is always recomputed from qty × price at save time.
+    // Never read from a stale stored value to avoid denormalization drift.
     const total = qty * price
 
     try {
@@ -288,7 +295,7 @@ function GoodsPage() {
                 </div>
                 <div><label className="label">{te?'యూనిట్':'Unit'}</label>
                   <select value={form.unit??'bags'} onChange={e=>setForm(f=>({...f,unit:e.target.value}))} className="input">
-                    {['bags','tons','pieces','sq.ft','cu.ft','liters','kg','loads','rods','tiles','Nos'].map(u=><option key={u}>{u}</option>)}
+                    {GOODS_UNITS.map(u=><option key={u}>{u}</option>)}
                   </select>
                 </div>
               </div>
