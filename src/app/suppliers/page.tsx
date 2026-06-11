@@ -193,7 +193,7 @@ function SuppliersPage() {
                         <span className="badge-gray">{sup.goodsCount} {te?'వస్తువులు':'goods'}</span>
                       </div>
                     </div>
-                    <div className={`text-xs font-bold px-2.5 py-1.5 rounded-xl text-right ${b>0?'text-red-600':'b'<'0'?'text-green-700':''}`}
+                    <div className={`text-xs font-bold px-2.5 py-1.5 rounded-xl text-right ${b>0?'text-red-600':b<0?'text-green-700':''}`}
                       style={{
                         background: b>0 ? 'rgba(220,38,38,0.1)' : b<0 ? 'rgba(22,163,74,0.1)' : 'rgb(var(--surface2))',
                         color: b>0 ? '#dc2626' : b<0 ? '#15803d' : 'rgb(var(--muted))',
