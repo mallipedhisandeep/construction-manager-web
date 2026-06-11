@@ -107,8 +107,9 @@ function SitesPage() {
   }, [])
 
   const loadPayments = useCallback(async (siteId:string) => {
+    const userId = await uid()
     const { data } = await supabase.from('site_payments').select('*')
-      .eq('site_id',siteId).eq('direction','received').order('payment_date',{ascending:false})
+      .eq('site_id',siteId).eq('user_id',userId).eq('direction','received').order('payment_date',{ascending:false})
     setSitePayments(data??[])
   }, [])
 
