@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import AppShell, { useLang } from '@/components/AppShell'
+import AppShell, { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
@@ -18,9 +18,9 @@ function PrivateWorkPage() {
   const [priceStr, setPriceStr] = useState('')
   const [paidStr,  setPaidStr]  = useState('')
   const [saving,   setSaving]   = useState(false)
-  const [toast,    setToast]    = useState<{msg:string;ok:boolean}|undefined>()
 
-  const showToast = (msg:string, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(undefined),3000) }
+  const { showToast: _showToast } = useToast()
+  const showToast = (msg: string, ok = true) => _showToast(msg, ok ? 'ok' : 'err')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -84,7 +84,6 @@ function PrivateWorkPage() {
 
   return (
     <div className="page">
-      {toast && <div className={`fixed top-16 right-4 z-50 text-white text-sm px-4 py-2 rounded-xl shadow-lg ${toast.ok?'bg-green-500':'bg-red-500'}`}>{toast.msg}</div>}
 
       <div className="page-header">
         <div className="flex items-center justify-between mb-3">
