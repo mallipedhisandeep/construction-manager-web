@@ -38,7 +38,7 @@ function PrivateWorkPage() {
   useEffect(() => { load() }, [load])
 
   const filtered    = filter==='All' ? works : works.filter(w=>w.status===filter)
-  const totalPending = works.reduce((s,w)=>s+(w.price_charged-w.amount_paid),0)
+  const totalPending = works.filter(w=>w.status==='Active').reduce((s,w)=>s+(w.price_charged-w.amount_paid),0)
 
   const save = async () => {
     if (!form.worker_id||!form.site_id) { showToast(ts(lang,'required'), false); return }
