@@ -40,7 +40,7 @@ function GoodsPage() {
       supabase.from('suppliers').select('*').eq('user_id', userId).is('deleted_at', null).order('name'),
       supabase.from('sites').select('id,site_name,status').eq('user_id', userId).eq('status','Active').is('deleted_at', null),
     ])
-    setOrders(o??[]); setSuppliers(s??[]); setSites((si??[]) as typeof si & [])
+    setOrders(o??[]); setSuppliers(s??[]); setSites((si??[]) as (Site & {id:string})[])
     setLoading(false)
   }, [])
 
