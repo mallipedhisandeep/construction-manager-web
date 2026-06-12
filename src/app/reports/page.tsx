@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
@@ -27,75 +27,71 @@ function ReportsPage() {
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState({ totalBudget:0, totalReceived:0, totalSpend:0, totalGoodsSpend:0, totalWorkerSpend:0, netPL:0 })
   const [outstanding, setOutstanding] = useState({ workers:0, suppliers:0, privateWorkers:0, sitesPending:0 })
-  
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true)
-      try {
-       
-        const userId = await uid()
-        const [
-          { data: sites },
-          { data: allAtt },
-          { data: allGoods },
-          { data: allSupPay },
-          { data: allPw },
-          { data: spData },
-          { data: allWorkers },
-        ] = await Promise.all([
-          supabase.from('sites').select('*').eq('user_id', userId).is('deleted_at', null),
-          
-          supabase.from('attendance').select('wage,advance,attendance_type,site_id,worker_id').eq('user_id', userId),
-          supabase.from('goods_orders').select('total_price,advance_paid,site_id').eq('user_id', userId).neq('status','Cancelled'),
-          supabase.from('supplier_payments').select('amount').eq('user_id', userId),
-          supabase.from('private_work').select('price_charged,amount_paid,worker_id').eq('user_id', userId),
-          supabase.from('site_payments').select('amount,direction,site_id').eq('user_id', userId),
-          supabase.from('workers').select('id,name').eq('user_id', userId).is('deleted_at', null),
-        ])
 
-        const workerNameMap: Record<string, string> = {}
-        allWorkers?.forEach(w => { workerNameMap[w.id] = w.name })
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const userId = await uid()
+      const [
+        { data: sites },
+        { data: allAtt },
+        { data: allGoods },
+        { data: allSupPay },
+        { data: allPw },
+        { data: spData },
+        { data: allWorkers },
+      ] = await Promise.all([
+        supabase.from('sites').select('*').eq('user_id', userId).is('deleted_at', null),
+        supabase.from('attendance').select('wage,advance,attendance_type,site_id,worker_id').eq('user_id', userId),
+        supabase.from('goods_orders').select('total_price,advance_paid,site_id').eq('user_id', userId).neq('status','Cancelled'),
+        supabase.from('supplier_payments').select('amount').eq('user_id', userId),
+        supabase.from('private_work').select('price_charged,amount_paid,worker_id').eq('user_id', userId),
+        supabase.from('site_payments').select('amount,direction,site_id').eq('user_id', userId),
+        supabase.from('workers').select('id,name').eq('user_id', userId).is('deleted_at', null),
+      ])
 
-        const sr = (sites ?? []).map(site => {
-          const received   = spData?.filter(p=>p.site_id===site.id&&p.direction==='received').reduce((s,p)=>s+p.amount,0) ?? 0
-          const workerCost = allAtt?.filter(a=>a.site_id===site.id&&a.attendance_type!=='Absent').reduce((s,a)=>s+a.wage,0) ?? 0
-          const goodsCost  = allGoods?.filter(g=>g.site_id===site.id).reduce((s,g)=>s+g.total_price,0) ?? 0
-          return { id:site.id, name:site.site_name, budget:site.budget, received, workerCost, goodsCost, status:site.status }
+      const workerNameMap: Record<string, string> = {}
+      allWorkers?.forEach(w => { workerNameMap[w.id] = w.name })
+
+      const sr = (sites ?? []).map(site => {
+        const received   = spData?.filter(p=>p.site_id===site.id&&p.direction==='received').reduce((s,p)=>s+p.amount,0) ?? 0
+        const workerCost = allAtt?.filter(a=>a.site_id===site.id&&a.attendance_type!=='Absent').reduce((s,a)=>s+a.wage,0) ?? 0
+        const goodsCost  = allGoods?.filter(g=>g.site_id===site.id).reduce((s,g)=>s+g.total_price,0) ?? 0
+        return { id:site.id, name:site.site_name, budget:site.budget, received, workerCost, goodsCost, status:site.status }
+      })
+      setSiteReports(sr)
+
+      const totalReceived   = spData?.filter(p=>p.direction==='received').reduce((s,p)=>s+p.amount,0) ?? 0
+      const totalWorkerCost = allAtt?.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+a.wage,0) ?? 0
+      const totalGoods      = allGoods?.reduce((s,g)=>s+g.total_price,0) ?? 0
+      const totalBudget     = (sites ?? []).reduce((s,si)=>s+si.budget,0)
+      setOverview({ totalBudget, totalReceived, totalSpend:totalWorkerCost+totalGoods, totalGoodsSpend:totalGoods, totalWorkerSpend:totalWorkerCost, netPL:totalReceived-(totalWorkerCost+totalGoods) })
+
+      const totalAdv        = allAtt?.reduce((s,a)=>s+a.advance,0) ?? 0
+      const totalGoodsOwed  = allGoods?.reduce((s,g)=>s+g.total_price,0) ?? 0
+      const totalSupPaid    = allSupPay?.reduce((s,p)=>s+p.amount,0) ?? 0
+      const totalPwCharged  = allPw?.reduce((s,p)=>s+p.price_charged,0) ?? 0
+      const totalPwPaid     = allPw?.reduce((s,p)=>s+p.amount_paid,0) ?? 0
+      const sitesPending    = (sites ?? []).filter(s=>s.status==='Active').length
+      setOutstanding({ workers:Math.max(0,totalWorkerCost-totalAdv), suppliers:Math.max(0,totalGoodsOwed-totalSupPaid), privateWorkers:Math.max(0,totalPwCharged-totalPwPaid), sitesPending })
+
+      const workerIds = [...new Set(allAtt?.map(a=>a.worker_id) ?? [])]
+      const wr: WorkerReport[] = workerIds
+        .map(wid => {
+          const wAtt       = allAtt?.filter(a=>a.worker_id===wid) ?? []
+          const daysWorked = wAtt.filter(a=>a.attendance_type!=='Absent').length
+          const totalEarned= wAtt.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+a.wage,0)
+          const totalAdv2  = wAtt.reduce((s,a)=>s+a.advance,0)
+          if (daysWorked === 0) return null
+          return { id:wid, name:workerNameMap[wid]??'(Deleted Worker)', daysWorked, totalEarned, totalAdv:totalAdv2, balance:totalEarned-totalAdv2 }
         })
-        setSiteReports(sr)
-
-        const totalReceived   = spData?.filter(p=>p.direction==='received').reduce((s,p)=>s+p.amount,0) ?? 0
-        const totalWorkerCost = allAtt?.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+a.wage,0) ?? 0
-        const totalGoods      = allGoods?.reduce((s,g)=>s+g.total_price,0) ?? 0
-        const totalBudget     = (sites ?? []).reduce((s,si)=>s+si.budget,0)
-        setOverview({ totalBudget, totalReceived, totalSpend:totalWorkerCost+totalGoods, totalGoodsSpend:totalGoods, totalWorkerSpend:totalWorkerCost, netPL:totalReceived-(totalWorkerCost+totalGoods) })
-
-        const totalAdv        = allAtt?.reduce((s,a)=>s+a.advance,0) ?? 0
-        const totalGoodsOwed  = allGoods?.reduce((s,g)=>s+g.total_price,0) ?? 0
-        const totalSupPaid    = allSupPay?.reduce((s,p)=>s+p.amount,0) ?? 0
-        const totalPwCharged  = allPw?.reduce((s,p)=>s+p.price_charged,0) ?? 0
-        const totalPwPaid     = allPw?.reduce((s,p)=>s+p.amount_paid,0) ?? 0
-        const sitesPending    = (sites ?? []).filter(s=>s.status==='Active').length
-        setOutstanding({ workers:Math.max(0,totalWorkerCost-totalAdv), suppliers:Math.max(0,totalGoodsOwed-totalSupPaid), privateWorkers:Math.max(0,totalPwCharged-totalPwPaid), sitesPending })
-
-        const workerIds = [...new Set(allAtt?.map(a=>a.worker_id) ?? [])]
-        const wr: WorkerReport[] = workerIds
-          .map(wid => {
-            const wAtt       = allAtt?.filter(a=>a.worker_id===wid) ?? []
-            const daysWorked = wAtt.filter(a=>a.attendance_type!=='Absent').length
-            const totalEarned= wAtt.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+a.wage,0)
-            const totalAdv2  = wAtt.reduce((s,a)=>s+a.advance,0)
-            if (daysWorked === 0) return null
-            return { id:wid, name:workerNameMap[wid]??'(Deleted Worker)', daysWorked, totalEarned, totalAdv:totalAdv2, balance:totalEarned-totalAdv2 }
-          })
-          .filter(Boolean) as WorkerReport[]
-        setWorkerReports(wr.sort((a,b)=>b.totalEarned-a.totalEarned))
-      } catch(e) { console.error(e) }
-      finally { setLoading(false) }
-    }
-    load()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+        .filter(Boolean) as WorkerReport[]
+      setWorkerReports(wr.sort((a,b)=>b.totalEarned-a.totalEarned))
+    } catch(e) { console.error(e) }
+    finally { setLoading(false) }
   }, [])
+
+  useEffect(() => { load() }, [load])
 
   const handlePrint = () => {
     const w = window.open('', '_blank')
