@@ -24,6 +24,7 @@ function PrivateWorkersPage() {
   const load = useCallback(async () => {
     setLoading(true)
     const userId = await uid()
+    if (!userId) { setLoading(false); return }
     const [{ data: workers }, { data: allWork }, { data: allPays }] = await Promise.all([
       supabase.from('private_workers').select('*').eq('user_id', userId).is('deleted_at', null).order('name'),
       supabase.from('private_work').select('worker_id,price_charged,amount_paid').eq('user_id', userId).is('deleted_at', null),
