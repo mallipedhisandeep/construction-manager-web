@@ -33,7 +33,8 @@ function SuppliersPage() {
     const userId = await uid()
     const [{ data }, { data: allPays }, { data: allOrders }, { data: allCounts }] = await Promise.all([
       supabase.from('suppliers').select('*').eq('user_id', userId).is('deleted_at', null).order('name'),
-      supabase.from('supplier_payments').select('supplier_id,amount').eq('user_id', userId),
+      // FIX: filter deleted payments out of the balance calculation
+      supabase.from('supplier_payments').select('supplier_id,amount').eq('user_id', userId).is('deleted_at', null),
       supabase.from('goods_orders').select('supplier_id,total_price')
         .eq('user_id', userId)
         .neq('status','Cancelled')
@@ -66,8 +67,8 @@ function SuppliersPage() {
     const userId = await uid()
     const [{ data:g }, { data:p }] = await Promise.all([
       supabase.from('supplier_goods').select('*').eq('supplier_id', sup.id).eq('user_id', userId).order('goods_name'),
-     
-      supabase.from('supplier_payments').select('*').eq('supplier_id', sup.id).eq('user_id', userId).order('created_at',{ascending:false}),
+      // FIX: filter deleted payments in detail view too
+      supabase.from('supplier_payments').select('*').eq('supplier_id', sup.id).eq('user_id', userId).is('deleted_at', null).order('created_at',{ascending:false}),
     ])
     setGoods(g??[]); setPayments(p??[])
   }
@@ -99,355 +100,283 @@ function SuppliersPage() {
       const userId = await uid()
       const { error } = await supabase.from('supplier_goods').insert({ ...gForm, supplier_id: selected.id, user_id: userId })
       if (error) throw error
-      await loadDetail(selected); setModal(null)
-      showToast(te ? 'వస్తువు జోడించబడింది!' : 'Goods added!')
+      setModal(null); loadDetail(selected)
+      showToast(te ? 'వస్తువు జోడించబడింది!' : 'Item added!')
     } catch(e:unknown) { showToast((e as Error).message, false) } finally { setSaving(false) }
   }
 
   const savePayment = async () => {
-    if (!selected) return
-    if (!pForm.amount || Number(pForm.amount) <= 0) {
-      showToast(te ? 'మొత్తం సున్నా కంటే ఎక్కువ ఉండాలి' : 'Amount must be greater than zero', false); return
-    }
+    if (!pForm.amount || !selected) return
     setSaving(true)
     try {
       const userId = await uid()
       const { error } = await supabase.from('supplier_payments').insert({
-        ...pForm, supplier_id: selected.id,
-        payment_date: pForm.payment_date || new Date().toISOString().split('T')[0],
-        user_id: userId,
+        ...pForm,
+        supplier_id:  selected.id,
+        payment_date: pForm.payment_date ?? new Date().toISOString().split('T')[0],
+        user_id:      userId,
       })
       if (error) throw error
-      await loadDetail(selected); setModal(null); load()
+      // Reset form
+      setPForm({ payment_type:'payment', mode:'Cash' })
+      setModal(null); loadDetail(selected); load()
       showToast(te ? 'చెల్లింపు సేవ్ అయింది!' : 'Payment saved!')
     } catch(e:unknown) { showToast((e as Error).message, false) } finally { setSaving(false) }
   }
 
-  const delGoods = async (id:string) => {
+  const deleteGoods = async (id: string) => {
+    if (!confirm(te ? 'తొలగించాలా?' : 'Delete this item?')) return
     await supabase.from('supplier_goods').delete().eq('id', id)
-    if (selected) await loadDetail(selected)
-  }
-  const delPayment = async (id:string) => {
-    // soft-delete payment so it goes to recycle bin
-    await supabase.from('supplier_payments').update({ deleted_at: new Date().toISOString() }).eq('id', id)
-    if (selected) { await loadDetail(selected); load() }
-  }
-  const delSup = async () => {
-    if (!selected || !confirm(te ? 'సరఫరాదారుని చెత్తబుట్టకు తరలించాలా?' : 'Move supplier to recycle bin?')) return
-    await supabase.from('suppliers').update({ deleted_at: new Date().toISOString() }).eq('id', selected.id)
-    setView('list'); load()
-    showToast(te ? 'చెత్తబుట్టకు తరలించబడింది 🗑️' : 'Moved to recycle bin 🗑️', false)
+    if (selected) loadDetail(selected); load()
+    showToast(te ? 'తొలగించబడింది' : 'Deleted')
   }
 
-  const bal = selected?.balance ?? 0
+  const deletePayment = async (id: string) => {
+    if (!confirm(te ? 'తొలగించాలా?' : 'Delete this payment?')) return
+    await supabase.from('supplier_payments').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    if (selected) loadDetail(selected); load()
+    showToast(te ? 'తొలగించబడింది' : 'Deleted')
+  }
+
+  const deleteSup = async () => {
+    if (!selected || !confirm(te ? 'ఖచ్చితంగా తొలగించాలా?' : 'Delete this supplier?')) return
+    await supabase.from('suppliers').update({ deleted_at: new Date().toISOString() }).eq('id', selected.id)
+    setView('list'); setSelected(null); load()
+    showToast(te ? 'చెత్తబుట్టకు తరలించబడింది 🗑️' : 'Moved to recycle bin 🗑️')
+  }
+
+  if (view === 'detail' && selected) {
+    const bal = selected.balance ?? 0
+    return (
+      <div className="page">
+        <div className="page-header">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setView('list')} className="font-bold text-sm" style={{color:'rgb(var(--accent))'}}>
+              ←
+            </button>
+            <div className="flex-1 min-w-0">
+              <p className="font-black truncate" style={{color:'rgb(var(--text))'}}>{selected.name}</p>
+              <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{selected.shop_name || selected.phone}</p>
+            </div>
+            <div className="flex gap-1">
+              <button onClick={() => { setSForm({name:selected.name,phone:selected.phone,shop_name:selected.shop_name,notes:selected.notes}); setModal('supplier') }}
+                className="btn-ghost btn-sm">✏️</button>
+              <button onClick={deleteSup} className="btn-danger btn-sm">🗑️</button>
+            </div>
+          </div>
+          {/* Balance banner */}
+          <div className="mt-3 flex items-center justify-between rounded-xl px-4 py-2.5"
+            style={{background: bal>0?'rgba(220,38,38,0.1)':'rgba(21,128,61,0.1)', border:`1px solid ${bal>0?'rgba(220,38,38,0.25)':'rgba(21,128,61,0.25)'}`}}>
+            <span className="text-sm font-bold" style={{color: bal>0?'rgb(var(--danger))':'rgb(var(--success))'}}>
+              {bal > 0 ? (te?'మీరు ఇవ్వాల్సినది:':'You Owe:') : (te?'మీరు అదనంగా చెల్లించారు:':'Overpaid:')}
+            </span>
+            <span className="font-black text-lg" style={{color: bal>0?'rgb(var(--danger))':'rgb(var(--success))'}}>
+              ₹{Math.abs(bal).toFixed(0)}
+            </span>
+          </div>
+          {/* Tabs */}
+          <div className="flex gap-1 mt-3">
+            {(['goods','payments'] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                className="flex-1 py-2 rounded-xl text-sm font-bold transition"
+                style={{background: tab===t?'rgb(var(--accent))':'rgb(var(--surface2))', color: tab===t?'#fff':'rgb(var(--muted))'}}>
+                {t === 'goods' ? (te?'వస్తువులు':'Goods') : (te?'చెల్లింపులు':'Payments')}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="px-4 pt-4 pb-24">
+          {tab === 'goods' && (
+            <>
+              <button onClick={() => { setGForm({ unit:'bags' }); setModal('goods') }} className="btn-primary btn-sm mb-3">
+                + {te?'వస్తువు జోడించు':'Add Item'}
+              </button>
+              {goods.length === 0 ? (
+                <div className="text-center py-12 opacity-50"><p className="text-4xl mb-2">📦</p><p style={{color:'rgb(var(--muted))'}}>{te?'వస్తువులు లేవు':'No items added'}</p></div>
+              ) : goods.map(g => (
+                <div key={g.id} className="card mb-2 flex items-center gap-3 p-3.5">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm" style={{color:'rgb(var(--text))'}}>{g.goods_name}</p>
+                    <p className="text-xs mt-0.5" style={{color:'rgb(var(--muted))'}}>₹{g.price_per_unit}/{g.unit}</p>
+                  </div>
+                  <button onClick={() => deleteGoods(g.id!)} className="text-red-400 p-1.5">🗑️</button>
+                </div>
+              ))}
+            </>
+          )}
+
+          {tab === 'payments' && (
+            <>
+              <button onClick={() => { setPForm({ payment_type:'payment', mode:'Cash', payment_date: new Date().toISOString().split('T')[0] }); setModal('payment') }}
+                className="btn-primary btn-sm mb-3">
+                + {te?'చెల్లింపు జోడించు':'Add Payment'}
+              </button>
+              {payments.length === 0 ? (
+                <div className="text-center py-12 opacity-50"><p className="text-4xl mb-2">💳</p><p style={{color:'rgb(var(--muted))'}}>{te?'చెల్లింపులు లేవు':'No payments'}</p></div>
+              ) : payments.map(p => (
+                <div key={p.id} className="card mb-2 flex items-center gap-3 p-3.5">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={p.payment_type==='advance'?'badge-amber':'badge-green'}>{p.payment_type}</span>
+                      <span className="text-sm font-black" style={{color:'rgb(var(--accent))'}}>₹{p.amount}</span>
+                    </div>
+                    <p className="text-xs mt-0.5" style={{color:'rgb(var(--muted))'}}>{p.payment_date} · {p.mode}</p>
+                    {p.notes && <p className="text-xs mt-0.5" style={{color:'rgb(var(--muted))'}}>{p.notes}</p>}
+                  </div>
+                  <button onClick={() => deletePayment(p.id!)} className="text-red-400 p-1.5">🗑️</button>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Goods modal */}
+        {modal === 'goods' && (
+          <div className="modal-backdrop" onClick={() => setModal(null)}>
+            <div className="modal-box" onClick={e=>e.stopPropagation()}>
+              <div className="modal-header">
+                <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{te?'వస్తువు జోడించు':'Add Goods Item'}</h2>
+                <button onClick={() => setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
+              </div>
+              <div className="p-5 space-y-3">
+                <div><label className="label">{te?'వస్తువు పేరు *':'Goods Name *'}</label>
+                  <input value={gForm.goods_name??''} onChange={e=>setGForm(f=>({...f,goods_name:e.target.value}))} className="input" placeholder={te?'ఉదా: సిమెంట్':'e.g. Cement'}/></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="label">{te?'ధర/యూనిట్':'Price/Unit'}</label>
+                    <input type="number" inputMode="decimal" value={gForm.price_per_unit??''} onChange={e=>setGForm(f=>({...f,price_per_unit:+e.target.value}))} className="input" placeholder="0"/></div>
+                  <div><label className="label">{te?'యూనిట్':'Unit'}</label>
+                    <select value={gForm.unit??'bags'} onChange={e=>setGForm(f=>({...f,unit:e.target.value}))} className="input">
+                      {GOODS_UNITS.map(u=><option key={u} value={u}>{u}</option>)}</select></div>
+                </div>
+                <button onClick={saveGoods} disabled={saving} className="btn-primary w-full py-3">
+                  {saving ? '⏳...' : (te?'సేవ్ చేయి':'Save')}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Payment modal */}
+        {modal === 'payment' && (
+          <div className="modal-backdrop" onClick={() => setModal(null)}>
+            <div className="modal-box" onClick={e=>e.stopPropagation()}>
+              <div className="modal-header">
+                <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{te?'చెల్లింపు జోడించు':'Add Payment'}</h2>
+                <button onClick={() => setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
+              </div>
+              <div className="p-5 space-y-3">
+                <div><label className="label">{te?'మొత్తం ₹ *':'Amount ₹ *'}</label>
+                  <input type="number" inputMode="decimal" value={pForm.amount??''} onChange={e=>setPForm(f=>({...f,amount:+e.target.value}))} className="input" placeholder="0"/></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="label">{te?'రకం':'Type'}</label>
+                    <select value={pForm.payment_type??'payment'} onChange={e=>setPForm(f=>({...f,payment_type:e.target.value as 'advance'|'payment'}))} className="input">
+                      <option value="payment">{te?'చెల్లింపు':'Payment'}</option>
+                      <option value="advance">{te?'అడ్వాన్స్':'Advance'}</option>
+                    </select></div>
+                  <div><label className="label">{te?'పద్ధతి':'Mode'}</label>
+                    <select value={pForm.mode??'Cash'} onChange={e=>setPForm(f=>({...f,mode:e.target.value}))} className="input">
+                      {['Cash','Online','Cheque'].map(m=><option key={m}>{m}</option>)}</select></div>
+                </div>
+                <div><label className="label">{te?'తేదీ':'Date'}</label>
+                  <input type="date" value={pForm.payment_date??new Date().toISOString().split('T')[0]} onChange={e=>setPForm(f=>({...f,payment_date:e.target.value}))} className="input"/></div>
+                <div><label className="label">{te?'గమనికలు':'Notes'}</label>
+                  <input value={pForm.notes??''} onChange={e=>setPForm(f=>({...f,notes:e.target.value}))} className="input" placeholder={te?'ఐచ్ఛికం':'Optional'}/></div>
+                <button onClick={savePayment} disabled={saving} className="btn-primary w-full py-3">
+                  {saving ? '⏳...' : (te?'సేవ్ చేయి':'Save')}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit supplier modal */}
+        {modal === 'supplier' && (
+          <div className="modal-backdrop" onClick={() => setModal(null)}>
+            <div className="modal-box" onClick={e=>e.stopPropagation()}>
+              <div className="modal-header">
+                <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{te?'సరఫరాదారును సవరించు':'Edit Supplier'}</h2>
+                <button onClick={() => setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
+              </div>
+              <div className="p-5 space-y-3">
+                <div><label className="label">{te?'పేరు *':'Name *'}</label>
+                  <input value={sForm.name??''} onChange={e=>setSForm(f=>({...f,name:e.target.value}))} className="input"/></div>
+                <div><label className="label">{te?'ఫోన్':'Phone'}</label>
+                  <input value={sForm.phone??''} onChange={e=>setSForm(f=>({...f,phone:e.target.value.replace(/\D/g,'').slice(0,10)}))} className="input" type="tel"/></div>
+                <div><label className="label">{te?'దుకాణం పేరు':'Shop Name'}</label>
+                  <input value={sForm.shop_name??''} onChange={e=>setSForm(f=>({...f,shop_name:e.target.value}))} className="input"/></div>
+                <div><label className="label">{te?'గమనికలు':'Notes'}</label>
+                  <textarea rows={2} value={sForm.notes??''} onChange={e=>setSForm(f=>({...f,notes:e.target.value}))} className="input resize-none"/></div>
+                <button onClick={saveSup} disabled={saving} className="btn-primary w-full py-3">
+                  {saving ? '⏳...' : (te?'సేవ్ చేయి':'Save')}</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="page">
-
-      {view === 'list' ? (
-        <>
-          <div className="page-header">
-            <div className="flex items-center justify-between">
-              <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>
-                🏪 {te?'సరఫరాదారులు':'Suppliers'}
-              </h1>
-              <button onClick={()=>{ setSForm({}); setSelected(null); setModal('supplier') }} className="btn-primary btn-sm">
-                + {te?'సరఫరాదారు జోడించు':'Add Supplier'}
-              </button>
-            </div>
-          </div>
-          <div className="px-4 pt-4">
-            {loading ? (
-              <div className="flex justify-center py-16">
-                <div className="animate-spin w-8 h-8 border-4 border-t-transparent rounded-full" style={{borderColor:'rgb(var(--accent))',borderTopColor:'transparent'}}/>
-              </div>
-            ) : suppliers.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="text-5xl mb-2 opacity-20">🏪</div>
-                <p style={{color:'rgb(var(--muted))'}}>{te?'సరఫరాదారులు లేరు':'No suppliers yet'}</p>
-              </div>
-            ) : suppliers.map(sup => {
-              const b = sup.balance ?? 0
-              return (
-                <div key={sup.id} className="card-hover mb-3 p-4" onClick={()=>loadDetail(sup)}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-400 rounded-2xl flex items-center justify-center text-white font-black text-xl flex-shrink-0">
-                      {sup.name[0]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold" style={{color:'rgb(var(--text))'}}>{sup.name}</p>
-                      {sup.shop_name && <p className="text-xs" style={{color:'rgb(var(--muted))'}}>🏪 {sup.shop_name}</p>}
-                      <div className="flex gap-2 mt-1 flex-wrap items-center">
-                        {sup.phone && (
-                          <a href={`tel:${sup.phone}`} className="text-xs text-green-600 dark:text-green-400 font-medium"
-                            onClick={e=>e.stopPropagation()}>
-                            📞 {sup.phone}
-                          </a>
-                        )}
-                        <span className="badge-gray">{sup.goodsCount} {te?'వస్తువులు':'goods'}</span>
-                      </div>
-                    </div>
-                    <div className={`text-xs font-bold px-2.5 py-1.5 rounded-xl text-right ${b>0?'text-red-600':b<0?'text-green-700':''}`}
-                      style={{
-                        background: b>0 ? 'rgba(220,38,38,0.1)' : b<0 ? 'rgba(22,163,74,0.1)' : 'rgb(var(--surface2))',
-                        color: b>0 ? '#dc2626' : b<0 ? '#15803d' : 'rgb(var(--muted))',
-                        border: `1px solid ${b>0?'rgba(220,38,38,0.2)':b<0?'rgba(22,163,74,0.2)':'rgb(var(--border))'}`,
-                      }}>
-                      {b === 0
-                        ? (te ? '✓ క్లియర్' : '✓ Settled')
-                        : b > 0
-                          ? (te ? `₹${b.toFixed(0)} ఇవ్వాలి` : `We Owe ₹${b.toFixed(0)}`)
-                          : (te ? `సరఫరాదారు ₹${Math.abs(b).toFixed(0)} ఇవ్వాలి` : `Supplier Owes ₹${Math.abs(b).toFixed(0)}`)}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </>
-      ) : selected && (
-        <>
-          <div className="page-header">
-            <div className="flex items-center gap-3">
-              <button onClick={()=>setView('list')} className="font-bold text-sm" style={{color:'rgb(var(--accent))'}}>
-                ← {te?'వెనక్కి':'Back'}
-              </button>
-              <div className="flex-1 min-w-0">
-                <p className="font-black truncate" style={{color:'rgb(var(--text))'}}>{selected.name}</p>
-                {selected.shop_name && <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{selected.shop_name}</p>}
-              </div>
-              <div className="flex gap-1">
-                {selected.phone && (
-                  <a href={`tel:${selected.phone}`} className="p-2 rounded-xl text-sm" style={{background:'rgba(22,163,74,0.1)',color:'#15803d'}}>📞</a>
-                )}
-                <button onClick={()=>{ setSForm({...selected}); setModal('supplier') }} className="p-2 rounded-xl" style={{background:'rgba(var(--accent),0.1)',color:'rgb(var(--accent))'}}>✏️</button>
-                <button onClick={delSup} className="p-2 rounded-xl" style={{background:'rgba(220,38,38,0.1)',color:'#dc2626'}}>🗑️</button>
-              </div>
-            </div>
-          </div>
-
-          <div className="px-4 pt-3">
-            {/* Balance card */}
-            <div className="rounded-2xl p-4 mb-4 border-2"
-              style={{
-                background: bal>0?'rgba(220,38,38,0.06)':bal<0?'rgba(22,163,74,0.06)':'rgb(var(--surface2))',
-                borderColor: bal>0?'rgba(220,38,38,0.3)':bal<0?'rgba(22,163,74,0.3)':'rgb(var(--border))',
-              }}>
-              <p className="text-xs font-black uppercase tracking-wide mb-1" style={{color:'rgb(var(--muted))'}}>
-                {te?'బాలెన్స్':'Balance'}
-              </p>
-              <p className="text-2xl font-black" style={{color:bal>0?'#dc2626':bal<0?'#15803d':'rgb(var(--muted))'}}>
-                ₹{Math.abs(bal).toFixed(0)}
-              </p>
-              <p className="text-sm mt-0.5" style={{color:'rgb(var(--muted))'}}>
-                {bal === 0
-                  ? (te?'అన్నీ క్లియర్ ✓':'All settled ✓')
-                  : bal > 0
-                    ? (te?'మేము సరఫరాదారుకు ఇవ్వాలి':'We owe supplier')
-                    : (te?'సరఫరాదారు మాకు ఇవ్వాలి':'Supplier owes us')}
-              </p>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex border-b mb-4" style={{borderColor:'rgb(var(--border))'}}>
-              {([['goods', te?'📦 వస్తువుల జాబితా':'📦 Goods Catalog'], ['payments', te?'💳 చెల్లింపు చరిత్ర':'💳 Payment History']] as const).map(([t,l]) => (
-                <button key={t} onClick={()=>setTab(t)}
-                  className={`flex-1 py-2.5 text-sm font-bold border-b-2 transition`}
-                  style={{
-                    color: tab===t ? 'rgb(var(--accent))' : 'rgb(var(--muted))',
-                    borderBottomColor: tab===t ? 'rgb(var(--accent))' : 'transparent',
-                  }}>
-                  {l}
-                </button>
-              ))}
-            </div>
-
-            {tab === 'goods' ? (
-              <>
-                <button onClick={()=>{ setGForm({unit:'bags'}); setModal('goods') }} className="btn-primary w-full mb-3">
-                  + {te?'వస్తువు జోడించు':'Add Goods Item'}
-                </button>
-                {goods.length === 0 ? (
-                  <div className="text-center py-10 opacity-50">
-                    <p className="text-4xl mb-2">📦</p>
-                    <p style={{color:'rgb(var(--muted))'}}>{te?'జాబితాలో వస్తువులు లేవు':'No goods in catalog'}</p>
-                  </div>
-                ) : goods.map(g => (
-                  <div key={g.id} className="card mb-2 p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{background:'rgba(212,140,40,0.1)'}}>📦</div>
-                    <div className="flex-1">
-                      <p className="font-bold" style={{color:'rgb(var(--text))'}}>{g.goods_name}</p>
-                      <p className="text-sm" style={{color:'rgb(var(--muted))'}}>₹{g.price_per_unit} {te?'ప్రతి':'per'} {g.unit}</p>
-                    </div>
-                    <button onClick={()=>delGoods(g.id!)} className="p-1.5 rounded-lg text-sm text-red-400 hover:text-red-600">🗑️</button>
-                  </div>
-                ))}
-              </>
-            ) : (
-              <>
-                <button onClick={()=>{ setPForm({payment_type:'payment',mode:'Cash',payment_date:new Date().toISOString().split('T')[0]}); setModal('payment') }}
-                  className="btn-green w-full mb-3">
-                  + {te?'చెల్లింపు జోడించు':'Add Payment'}
-                </button>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="card p-3 text-center">
-                    <p className="text-lg font-black text-red-500 dark:text-red-400">₹{bal>0?bal.toFixed(0):'0'}</p>
-                    <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{te?'బాకీ':'Still Owe'}</p>
-                  </div>
-                  <div className="card p-3 text-center">
-                    <p className="text-lg font-black text-green-600 dark:text-green-400">₹{payments.reduce((s,p)=>s+p.amount,0).toFixed(0)}</p>
-                    <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{te?'మొత్తం చెల్లింపు':'Total Paid'}</p>
-                  </div>
-                </div>
-                {payments.length === 0 ? (
-                  <div className="text-center py-10 opacity-50">
-                    <p className="text-4xl mb-2">💳</p>
-                    <p style={{color:'rgb(var(--muted))'}}>{te?'చెల్లింపులు లేవు':'No payments yet'}</p>
-                  </div>
-                ) : payments.map(p => (
-                  <div key={p.id} className="card mb-2 p-3 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                      style={{background: p.payment_type==='advance'?'rgba(212,140,40,0.1)':'rgba(22,163,74,0.1)'}}>
-                      {p.payment_type==='advance' ? '🔶' : '💳'}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold" style={{color:'rgb(var(--text))'}}>₹{p.amount}</span>
-                        <span className={p.payment_type==='advance'?'badge-amber':'badge-green'}>
-                          {te ? (p.payment_type==='advance'?'అడ్వాన్స్':'చెల్లింపు') : p.payment_type}
-                        </span>
-                        <span className="badge-gray">{p.mode}</span>
-                      </div>
-                      <p className="text-xs mt-0.5" style={{color:'rgb(var(--muted))'}}>{p.payment_date}{p.notes?` · ${p.notes}`:''}</p>
-                    </div>
-                    <button onClick={()=>delPayment(p.id!)} className="text-red-400 text-sm p-1.5">🗑️</button>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* Supplier modal */}
-      {modal === 'supplier' && (
-        <div className="modal-backdrop" onClick={()=>setModal(null)}>
-          <div className="modal-box" onClick={e=>e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>
-                {selected && modal==='supplier' ? (te?'సరఫరాదారు సవరించు':'Edit Supplier') : (te?'సరఫరాదారు జోడించు':'Add Supplier')}
-              </h2>
-              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
-            </div>
-            <div className="p-5 space-y-3">
-              {[
-                {k:'name',      l:te?'సరఫరాదారు పేరు *':'Supplier Name *'},
-                {k:'phone',     l:te?'ఫోన్ నంబర్':'Phone Number'},
-                {k:'shop_name', l:te?'దుకాణం పేరు':'Shop Name'},
-              ].map(({k,l}) => (
-                <div key={k}>
-                  <label className="label">{l}</label>
-                  <input value={(sForm as Record<string,string>)[k]??''} maxLength={k==='phone'?10:undefined}
-                    onChange={e=>setSForm({...sForm,[k]:e.target.value})} className="input"/>
-                </div>
-              ))}
-              <div>
-                <label className="label">{te?'గమనికలు':'Notes'}</label>
-                <textarea rows={2} value={sForm.notes??''} onChange={e=>setSForm({...sForm,notes:e.target.value})} className="input resize-none"/>
-              </div>
-              <button onClick={saveSup} disabled={saving} className="btn-primary btn-full">
-                {saving ? '⏳ Saving...' : (te?'సేవ్ చేయి':'Save Supplier')}
-              </button>
-            </div>
-          </div>
+      <div className="page-header">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>🏪 {te?'సరఫరాదారులు':'Suppliers'}</h1>
+          <button onClick={() => { setSForm({}); setModal('supplier') }} className="btn-primary btn-sm">
+            + {te?'జోడించు':'Add'}
+          </button>
         </div>
-      )}
+      </div>
 
-      {/* Goods modal */}
-      {modal === 'goods' && (
-        <div className="modal-backdrop" onClick={()=>setModal(null)}>
-          <div className="modal-box" onClick={e=>e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>
-                {te ? `${selected?.name} జాబితాకు జోడించు` : `Add to ${selected?.name}'s Catalog`}
-              </h2>
-              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
-            </div>
-            <div className="p-5 space-y-3">
-              <div>
-                <label className="label">{te?'వస్తువు పేరు *':'Goods Name *'}</label>
-                <input value={gForm.goods_name??''} onChange={e=>setGForm({...gForm,goods_name:e.target.value})} className="input" placeholder={te?'ఉదా: సిమెంట్, ఇసుక...':'e.g. Cement, Sand...'}/>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">{te?'ధర / యూనిట్ ₹':'Price per Unit ₹'}</label>
-                  <input type="number" value={gForm.price_per_unit??''} onChange={e=>setGForm({...gForm,price_per_unit:+e.target.value})} className="input" placeholder="0"/>
-                </div>
-                <div>
-                  <label className="label">{te?'యూనిట్':'Unit'}</label>
-                  <select value={gForm.unit??'bags'} onChange={e=>setGForm({...gForm,unit:e.target.value})} className="input">
-                    {GOODS_UNITS.map(u=><option key={u}>{u}</option>)}
-                  </select>
-                </div>
-              </div>
-              <button onClick={saveGoods} disabled={saving} className="btn-primary btn-full">
-                {saving ? '⏳...' : (te?'జాబితాకు జోడించు':'Add to Catalog')}
-              </button>
-            </div>
+      <div className="px-4 pt-4 pb-24">
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{borderColor:'rgb(var(--accent))',borderTopColor:'transparent'}}/>
           </div>
-        </div>
-      )}
+        ) : suppliers.length === 0 ? (
+          <div className="text-center py-16 opacity-50"><p className="text-5xl mb-3">🏪</p><p style={{color:'rgb(var(--muted))'}}>{te?'సరఫరాదారులు లేరు':'No suppliers added'}</p></div>
+        ) : suppliers.map(sup => {
+          const bal = sup.balance ?? 0
+          return (
+            <div key={sup.id} className="card mb-3 p-4 cursor-pointer" onClick={() => loadDetail(sup)}>
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-lg flex-shrink-0"
+                  style={{background:'rgba(212,140,40,0.12)', color:'rgb(var(--accent))'}}>
+                  {sup.name[0]?.toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm" style={{color:'rgb(var(--text))'}}>{sup.name}</p>
+                  <p className="text-xs mt-0.5" style={{color:'rgb(var(--muted))'}}>{sup.shop_name || sup.phone || '—'}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-black text-sm" style={{color: bal>0?'rgb(var(--danger))':'rgb(var(--success))'}}>
+                    {bal > 0 ? `₹${bal.toFixed(0)} due` : bal < 0 ? `₹${Math.abs(bal).toFixed(0)} cr` : '✅'}
+                  </p>
+                  {(sup.goodsCount??0) > 0 && <p className="text-[10px]" style={{color:'rgb(var(--muted))'}}>{sup.goodsCount} items</p>}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
 
-      {/* Payment modal */}
-      {modal === 'payment' && (
-        <div className="modal-backdrop" onClick={()=>setModal(null)}>
+      {/* Add supplier modal */}
+      {modal === 'supplier' && !selected && (
+        <div className="modal-backdrop" onClick={() => setModal(null)}>
           <div className="modal-box" onClick={e=>e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>
-                {te ? `చెల్లింపు — ${selected?.name}` : `Payment — ${selected?.name}`}
-              </h2>
-              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
+              <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{te?'సరఫరాదారు జోడించు':'Add Supplier'}</h2>
+              <button onClick={() => setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
             </div>
             <div className="p-5 space-y-3">
-              <div>
-                <label className="label">{te?'చెల్లింపు రకం':'Payment Type'}</label>
-                <div className="flex gap-2">
-                  {(['payment','advance'] as const).map(t => (
-                    <button key={t} onClick={()=>setPForm({...pForm,payment_type:t})}
-                      className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
-                      style={{
-                        background: pForm.payment_type===t ? 'linear-gradient(135deg,rgb(var(--accent)),rgb(var(--accent2)))' : 'rgb(var(--surface2))',
-                        color: pForm.payment_type===t ? '#fff' : 'rgb(var(--muted))',
-                        border: `1px solid ${pForm.payment_type===t?'transparent':'rgb(var(--border))'}`,
-                      }}>
-                      {t==='advance' ? (te?'🔶 అడ్వాన్స్':'🔶 Advance') : (te?'💳 చెల్లింపు':'💳 Regular Payment')}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="label">{te?'మొత్తం ₹ *':'Amount ₹ *'}</label>
-                <input type="number" inputMode="decimal" value={pForm.amount??''} onChange={e=>setPForm({...pForm,amount:+e.target.value})} className="input" placeholder="0"/>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">{te?'పద్ధతి':'Mode'}</label>
-                  <select value={pForm.mode??'Cash'} onChange={e=>setPForm({...pForm,mode:e.target.value})} className="input">
-                    {['Cash','Online','Cheque'].map(m=><option key={m}>{m}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="label">{te?'తేదీ':'Date'}</label>
-                  <input type="date" value={pForm.payment_date??''} onChange={e=>setPForm({...pForm,payment_date:e.target.value})} className="input"/>
-                </div>
-              </div>
-              <div>
-                <label className="label">{te?'గమనికలు':'Notes'}</label>
-                <input value={pForm.notes??''} onChange={e=>setPForm({...pForm,notes:e.target.value})} className="input" placeholder={te?'ఐచ్ఛికం...':'Optional...'}/>
-              </div>
-              <button onClick={savePayment} disabled={saving} className="btn-green btn-full">
-                {saving ? '⏳...' : (te?'చెల్లింపు సేవ్ చేయి':'Save Payment')}
-              </button>
+              <div><label className="label">{te?'పేరు *':'Name *'}</label>
+                <input value={sForm.name??''} onChange={e=>setSForm(f=>({...f,name:e.target.value}))} className="input"/></div>
+              <div><label className="label">{te?'ఫోన్':'Phone'}</label>
+                <input value={sForm.phone??''} onChange={e=>setSForm(f=>({...f,phone:e.target.value.replace(/\D/g,'').slice(0,10)}))} className="input" type="tel"/></div>
+              <div><label className="label">{te?'దుకాణం పేరు':'Shop Name'}</label>
+                <input value={sForm.shop_name??''} onChange={e=>setSForm(f=>({...f,shop_name:e.target.value}))} className="input"/></div>
+              <div><label className="label">{te?'గమనికలు':'Notes'}</label>
+                <textarea rows={2} value={sForm.notes??''} onChange={e=>setSForm(f=>({...f,notes:e.target.value}))} className="input resize-none"/></div>
+              <button onClick={saveSup} disabled={saving} className="btn-primary w-full py-3">
+                {saving ? '⏳...' : (te?'సేవ్ చేయి':'Save')}</button>
             </div>
           </div>
         </div>
