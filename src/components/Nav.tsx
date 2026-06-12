@@ -6,19 +6,23 @@ import { supabase } from '@/lib/supabase'
 import { useLang, useTheme } from '@/components/AppShell'
 import { ts } from '@/lib/strings'
 
-const NAV = [
-  { href:'/',                emoji:'🏠', key:'home'           as const },
-  { href:'/workers',         emoji:'👷', key:'workers'        as const },
-  { href:'/attendance',      emoji:'📋', key:'attendance'     as const },
-  { href:'/sites',           emoji:'🏗️', key:'sites'          as const },
-  { href:'/suppliers',       emoji:'🏪', key:'suppliers'      as const },
-  { href:'/goods',           emoji:'📦', key:'goods'          as const },
-  { href:'/money',           emoji:'💰', key:'money'          as const },
-  { href:'/private-workers', emoji:'🔧', key:'privateWorkers' as const },
-  { href:'/private-work',    emoji:'📝', key:'privateWork'    as const },
-  { href:'/reports',         emoji:'📊', key:'reports'        as const },
-  { href:'/profile',         emoji:'👤', key:'profile'        as const },
-  { href:'/trash',           emoji:'🗑️', key:'trash'          as const },
+type NavKey = 'home'|'workers'|'attendance'|'sites'|'suppliers'|'goods'|'money'|'privateWorkers'|'privateWork'|'reports'|'profile'|'trash'
+
+interface NavItem { href: string; emoji: string; key: NavKey }
+
+const NAV: NavItem[] = [
+  { href:'/',                emoji:'🏠', key:'home'           },
+  { href:'/workers',         emoji:'👷', key:'workers'        },
+  { href:'/attendance',      emoji:'📋', key:'attendance'     },
+  { href:'/sites',           emoji:'🏗️', key:'sites'          },
+  { href:'/suppliers',       emoji:'🏪', key:'suppliers'      },
+  { href:'/goods',           emoji:'📦', key:'goods'          },
+  { href:'/money',           emoji:'💰', key:'money'          },
+  { href:'/private-workers', emoji:'🔧', key:'privateWorkers' },
+  { href:'/private-work',    emoji:'📝', key:'privateWork'    },
+  { href:'/reports',         emoji:'📊', key:'reports'        },
+  { href:'/profile',         emoji:'👤', key:'profile'        },
+  { href:'/trash',           emoji:'🗑️', key:'trash'          },
 ]
 
 const BOTTOM_NAV = [NAV[0], NAV[1], NAV[2], NAV[3], NAV[8]]
