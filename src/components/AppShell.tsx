@@ -143,7 +143,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <div
             role="status"
             aria-live="polite"
-            className="fixed top-4 right-4 z-[200] max-w-[80vw] px-4 py-2.5 rounded-xl shadow-lg text-white text-sm font-semibold pointer-events-none"
+            className="fixed top-16 right-4 z-[200] max-w-[80vw] px-4 py-2.5 rounded-xl shadow-lg text-white text-sm font-semibold pointer-events-none"
             style={{ background: toast.type === 'ok' ? '#16a34a' : '#dc2626' }}>
             {toast.msg}
           </div>
