@@ -40,22 +40,22 @@ function MoneyPage() {
       ] = await Promise.all([
         // Period-filtered
         supabase.from('attendance').select('wage,advance,attendance_type').eq('user_id',userId).gte('date_key', dateFilter),
-        supabase.from('site_payments').select('amount,direction').eq('user_id',userId).gte('payment_date', dateFilter),
+        supabase.from('site_payments').select('amount,direction').eq('user_id',userId).is('deleted_at',null).gte('payment_date', dateFilter),
         supabase.from('goods_orders').select('total_price,advance_paid').eq('user_id',userId).neq('status','Cancelled').is('deleted_at',null).gte('delivery_date', dateFilter),
-        supabase.from('supplier_payments').select('amount').eq('user_id',userId).gte('payment_date', dateFilter),
+        supabase.from('supplier_payments').select('amount').eq('user_id',userId).is('deleted_at',null).gte('payment_date', dateFilter),
         
-        supabase.from('private_worker_payments').select('amount,direction').eq('user_id',userId).gte('date', dateFilter),
+        supabase.from('private_worker_payments').select('amount,direction').eq('user_id',userId).is('deleted_at',null).gte('date', dateFilter),
         supabase.from('sites').select('id,site_name').eq('user_id',userId).is('deleted_at', null),
         // All-time for outstanding balances
         supabase.from('attendance').select('wage,advance,attendance_type').eq('user_id',userId),
         supabase.from('goods_orders').select('total_price,advance_paid').eq('user_id',userId).neq('status','Cancelled').is('deleted_at',null),
-        supabase.from('supplier_payments').select('amount').eq('user_id',userId),
-        supabase.from('private_worker_payments').select('amount,direction').eq('user_id',userId),
-        supabase.from('private_work').select('price_charged,amount_paid').eq('user_id',userId),
+        supabase.from('supplier_payments').select('amount').eq('user_id',userId).is('deleted_at',null),
+        supabase.from('private_worker_payments').select('amount,direction').eq('user_id',userId).is('deleted_at',null),
+        supabase.from('private_work').select('price_charged,amount_paid').eq('user_id',userId).is('deleted_at',null),
         // Per-site breakdown (all-time)
         supabase.from('attendance').select('wage,site_id').eq('user_id',userId).neq('attendance_type','Absent'),
         supabase.from('goods_orders').select('total_price,site_id').eq('user_id',userId).neq('status','Cancelled').is('deleted_at',null),
-        supabase.from('site_payments').select('amount,direction,site_id').eq('user_id',userId),
+        supabase.from('site_payments').select('amount,direction,site_id').eq('user_id',userId).is('deleted_at',null),
       ])
 
       const workerWages    = attData?.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+a.wage,0)??0
