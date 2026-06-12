@@ -34,6 +34,7 @@ function GoodsPage() {
   const load = useCallback(async () => {
     setLoading(true)
     const userId = await uid()
+    if (!userId) { setLoading(false); return }
     const [{ data:o },{ data:s },{ data:si }] = await Promise.all([
       supabase.from('goods_orders').select('*').eq('user_id', userId).is('deleted_at', null).order('created_at',{ascending:false}),
       supabase.from('suppliers').select('*').eq('user_id', userId).is('deleted_at', null).order('name'),
@@ -98,7 +99,6 @@ function GoodsPage() {
           notes: `Advance for ${form.goods_name} order`,
           user_id: userId,
         })
-      }
       }
       setModal(false); load()
       showToast(te
