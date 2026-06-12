@@ -99,6 +99,7 @@ function GoodsPage() {
           user_id: userId,
         })
       }
+      }
       setModal(false); load()
       showToast(te
         ? ('ఆర్డర్ జోడించబడింది!' + (adv>0?' అడ్వాన్స్ నమోదు చేయబడింది.':''))
