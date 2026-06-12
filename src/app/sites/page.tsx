@@ -109,7 +109,7 @@ function SitesPage() {
   const loadPayments = useCallback(async (siteId:string) => {
     const userId = await uid()
     const { data } = await supabase.from('site_payments').select('*')
-      .eq('site_id',siteId).eq('user_id',userId).eq('direction','received').order('payment_date',{ascending:false})
+      .eq('site_id',siteId).eq('user_id',userId).eq('direction','received').is('deleted_at',null).order('payment_date',{ascending:false})
     setSitePayments(data??[])
   }, [])
 
@@ -182,7 +182,15 @@ function SitesPage() {
         ? await supabase.from('sites').insert({...data, user_id: userId})
         : await supabase.from('sites').update(data).eq('id', selected!.id)
       if (error) throw error
-      setModal(null); load(); showToast(modal==='add' ? t('siteAdded') : t('siteUpdated'))
+      if (modal === 'edit' && selected) {
+        // Refresh selected site and return to detail view
+        const { data: refreshed } = await supabase.from('sites').select('*').eq('id', selected.id).single()
+        if (refreshed) setSelected(refreshed as SiteDetail)
+        setModal('detail')
+      } else {
+        setModal(null)
+      }
+      load(); showToast(modal==='add' ? t('siteAdded') : t('siteUpdated'))
     } catch(e:unknown) { showToast(e instanceof Error ? e.message : 'Save failed', false) }
     finally { setSaving(false) }
   }
