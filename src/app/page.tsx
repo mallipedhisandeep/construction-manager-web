@@ -31,7 +31,7 @@ function Dashboard() {
     supabase.auth.getUser().then(({ data }) => {
       const u = data.user
       if (!u) return
-      const raw = u.email?.split('@')[0] ?? ''
+      const raw = u.user_metadata?.full_name ?? u.email?.split('@')[0] ?? ''
       setUser(raw.replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase()) || 'Admin')
       Promise.all([
         supabase.from('workers').select('id',{count:'exact',head:true}).eq('user_id',u.id).is('deleted_at',null),
