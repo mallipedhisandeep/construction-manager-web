@@ -26,6 +26,7 @@ function PrivateWorkPage() {
     setLoading(true)
    
     const userId = await uid()
+    if (!userId) { setLoading(false); return }
     const [{ data: w }, { data: pw }, { data: s }] = await Promise.all([
       supabase.from('private_work').select('*').eq('user_id', userId).is('deleted_at', null).order('status',{ascending:true}).order('created_at',{ascending:false}),
       supabase.from('private_workers').select('*').eq('user_id', userId).is('deleted_at', null).order('name'),
