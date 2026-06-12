@@ -29,6 +29,7 @@ function WorkersPage() {
     setLoading(true)
     
     const userId = await uid()
+    if (!userId) { setLoading(false); return }
     const { data } = await supabase.from('workers').select('*')
       .eq('user_id', userId)
       .is('deleted_at', null)
