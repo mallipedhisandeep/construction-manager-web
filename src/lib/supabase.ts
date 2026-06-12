@@ -18,11 +18,17 @@ if (!key || key === 'placeholder-anon-key') {
 
 export const supabase = createClient(url, key, {
   auth: {
-    flowType:         'pkce',
-    persistSession:   true,
-    autoRefreshToken: true,
+    flowType:           'pkce',
+    persistSession:     true,
+    autoRefreshToken:   true,
     detectSessionInUrl: true,
-    storageKey:       'cm-auth-token',
+    storageKey:         'cm-auth-token',
+  },
+  global: {
+    headers: {
+      // Identify the app in Supabase logs
+      'x-application-name': 'construction-manager',
+    },
   },
 })
 
