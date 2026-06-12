@@ -65,6 +65,7 @@ function AttendancePage() {
 
   const loadBase = useCallback(async () => {
     const userId = await uid()
+    if (!userId) { setLoading(false); return }
     const [{ data: ws }, { data: si }] = await Promise.all([
       supabase.from('workers').select('*')
         .eq('user_id', userId)
@@ -84,6 +85,7 @@ function AttendancePage() {
   const loadDay = useCallback(async () => {
     setLoading(true)
     const userId = await uid()
+    if (!userId) { setLoading(false); return }
     const { data } = await supabase.from('attendance').select('*')
       .eq('date_key', dKey)
       .eq('user_id', userId)
