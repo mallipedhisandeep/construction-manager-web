@@ -19,6 +19,7 @@ function SuppliersPage() {
   const [view,      setView]      = useState<'list'|'detail'>('list')
   const [tab,       setTab]       = useState<'goods'|'payments'>('goods')
   const [loading,   setLoading]   = useState(true)
+  const [search,    setSearch]    = useState('')
   const [modal,     setModal]     = useState<'supplier'|'goods'|'payment'|null>(null)
   const [saving,    setSaving]    = useState(false)
   const [sForm, setSForm] = useState<Partial<Supplier>>({})
@@ -324,6 +325,10 @@ function SuppliersPage() {
             + {te?'జోడించు':'Add'}
           </button>
         </div>
+        <input
+          value={search} onChange={e => setSearch(e.target.value)}
+          placeholder={te ? '🔍 పేరు, ఫోన్ వెతకండి...' : '🔍 Search by name, phone...'}
+          className="input mt-3 py-2 text-sm" />
       </div>
 
       <div className="px-4 pt-4 pb-24">
@@ -333,7 +338,11 @@ function SuppliersPage() {
           </div>
         ) : suppliers.length === 0 ? (
           <div className="text-center py-16 opacity-50"><p className="text-5xl mb-3">🏪</p><p style={{color:'rgb(var(--muted))'}}>{te?'సరఫరాదారులు లేరు':'No suppliers added'}</p></div>
-        ) : suppliers.map(sup => {
+        ) : suppliers.filter(s =>
+            !search || s.name.toLowerCase().includes(search.toLowerCase()) ||
+            (s.shop_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
+            (s.phone ?? '').includes(search)
+          ).map(sup => {
           const bal = sup.balance ?? 0
           return (
             <div key={sup.id} className="card mb-3 p-4 cursor-pointer" onClick={() => loadDetail(sup)}>
