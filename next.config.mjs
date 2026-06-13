@@ -4,18 +4,11 @@ const nextConfig = {
   eslint:     { ignoreDuringBuilds: true },
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '*.supabase.co',
-        port: '',
-        pathname: '/storage/v1/object/public/**',
-      },
-      {
-        protocol: 'https',
-        hostname: '*.supabase.co',
-        port: '',
-        pathname: '/storage/v1/object/sign/**',
-      },
+      { protocol:'https', hostname:'*.supabase.co', pathname:'/storage/v1/object/public/**' },
+      { protocol:'https', hostname:'*.supabase.co', pathname:'/storage/v1/object/sign/**' },
+      // Google profile photos
+      { protocol:'https', hostname:'lh3.googleusercontent.com' },
+      { protocol:'https', hostname:'*.googleusercontent.com' },
     ],
   },
   async redirects() {
