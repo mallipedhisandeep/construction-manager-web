@@ -173,6 +173,66 @@ function AttendancePage() {
     } finally { setSaving(false) }
   }
 
+  // ── Bulk mark all workers same shift ──────────────────────────────────────
+  const [bulkSaving,  setBulkSaving]  = useState(false)
+  const [bulkShift,   setBulkShift]   = useState<Shift>('6-6')
+  const [showBulk,    setShowBulk]    = useState(false)
+  const [bulkSite,    setBulkSite]    = useState('')
+
+  const bulkMarkAll = async () => {
+    if (workers.length === 0) return
+    setBulkSaving(true)
+    try {
+      const userId = await uid()
+      if (!userId) return
+      // Only mark workers NOT already marked today
+      const unmarked = workers.filter(w => !attMap[w.id!])
+      if (unmarked.length === 0) { showToast(lang==='te'?'అందరూ ఇప్పటికే గుర్తించారు':'All already marked'); setBulkSaving(false); setShowBulk(false); return }
+      const inserts = await Promise.all(unmarked.map(async w => {
+        const { data: prevRecs } = await supabase.from('attendance')
+          .select('wage,advance,attendance_type')
+          .eq('worker_id', w.id!).eq('user_id', userId).lt('date_key', dKey)
+        const prevEarned = prevRecs?.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+(a.wage??0),0)??0
+        const prevAdv    = prevRecs?.reduce((s,a)=>s+(a.advance??0),0)??0
+        const w2 = bulkShift === 'Absent' ? 0 : wage(w, bulkShift)
+        return {
+          worker_id: w.id!, date_key: dKey,
+          date: new Date(year, month, day).toISOString(),
+          attendance_type: bulkShift, wage: w2, advance: 0,
+          payment_mode: 'Cash', balance_after: prevEarned + w2 - prevAdv,
+          site_id: bulkSite || null, user_id: userId,
+        }
+      }))
+      const { error } = await supabase.from('attendance').insert(inserts)
+      if (error) throw error
+      setShowBulk(false)
+      await loadDay(); await loadMonthMarks()
+      showToast(lang==='te'?`${unmarked.length} మంది గుర్తించారు`:`${unmarked.length} workers marked`)
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : 'Bulk mark failed', false)
+    } finally { setBulkSaving(false) }
+  }
+
+  // ── Recalculate all balances for a worker (fixes stale balance_after) ──────
+  const recalcBalances = async (workerId: string) => {
+    const userId = await uid()
+    if (!userId) return
+    const { data: allRecs } = await supabase.from('attendance')
+      .select('id,date_key,wage,advance,attendance_type')
+      .eq('worker_id', workerId).eq('user_id', userId)
+      .order('date_key', { ascending: true })
+    if (!allRecs || allRecs.length === 0) return
+    let runEarned = 0, runAdv = 0
+    const updates = allRecs.map(r => {
+      const w2 = r.attendance_type !== 'Absent' ? (r.wage ?? 0) : 0
+      runEarned += w2; runAdv += (r.advance ?? 0)
+      return supabase.from('attendance').update({ balance_after: runEarned - runAdv }).eq('id', r.id)
+    })
+    await Promise.all(updates)
+    await loadDay()
+    showToast(lang==='te'?'బ్యాలెన్స్ అప్‌డేట్ అయింది':'Balances recalculated')
+  }
+
   const openSummary = async (w: Worker) => {
     setSumWorker(w); setView('summary'); setSumRecords([]); setSumPrevBal(0); setSumLoading(true)
     const start = `${year}-${pad(month+1)}-01`
@@ -254,6 +314,15 @@ function AttendancePage() {
             {sumLoading && <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{borderColor:'rgb(var(--accent))',borderTopColor:'transparent'}}/>}
             {!sumLoading && sumWorker && (
               <button
+                onClick={() => recalcBalances(sumWorker.id!)}
+                className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-base"
+                title="Recalculate all balances"
+                style={{background:'rgba(var(--accent),0.1)',color:'rgb(var(--accent))',border:'1px solid rgba(var(--accent),0.2)'}}>
+                🔄
+              </button>
+            )}
+            {!sumLoading && sumWorker && (
+              <button
                 onClick={() => {
                   const days = sumRecords.filter(a => a.attendance_type !== 'Absent').length
                   const earned = sumRecords.filter(a => a.attendance_type !== 'Absent').reduce((s,a) => s+(a.wage??0), 0)
@@ -323,9 +392,19 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
               <span className="text-sm font-black" style={{color:'rgb(var(--accent))'}}>
                 📅 {months[month]} {day}, {year}
               </span>
-              <span className="text-xs" style={{color:'rgb(var(--muted))'}}>
-                {Object.keys(attMap).length}/{workers.length} {lang==='te' ? 'గుర్తించారు' : 'marked'}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs" style={{color:'rgb(var(--muted))'}}>
+                  {Object.keys(attMap).length}/{workers.length} {lang==='te' ? 'గుర్తించారు' : 'marked'}
+                </span>
+                {workers.length > 0 && (
+                  <button
+                    onClick={() => setShowBulk(true)}
+                    className="text-xs px-2 py-1 rounded-lg font-bold"
+                    style={{background:'rgba(var(--accent),0.15)',color:'rgb(var(--accent))'}}>
+                    ⚡ {lang==='te'?'అందరికీ':'Bulk'}
+                  </button>
+                )}
+              </div>
             </div>
           </>
         )}
@@ -541,6 +620,50 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Bulk mark modal ── */}
+      {showBulk && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{background:'rgba(0,0,0,0.6)'}}>
+          <div className="w-full max-w-lg rounded-t-3xl p-5 pb-8"
+            style={{background:'rgb(var(--surface))'}}>
+            <div className="flex items-center justify-between mb-4">
+              <p className="font-black text-base" style={{color:'rgb(var(--text))'}}>
+                ⚡ {lang==='te'?'అందరికీ హాజరు':'Bulk Mark Attendance'}
+              </p>
+              <button onClick={() => setShowBulk(false)} className="text-xl" style={{color:'rgb(var(--muted))'}}>✕</button>
+            </div>
+            <p className="text-xs mb-3" style={{color:'rgb(var(--muted))'}}>
+              {lang==='te'
+                ? `ఇప్పటికే గుర్తించబడని ${workers.filter(w=>!attMap[w.id!]).length} మంది కార్మికులకు వర్తిస్తుంది`
+                : `Applies to ${workers.filter(w=>!attMap[w.id!]).length} unmarked workers`}
+            </p>
+            {/* Shift picker */}
+            <div className="grid grid-cols-4 gap-1.5 mb-4">
+              {SHIFTS.map(s => (
+                <button key={s} onClick={() => setBulkShift(s as Shift)}
+                  className="py-2 rounded-xl text-xs font-bold transition"
+                  style={{
+                    background: bulkShift===s ? SHIFT_BG[s as Shift] : 'rgb(var(--surface2))',
+                    color: bulkShift===s ? '#fff' : 'rgb(var(--muted))',
+                    border: bulkShift===s ? `1px solid ${SHIFT_BG[s as Shift]}` : '1px solid rgb(var(--border))',
+                  }}>
+                  {SHIFT_LABEL[s as Shift]}
+                </button>
+              ))}
+            </div>
+            {/* Site picker */}
+            {sites.length > 0 && (
+              <select value={bulkSite} onChange={e=>setBulkSite(e.target.value)} className="input mb-4">
+                <option value="">{lang==='te'?'సైట్ ఎంచుకోండి (ఐచ్ఛికం)':'Select site (optional)'}</option>
+                {sites.map(s=><option key={s.id} value={s.id}>{s.site_name}</option>)}
+              </select>
+            )}
+            <button onClick={bulkMarkAll} disabled={bulkSaving} className="btn-primary btn-full py-3 font-black">
+              {bulkSaving ? '⏳ Marking...' : (lang==='te'?`⚡ అందరికీ ${SHIFT_LABEL[bulkShift]} గుర్తించు`:`⚡ Mark All as ${SHIFT_LABEL[bulkShift]}`)}
+            </button>
           </div>
         </div>
       )}
