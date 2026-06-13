@@ -1,19 +1,14 @@
-// Construction Manager Service Worker v7
+// Construction Manager Service Worker v8
 
-// Derive cache name from query string so it changes with each deploy
 const swUrl   = new URL(self.location.href)
-const buildId = swUrl.searchParams.get('v') || 'v7'
+const buildId = swUrl.searchParams.get('v') || 'v8'
 const CACHE   = `cm-${buildId}`
 
-// Files to precache — kept minimal so a single missing file
-// doesn't abort the entire SW install.
 const PRECACHE_URLS = [
   '/offline.html',
   '/manifest.json',
 ]
 
-// Install: cache essential files individually so one failure doesn't
-// block the whole install (unlike cache.addAll which is all-or-nothing).
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE).then(async (cache) => {
@@ -26,7 +21,6 @@ self.addEventListener('install', (e) => {
   )
 })
 
-// Activate: delete all old caches
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
@@ -46,25 +40,33 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(e.request.url)
 
-  // Never intercept auth pages — one-time codes must always be fresh
+  // ── PASSTHROUGH — never intercept these ───────────────────────────────────
+
+  // All external domains (only cache same-origin)
+  if (url.origin !== self.location.origin) {
+    e.respondWith(fetch(e.request))
+    return
+  }
+
+  // Auth pages — one-time codes must always be fresh
   if (url.pathname.startsWith('/auth/') || url.pathname === '/login') {
     e.respondWith(fetch(e.request))
     return
   }
 
-  // Never cache Supabase API calls
+  // Supabase API calls
   if (url.hostname.includes('supabase')) {
     e.respondWith(fetch(e.request))
     return
   }
 
-  // Never cache Next.js API routes
+  // Next.js API routes
   if (url.pathname.startsWith('/api/')) {
     e.respondWith(fetch(e.request))
     return
   }
 
-  // Static assets (_next/static, images, fonts): cache first
+  // ── Static assets: cache first ────────────────────────────────────────────
   if (
     url.pathname.startsWith('/_next/static/') ||
     url.pathname.match(/\.(png|jpg|jpeg|webp|svg|ico|woff2?|ttf)$/)
@@ -83,7 +85,7 @@ self.addEventListener('fetch', (e) => {
     return
   }
 
-  // Everything else: network first, cache fallback
+  // ── Everything else (same-origin): network first, cache fallback ──────────
   e.respondWith(
     fetch(e.request)
       .then(response => {
