@@ -33,10 +33,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-        {/* Razorpay — loaded in <head> so window.Razorpay is always available */}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src="https://checkout.razorpay.com/v1/checkout.js" />
-
         {/* Inline theme script — runs before first paint, eliminates white flash */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
