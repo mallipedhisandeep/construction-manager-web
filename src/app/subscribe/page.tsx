@@ -27,18 +27,6 @@ interface RazorpayOptions {
   modal?: { ondismiss?: () => void }
 }
 
-// Wait for window.Razorpay to be available (loaded via layout Script tag)
-function waitForRazorpay(timeout = 10000): Promise<boolean> {
-  return new Promise(resolve => {
-    if (typeof window !== 'undefined' && window.Razorpay) { resolve(true); return }
-    const start = Date.now()
-    const interval = setInterval(() => {
-      if (window.Razorpay) { clearInterval(interval); resolve(true); return }
-      if (Date.now() - start > timeout) { clearInterval(interval); resolve(false) }
-    }, 100)
-  })
-}
-
 function SubscribePage() {
   const { lang } = useLang()
   const te = lang === 'te'
@@ -75,10 +63,9 @@ function SubscribePage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
 
-      // 2. Wait for Razorpay (already loaded in layout, just poll until ready)
-      const ready = await waitForRazorpay()
-      if (!ready) {
-        setErrorMsg('Razorpay did not load. Please refresh the page and try again.')
+      // 2. Razorpay is loaded in <head> — if somehow still missing, show clear error
+      if (typeof window === 'undefined' || !window.Razorpay) {
+        setErrorMsg('Payment system unavailable. Please hard-refresh (Ctrl+Shift+R) and try again.')
         setStatus('error')
         setLoading(false)
         return
