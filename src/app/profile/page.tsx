@@ -79,17 +79,166 @@ function ProfilePage() {
   const exportData = async () => {
     const { data: { user: u } } = await supabase.auth.getUser()
     if (!u) return
-    const [{ data: workers },{ data: sites },{ data: att }] = await Promise.all([
-      supabase.from('workers').select('*').eq('user_id', u.id).is('deleted_at',null),
-      supabase.from('sites').select('*').eq('user_id', u.id).is('deleted_at',null),
-      supabase.from('attendance').select('*').eq('user_id', u.id),
+    showToast(lang === 'te' ? 'రిపోర్ట్ తయారవుతోంది...' : 'Preparing report...')
+
+    const [{ data: workers }, { data: sites }, { data: att }, { data: suppliers }, { data: goods }] = await Promise.all([
+      supabase.from('workers').select('*').eq('user_id', u.id).is('deleted_at', null).order('name'),
+      supabase.from('sites').select('*').eq('user_id', u.id).is('deleted_at', null).order('name'),
+      supabase.from('attendance').select('*').eq('user_id', u.id).order('date', { ascending: false }),
+      supabase.from('suppliers').select('*').eq('user_id', u.id).is('deleted_at', null).order('name'),
+      supabase.from('goods_orders').select('*').eq('user_id', u.id).is('deleted_at', null).order('delivery_date', { ascending: false }),
     ])
-    const blob = new Blob([JSON.stringify({ workers, sites, attendance: att, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' })
+
+    const date  = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+    const name  = u.user_metadata?.full_name ?? u.email?.split('@')[0] ?? 'User'
+
+    // Total wages paid
+    const totalWages = (att ?? []).reduce((sum: number, r: Record<string, number>) => sum + (r.wage ?? 0), 0)
+    const totalAdvance = (att ?? []).reduce((sum: number, r: Record<string, number>) => sum + (r.advance ?? 0), 0)
+
+    const workerRows = (workers ?? []).map((w: Record<string, string | number>) => `
+      <tr>
+        <td>${w.name ?? ''}</td>
+        <td>${w.phone ?? '-'}</td>
+        <td>${w.role ?? '-'}</td>
+        <td style="text-align:right">₹${w.rate_6_6 ?? 0}</td>
+        <td style="text-align:center">${w.status ?? 'Active'}</td>
+      </tr>`).join('')
+
+    const siteRows = (sites ?? []).map((s: Record<string, string | number>) => `
+      <tr>
+        <td>${s.name ?? ''}</td>
+        <td>${s.owner_name ?? '-'}</td>
+        <td>${s.location ?? '-'}</td>
+        <td style="text-align:right">₹${Number(s.budget ?? 0).toLocaleString('en-IN')}</td>
+        <td style="text-align:center">${s.status ?? '-'}</td>
+      </tr>`).join('')
+
+    // Group attendance by month
+    const attByMonth: Record<string, typeof att> = {}
+    ;(att ?? []).forEach((r: Record<string, string>) => {
+      const month = r.date?.slice(0, 7) ?? 'unknown'
+      if (!attByMonth[month]) attByMonth[month] = []
+      attByMonth[month].push(r)
+    })
+    const attSections = Object.entries(attByMonth).slice(0, 6).map(([month, rows]) => {
+      const monthWages = (rows as Record<string, number>[]).reduce((s, r) => s + (r.wage ?? 0), 0)
+      const monthAdv   = (rows as Record<string, number>[]).reduce((s, r) => s + (r.advance ?? 0), 0)
+      const d = new Date(month + '-01')
+      const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+      return `
+        <h3 style="margin:18px 0 8px;color:#92400e;font-size:14px">${label}</h3>
+        <table>
+          <thead><tr>
+            <th>Date</th><th>Worker</th><th>Site</th><th>Shift</th>
+            <th style="text-align:right">Wage</th><th style="text-align:right">Advance</th><th>Mode</th>
+          </tr></thead>
+          <tbody>
+            ${(rows as Record<string, string | number>[]).map(r => `<tr>
+              <td>${r.date ?? ''}</td>
+              <td>${r.worker_name ?? '-'}</td>
+              <td>${r.site_name ?? '-'}</td>
+              <td>${r.shift ?? '-'}</td>
+              <td style="text-align:right">₹${r.wage ?? 0}</td>
+              <td style="text-align:right">₹${r.advance ?? 0}</td>
+              <td>${r.payment_mode ?? 'Cash'}</td>
+            </tr>`).join('')}
+          </tbody>
+          <tfoot><tr>
+            <td colspan="4"><strong>Month Total</strong></td>
+            <td style="text-align:right"><strong>₹${monthWages.toLocaleString('en-IN')}</strong></td>
+            <td style="text-align:right"><strong>₹${monthAdv.toLocaleString('en-IN')}</strong></td>
+            <td></td>
+          </tr></tfoot>
+        </table>`
+    }).join('')
+
+    const supplierRows = (suppliers ?? []).map((s: Record<string, string>) => `
+      <tr>
+        <td>${s.name ?? ''}</td>
+        <td>${s.phone ?? '-'}</td>
+        <td>${s.shop_name ?? '-'}</td>
+        <td>${s.notes ?? '-'}</td>
+      </tr>`).join('')
+
+    const goodsRows = (goods ?? []).map((g: Record<string, string | number>) => `
+      <tr>
+        <td>${g.delivery_date ?? ''}</td>
+        <td>${g.goods_name ?? ''}</td>
+        <td>${g.supplier_name ?? '-'}</td>
+        <td>${g.site_name ?? '-'}</td>
+        <td style="text-align:right">${g.quantity ?? 0} ${g.unit ?? ''}</td>
+        <td style="text-align:right">₹${Number(g.total_price ?? 0).toLocaleString('en-IN')}</td>
+        <td style="text-align:center">${g.status ?? '-'}</td>
+      </tr>`).join('')
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Construction Manager Report — ${date}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 13px; color: #1c1917; background: #fff; padding: 24px; }
+  h1 { font-size: 22px; color: #92400e; margin-bottom: 4px; }
+  h2 { font-size: 16px; color: #78350f; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #fde68a; }
+  h3 { font-size: 14px; color: #92400e; }
+  .meta { color: #78716c; font-size: 12px; margin-bottom: 20px; }
+  .summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .stat { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px 18px; min-width: 130px; }
+  .stat-val { font-size: 22px; font-weight: 900; color: #d97706; }
+  .stat-lbl { font-size: 11px; color: #92400e; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 12px; }
+  th { background: #fef3c7; color: #92400e; text-align: left; padding: 7px 10px; font-weight: 700; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f5f5f4; }
+  tr:last-child td { border-bottom: none; }
+  tfoot td { background: #fffbeb; font-weight: 700; }
+  .empty { color: #a8a29e; font-style: italic; padding: 12px 0; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+<h1>🏗️ Construction Manager</h1>
+<p class="meta">Report for <strong>${name}</strong> · Generated on ${date}</p>
+
+<div class="summary">
+  <div class="stat"><div class="stat-val">${(workers ?? []).length}</div><div class="stat-lbl">Workers</div></div>
+  <div class="stat"><div class="stat-val">${(sites ?? []).length}</div><div class="stat-lbl">Sites</div></div>
+  <div class="stat"><div class="stat-val">${(att ?? []).length}</div><div class="stat-lbl">Attendance Records</div></div>
+  <div class="stat"><div class="stat-val">₹${totalWages.toLocaleString('en-IN')}</div><div class="stat-lbl">Total Wages Paid</div></div>
+  <div class="stat"><div class="stat-val">₹${totalAdvance.toLocaleString('en-IN')}</div><div class="stat-lbl">Total Advance Given</div></div>
+</div>
+
+<h2>👷 Workers (${(workers ?? []).length})</h2>
+${workerRows ? `<table><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th style="text-align:right">Rate (6-6)</th><th style="text-align:center">Status</th></tr></thead><tbody>${workerRows}</tbody></table>` : '<p class="empty">No workers added yet.</p>'}
+
+<h2>🏗️ Sites (${(sites ?? []).length})</h2>
+${siteRows ? `<table><thead><tr><th>Site Name</th><th>Owner</th><th>Location</th><th style="text-align:right">Budget</th><th style="text-align:center">Status</th></tr></thead><tbody>${siteRows}</tbody></table>` : '<p class="empty">No sites added yet.</p>'}
+
+<h2>📋 Attendance by Month</h2>
+${attSections || '<p class="empty">No attendance records yet.</p>'}
+
+<h2>🏪 Suppliers (${(suppliers ?? []).length})</h2>
+${supplierRows ? `<table><thead><tr><th>Name</th><th>Phone</th><th>Shop</th><th>Notes</th></tr></thead><tbody>${supplierRows}</tbody></table>` : '<p class="empty">No suppliers added yet.</p>'}
+
+<h2>📦 Goods Orders (${(goods ?? []).length})</h2>
+${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th>Site</th><th style="text-align:right">Qty</th><th style="text-align:right">Total</th><th style="text-align:center">Status</th></tr></thead><tbody>${goodsRows}</tbody></table>` : '<p class="empty">No goods orders yet.</p>'}
+
+<p style="margin-top:32px;font-size:11px;color:#a8a29e;text-align:center">
+  Generated by Construction Manager App · ${date}
+</p>
+</body>
+</html>`
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
-    a.href = url; a.download = `cm-backup-${new Date().toISOString().split('T')[0]}.json`
-    a.click(); URL.revokeObjectURL(url)
-    showToast('Backup downloaded!')
+    a.href     = url
+    a.download = `CM-Report-${new Date().toISOString().split('T')[0]}.html`
+    a.click()
+    URL.revokeObjectURL(url)
+    showToast(lang === 'te' ? 'రిపోర్ట్ డౌన్‌లోడ్ అయింది!' : 'Report downloaded!')
   }
 
   // ── Subscription display helpers ──────────────────────────────────────────
@@ -283,8 +432,8 @@ function ProfilePage() {
           className="w-full flex items-center gap-3 px-4 py-3.5 transition hover:opacity-80">
           <span className="text-xl">💾</span>
           <div className="flex-1 text-left">
-            <p className="text-sm font-semibold" style={{color:'rgb(var(--text))'}}>{lang==='te'?'డేటా బ్యాకప్':'Backup Data'}</p>
-            <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'JSON ఫైల్ డౌన్లోడ్ చేయి':'Download as JSON file'}</p>
+            <p className="text-sm font-semibold" style={{color:'rgb(var(--text))'}}>{lang==='te'?'రిపోర్ట్ డౌన్‌లోడ్':'Download Report'}</p>
+            <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'కార్మికులు, హాజరు, సైట్లు — HTML ఫైల్':'Workers, attendance, sites — opens in browser'}</p>
           </div>
           <span style={{color:'rgb(var(--muted))'}}>›</span>
         </button>
