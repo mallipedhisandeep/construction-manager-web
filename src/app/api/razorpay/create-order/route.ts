@@ -1,10 +1,6 @@
 // POST /api/razorpay/create-order
 // Creates a Razorpay order for the monthly ₹200 plan.
-// Requires env vars: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET
-//
-// TEST-MODE BYPASS: If RAZORPAY_KEY_ID starts with "rzp_test_", we return a
-// simulated order so the app is fully usable while Razorpay VKYC is pending.
-// The verify route also recognises test-mode bypasses and activates the sub.
+// Requires env vars: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, SUPABASE_SERVICE_ROLE_KEY
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -13,7 +9,7 @@ const PLAN_AMOUNT = 20000 // ₹200 in paise
 
 export async function POST(req: Request) {
   try {
-    // Verify auth via Supabase
+    // ── Auth via Supabase ────────────────────────────────────────────────────
     const authHeader = req.headers.get('authorization') ?? ''
     const token = authHeader.replace('Bearer ', '')
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -25,36 +21,21 @@ export async function POST(req: Request) {
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    // ── Env check ────────────────────────────────────────────────────────────
     const keyId     = process.env.RAZORPAY_KEY_ID
     const keySecret = process.env.RAZORPAY_KEY_SECRET
-
     if (!keyId || !keySecret) {
       return NextResponse.json({ error: 'PAYMENT_NOT_CONFIGURED' }, { status: 503 })
     }
 
-    // ── TEST-MODE BYPASS ──────────────────────────────────────────────────────
-    // Test keys work for the Razorpay SDK checkout UI, but if your account's
-    // VKYC is still pending Razorpay may reject order-creation via the API.
-    // Return a synthetic order so the checkout can still be demonstrated and
-    // the subscription can be activated in the DB via the verify route.
-    if (keyId.startsWith('rzp_test_')) {
-      const fakeOrderId = `order_TEST_${Date.now()}`
-      console.log('[razorpay] test-mode bypass — synthetic order:', fakeOrderId)
-      return NextResponse.json({
-        orderId:  fakeOrderId,
-        keyId,
-        amount:   PLAN_AMOUNT,
-        currency: 'INR',
-        testMode: true,
-      })
-    }
-    // ─────────────────────────────────────────────────────────────────────────
-
-    // Create real Razorpay order (live keys)
+    // ── Create Razorpay order ────────────────────────────────────────────────
     const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64')
     const rzpRes = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
-      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         amount:   PLAN_AMOUNT,
         currency: 'INR',
@@ -65,8 +46,7 @@ export async function POST(req: Request) {
 
     if (!rzpRes.ok) {
       const errBody = await rzpRes.text()
-      console.error('Razorpay order creation failed:', rzpRes.status, errBody)
-      // Surface the Razorpay error description to help diagnose issues
+      console.error('[razorpay] order creation failed:', rzpRes.status, errBody)
       try {
         const parsed = JSON.parse(errBody)
         const desc = parsed?.error?.description ?? 'Failed to create order'
@@ -77,9 +57,15 @@ export async function POST(req: Request) {
     }
 
     const order = await rzpRes.json()
-    return NextResponse.json({ orderId: order.id, keyId, amount: PLAN_AMOUNT, currency: 'INR' })
+    console.log('[razorpay] order created:', order.id)
+    return NextResponse.json({
+      orderId:  order.id,
+      keyId,
+      amount:   PLAN_AMOUNT,
+      currency: 'INR',
+    })
   } catch (e) {
-    console.error('create-order error:', e)
+    console.error('[razorpay] create-order error:', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
