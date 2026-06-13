@@ -133,8 +133,15 @@ function GoodsPage() {
   const totalAdv   = orders.filter(o=>o.status!=='Cancelled').reduce((s,o)=>s+o.advance_paid,0)
 
   const filterLabels: Record<string,string> = te
-    ? {All:'అన్నీ',Pending:'పెండింగ్',Delivered:'డెలివరీ అయింది',Cancelled:'రద్దు చేయబడింది'}
-    : {All:'All',  Pending:'Pending',  Delivered:'Delivered',       Cancelled:'Cancelled'}
+    ? {All:'అన్ని ఆర్డర్లు',Pending:'పెండింగ్',Delivered:'డెలివరీ అయింది',Cancelled:'రద్దు చేయబడింది'}
+    : {All:'All Orders', Pending:'Pending', Delivered:'Delivered', Cancelled:'Cancelled'}
+  // Count per status for badge display
+  const filterCounts: Record<string,number> = {
+    All: orders.length,
+    Pending:   orders.filter(o=>o.status==='Pending').length,
+    Delivered: orders.filter(o=>o.status==='Delivered').length,
+    Cancelled: orders.filter(o=>o.status==='Cancelled').length,
+  }
   const statusLabels: Record<string,string> = te
     ? {Pending:'పెండింగ్',Delivered:'డెలివరీ అయింది',Cancelled:'రద్దు'}
     : {Pending:'Pending', Delivered:'Delivered',       Cancelled:'Cancelled'}
@@ -174,8 +181,17 @@ function GoodsPage() {
         <div className="flex gap-2 overflow-x-auto">
           {(['All','Pending','Delivered','Cancelled'] as const).map(f=>(
             <button key={f} onClick={()=>setFilter(f)}
-              className={`chip flex-shrink-0 ${filter===f?'chip-active':'chip-idle'}`}>
+              className={`chip flex-shrink-0 ${filter===f?'chip-active':'chip-idle'} flex items-center gap-1.5`}>
               {filterLabels[f]}
+              {filterCounts[f] > 0 && (
+                <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full"
+                  style={{
+                    background: filter===f ? 'rgba(255,255,255,0.25)' : 'rgba(var(--accent),0.15)',
+                    color: filter===f ? '#fff' : 'rgb(var(--accent))',
+                  }}>
+                  {filterCounts[f]}
+                </span>
+              )}
             </button>
           ))}
         </div>
