@@ -1,6 +1,10 @@
 // POST /api/razorpay/create-order
 // Creates a Razorpay order for the monthly ₹200 plan.
 // Requires env vars: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET
+//
+// TEST-MODE BYPASS: If RAZORPAY_KEY_ID starts with "rzp_test_", we return a
+// simulated order so the app is fully usable while Razorpay VKYC is pending.
+// The verify route also recognises test-mode bypasses and activates the sub.
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -25,11 +29,28 @@ export async function POST(req: Request) {
     const keySecret = process.env.RAZORPAY_KEY_SECRET
 
     if (!keyId || !keySecret) {
-      // Keys not configured yet — return a clear error so frontend can handle gracefully
       return NextResponse.json({ error: 'PAYMENT_NOT_CONFIGURED' }, { status: 503 })
     }
 
-    // Create Razorpay order
+    // ── TEST-MODE BYPASS ──────────────────────────────────────────────────────
+    // Test keys work for the Razorpay SDK checkout UI, but if your account's
+    // VKYC is still pending Razorpay may reject order-creation via the API.
+    // Return a synthetic order so the checkout can still be demonstrated and
+    // the subscription can be activated in the DB via the verify route.
+    if (keyId.startsWith('rzp_test_')) {
+      const fakeOrderId = `order_TEST_${Date.now()}`
+      console.log('[razorpay] test-mode bypass — synthetic order:', fakeOrderId)
+      return NextResponse.json({
+        orderId:  fakeOrderId,
+        keyId,
+        amount:   PLAN_AMOUNT,
+        currency: 'INR',
+        testMode: true,
+      })
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Create real Razorpay order (live keys)
     const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64')
     const rzpRes = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
@@ -43,9 +64,16 @@ export async function POST(req: Request) {
     })
 
     if (!rzpRes.ok) {
-      const err = await rzpRes.text()
-      console.error('Razorpay order error:', err)
-      return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
+      const errBody = await rzpRes.text()
+      console.error('Razorpay order creation failed:', rzpRes.status, errBody)
+      // Surface the Razorpay error description to help diagnose issues
+      try {
+        const parsed = JSON.parse(errBody)
+        const desc = parsed?.error?.description ?? 'Failed to create order'
+        return NextResponse.json({ error: desc }, { status: 500 })
+      } catch {
+        return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
+      }
     }
 
     const order = await rzpRes.json()
