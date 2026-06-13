@@ -3,7 +3,6 @@ import './globals.css'
 
 export const dynamic = 'force-dynamic'
 
-
 const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev'
 
 export const viewport: Viewport = {
@@ -28,21 +27,36 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-      
         <link rel="preload" as="image" href="/login-bg.jpg" fetchPriority="high" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-        
+        {/*
+          Inline theme script runs BEFORE first paint — eliminates white flash.
+          Sets the correct dark/light class and background-color instantly.
+          No React, no hydration delay.
+        */}
         <script dangerouslySetInnerHTML={{ __html: `
-          try {
-            var saved = localStorage.getItem('theme');
-            var isDark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-            document.documentElement.classList.toggle('dark', isDark);
-            if (!saved) localStorage.setItem('theme', isDark ? 'dark' : 'light');
-          } catch(e) { document.documentElement.classList.add('dark'); }
+          (function() {
+            try {
+              var saved = localStorage.getItem('theme');
+              var isDark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+              if (isDark) {
+                document.documentElement.classList.add('dark');
+                document.documentElement.style.backgroundColor = 'rgb(12,12,15)';
+                document.body && (document.body.style.backgroundColor = 'rgb(12,12,15)');
+              } else {
+                document.documentElement.style.backgroundColor = 'rgb(248,249,250)';
+                document.body && (document.body.style.backgroundColor = 'rgb(248,249,250)');
+              }
+              if (!saved) localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            } catch(e) {
+              document.documentElement.classList.add('dark');
+              document.documentElement.style.backgroundColor = 'rgb(12,12,15)';
+            }
+          })();
         `}} />
       </head>
       <body className="min-h-screen" style={{ backgroundColor:'rgb(var(--bg))', color:'rgb(var(--text))' }}>
@@ -63,13 +77,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 }).catch(function(){});
             });
           }
-          // Track PWA installs in Supabase for admin analytics
           window.addEventListener('appinstalled', function() {
             try {
-              var sb = window.__supabase_client;
               var ua = navigator.userAgent;
               var platform = /android/i.test(ua) ? 'android' : /ipad|iphone|ipod/i.test(ua) ? 'ios' : 'desktop';
-              // Store install event; user_id will be null if not logged in yet — that's fine
               fetch('${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/pwa_installs', {
                 method: 'POST',
                 headers: {
