@@ -13,7 +13,7 @@ interface Stats {
 // ── Subscription types ────────────────────────────────────────────────────────
 // Plan field mirrors what will be stored in the subscriptions table.
 // For now the app is fully free — this UI is ready for when billing is wired up.
-type Plan = 'free' | 'pro' | 'lifetime'
+type Plan = 'free' | 'trial' | 'pro' | 'lifetime'
 
 interface SubInfo {
   plan: Plan
@@ -93,13 +93,19 @@ function ProfilePage() {
   }
 
   // ── Subscription display helpers ──────────────────────────────────────────
-  const planLabel = (p: Plan) => p === 'lifetime' ? (lang==='te'?'లైఫ్‌టైమ్':'Lifetime Free') : p === 'pro' ? (lang==='te'?'ప్రో ప్లాన్':'Pro Plan') : (lang==='te'?'ఫ్రీ ప్లాన్':'Free Plan')
+  const planLabel = (p: Plan) => {
+    if (p === 'lifetime') return lang==='te' ? 'లైఫ్‌టైమ్' : 'Lifetime Free'
+    if (p === 'pro')      return lang==='te' ? 'ప్రో ప్లాన్' : 'Pro Plan'
+    if (p === 'trial')    return lang==='te' ? 'ఉచిత ట్రయల్' : 'Free Trial'
+    return lang==='te' ? 'ఫ్రీ ప్లాన్' : 'Free Plan'
+  }
   const planColor = (p: Plan): { bg: string; text: string; border: string } => {
     if (p === 'lifetime') return { bg:'rgba(139,92,246,0.12)', text:'#7c3aed', border:'rgba(139,92,246,0.3)' }
     if (p === 'pro')      return { bg:'rgba(var(--accent),0.12)', text:'rgb(var(--accent))', border:'rgba(var(--accent),0.3)' }
+    if (p === 'trial')    return { bg:'rgba(22,163,74,0.1)', text:'#15803d', border:'rgba(22,163,74,0.25)' }
     return { bg:'rgba(100,116,139,0.1)', text:'rgb(var(--muted))', border:'rgba(100,116,139,0.2)' }
   }
-  const planIcon = (p: Plan) => p === 'lifetime' ? '♾️' : p === 'pro' ? '⭐' : '🏗️'
+  const planIcon = (p: Plan) => p === 'lifetime' ? '♾️' : p === 'pro' ? '⭐' : p === 'trial' ? '🎁' : '🏗️'
 
   const trialDaysLeft = sub.trialEndsAt
     ? Math.max(0, Math.ceil((new Date(sub.trialEndsAt).getTime() - Date.now()) / 86400000))
@@ -127,23 +133,22 @@ function ProfilePage() {
               referrerPolicy="no-referrer"
               className="w-16 h-16 rounded-2xl object-cover flex-shrink-0"
               onError={e => {
-                // If Google photo fails to load, hide img and show initials
-                (e.target as HTMLImageElement).style.display = 'none'
-                const sib = (e.target as HTMLImageElement).nextElementSibling as HTMLElement | null
-                if (sib) sib.style.display = 'flex'
+                const img = e.target as HTMLImageElement
+                img.style.display = 'none'
+                const fallback = img.nextElementSibling as HTMLElement | null
+                if (fallback) fallback.style.display = 'flex'
               }}
             />
           ) : null}
           <div
             className="w-16 h-16 rounded-2xl items-center justify-center text-2xl font-black flex-shrink-0"
             style={{
-              background:'rgba(var(--accent),0.15)',
-              color:'rgb(var(--accent))',
+              background: 'rgba(var(--accent),0.15)',
+              color: 'rgb(var(--accent))',
               display: user?.avatar ? 'none' : 'flex',
             }}>
             {user?.name?.[0]?.toUpperCase() ?? '?'}
           </div>
-          )}
           <div className="min-w-0 flex-1">
             <p className="font-black text-lg truncate" style={{color:'rgb(var(--text))'}}>{user?.name}</p>
             <p className="text-sm truncate mb-1" style={{color:'rgb(var(--muted))'}}>{user?.email}</p>
@@ -172,20 +177,23 @@ function ProfilePage() {
             <div>
               <p className="font-black text-sm" style={{color: pc.text}}>{planLabel(sub.plan)}</p>
               <p className="text-xs" style={{color:'rgb(var(--muted))'}}>
-                {sub.plan === 'free' && !sub.trialEndsAt && (lang==='te'?'అన్ని ఫీచర్లు అందుబాటులో ఉన్నాయి':'All features available')}
+                {(sub.plan === 'free') && !sub.trialEndsAt && (lang==='te'?'అన్ని ఫీచర్లు అందుబాటులో ఉన్నాయి':'All features available')}
+                {sub.plan === 'trial' && trialDaysLeft !== null && trialDaysLeft > 0 && `${lang==='te'?'ట్రయల్:':'Trial:'} ${trialDaysLeft} ${lang==='te'?'రోజులు మిగిలాయి':'days left'}`}
+                {sub.plan === 'trial' && trialDaysLeft === 0 && (lang==='te'?'నేడు ముగుస్తుంది!':'Ends today!')}
                 {sub.plan === 'lifetime' && (lang==='te'?'ఎప్పటికీ ఉచితం':'Free forever · No billing')}
                 {sub.plan === 'pro' && sub.renewsAt && `${lang==='te'?'తదుపరి చెల్లింపు':'Renews'} ${new Date(sub.renewsAt).toLocaleDateString()}`}
                 {sub.plan === 'pro' && !sub.renewsAt && (lang==='te'?'యాక్టివ్':'Active')}
               </p>
             </div>
           </div>
-          {/* Upgrade CTA — shown only on free plan */}
-          {sub.plan === 'free' && (
-            <div
-              className="px-3 py-1.5 rounded-xl text-xs font-bold"
-              style={{background:'rgba(var(--accent),0.12)',color:'rgb(var(--accent))',border:'1px solid rgba(var(--accent),0.25)'}}>
-              {lang==='te'?'త్వరలో':'Coming soon'}
-            </div>
+          {/* Upgrade CTA — shown on free/trial plans */}
+          {(sub.plan === 'free' || sub.plan === 'trial') && (
+            <button
+              onClick={() => router.push('/subscribe')}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold transition"
+              style={{background:'rgb(var(--accent))',color:'#fff'}}>
+              {lang==='te'?'⭐ అప్‌గ్రేడ్':'⭐ Upgrade'}
+            </button>
           )}
         </div>
 
@@ -206,7 +214,7 @@ function ProfilePage() {
         )}
 
         {/* Pricing info row */}
-        {sub.plan === 'free' && (
+        {(sub.plan === 'free' || sub.plan === 'trial') && (
           <div
             className="flex items-center justify-between px-4 py-3 border-t"
             style={{borderColor:'rgb(var(--border))'}}>
