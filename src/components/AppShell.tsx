@@ -17,12 +17,36 @@ const Ctx = createContext<AppCtx>({
   showToast: () => {},
 })
 
-export const useLang    = (): LangCtx  => { const c = useContext(Ctx); return { lang: c.lang, toggleLang: c.toggleLang } }
-export const useTheme   = (): ThemeCtx => { const c = useContext(Ctx); return { theme: c.theme, toggleTheme: c.toggleTheme } }
+export const useLang  = (): LangCtx  => { const c = useContext(Ctx); return { lang: c.lang, toggleLang: c.toggleLang } }
+export const useTheme = (): ThemeCtx => { const c = useContext(Ctx); return { theme: c.theme, toggleTheme: c.toggleTheme } }
+export const useToast = (): ToastCtx => { const c = useContext(Ctx); return { showToast: c.showToast } }
 
-export const useToast   = (): ToastCtx => { const c = useContext(Ctx); return { showToast: c.showToast } }
+// Public routes that never need auth or subscription check
+const PUBLIC_PATHS     = ['/login', '/signup', '/auth/callback', '/auth/confirm']
+// Routes exempt from paywall (user can always access these even if subscription expired)
+const PAYWALL_EXEMPT   = ['/profile', '/subscribe', '/login', '/signup', '/auth/callback', '/auth/confirm']
 
-const PUBLIC_PATHS = ['/login', '/signup', '/auth/callback', '/auth/confirm']
+// ── Subscription check ────────────────────────────────────────────────────────
+type SubStatus = 'active' | 'trialing' | 'expired' | 'lifetime' | 'unknown'
+
+async function getSubStatus(userId: string): Promise<SubStatus> {
+  try {
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('plan,status,trial_ends_at,current_period_end')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (!data) return 'unknown'           // table not set up yet → don't block
+    if (data.plan === 'lifetime') return 'lifetime'
+    if (data.plan === 'pro' && data.status === 'active') return 'active'
+    if (data.trial_ends_at && new Date(data.trial_ends_at) > new Date()) return 'trialing'
+    if (data.trial_ends_at && new Date(data.trial_ends_at) <= new Date()) return 'expired'
+    return 'unknown'
+  } catch {
+    // If subscriptions table doesn't exist yet, never block access
+    return 'unknown'
+  }
+}
 
 function Splash() {
   return (
@@ -51,11 +75,43 @@ function Splash() {
   )
 }
 
+// ── Paywall screen shown when trial has expired ───────────────────────────────
+function PaywallScreen({ lang, onGoToProfile }: { lang: Lang; onGoToProfile: () => void }) {
+  const te = lang === 'te'
+  return (
+    <div className="fixed inset-0 z-[90] flex flex-col items-center justify-center p-6"
+      style={{ background:'rgb(var(--bg))' }}>
+      <div className="text-6xl mb-4">⏰</div>
+      <h1 className="text-2xl font-black text-center mb-2" style={{ color:'rgb(var(--text))' }}>
+        {te ? 'ట్రయల్ ముగిసింది' : 'Trial Ended'}
+      </h1>
+      <p className="text-sm text-center mb-6 max-w-xs" style={{ color:'rgb(var(--muted))' }}>
+        {te
+          ? 'మీ 30-రోజుల ట్రయల్ ముగిసింది. యాప్ ఉపయోగించడం కొనసాగించడానికి సభ్యత్వం పొందండి.'
+          : 'Your 30-day free trial has ended. Subscribe to continue using the app.'}
+      </p>
+      <div className="w-full max-w-xs card p-5 mb-4 text-center">
+        <p className="text-3xl font-black mb-1" style={{ color:'rgb(var(--accent))' }}>₹200</p>
+        <p className="text-sm mb-3" style={{ color:'rgb(var(--muted))' }}>
+          {te ? 'నెలకు · అన్ని ఫీచర్లు' : 'per month · all features'}
+        </p>
+        <button
+          onClick={onGoToProfile}
+          className="btn-primary w-full py-3 text-base font-black">
+          {te ? '⭐ సభ్యత్వం పొందండి' : '⭐ Subscribe Now'}
+        </button>
+      </div>
+      <button onClick={onGoToProfile} className="text-sm" style={{ color:'rgb(var(--muted))' }}>
+        {te ? 'ప్రొఫైల్ చూడండి' : 'Go to Profile'}
+      </button>
+    </div>
+  )
+}
+
 function getInitialTheme(): Theme {
   try {
     const saved = localStorage.getItem('theme') as Theme | null
     if (saved === 'light' || saved === 'dark') return saved
-    // No saved preference — follow device system theme
     if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light'
   } catch {}
   return 'dark'
@@ -73,9 +129,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [lang,      setLangState]  = useState<Lang>('en')
   const [theme,     setThemeState] = useState<Theme>('dark')
   const [authState, setAuthState]  = useState<'checking'|'authed'|'unauthed'>('checking')
+  const [subStatus, setSubStatus]  = useState<SubStatus>('unknown')
   const [hydrated,  setHydrated]   = useState(false)
 
- 
   const [toast,    setToast]    = useState<{msg:string; type:'ok'|'err'} | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const showToast = useCallback((msg: string, type: 'ok' | 'err' = 'ok') => {
@@ -86,7 +142,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const router   = useRouter()
   const pathname = usePathname()
-  const isPublicPath = PUBLIC_PATHS.some(p => pathname.startsWith(p))
+  const isPublicPath  = PUBLIC_PATHS.some(p => pathname.startsWith(p))
+  const isPaywallFree = PAYWALL_EXEMPT.some(p => pathname.startsWith(p))
 
   useEffect(() => {
     const t = getInitialTheme()
@@ -103,11 +160,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
-   
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!mounted) return
-      if (user) { setAuthState('authed') }
-      else { setAuthState('unauthed'); if (!isPublicPath) router.replace('/login') }
+      if (user) {
+        setAuthState('authed')
+        // Check subscription in parallel — don't block rendering
+        const status = await getSubStatus(user.id)
+        if (mounted) setSubStatus(status)
+      } else {
+        setAuthState('unauthed')
+        if (!isPublicPath) router.replace('/login')
+      }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return
@@ -134,39 +197,39 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
-  // On public paths (login, auth/callback, etc.), always render children.
-  // Auth state changes will be handled by redirects within those pages themselves.
+  // Toast element reused in both public and private renders
+  const toastEl = toast && (
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed top-16 right-4 z-[200] max-w-[80vw] px-4 py-2.5 rounded-xl shadow-lg text-white text-sm font-semibold pointer-events-none transition-opacity"
+      style={{ background: toast.type === 'ok' ? '#16a34a' : '#dc2626' }}>
+      {toast.msg}
+    </div>
+  )
+
   if (isPublicPath) {
     return (
       <Ctx.Provider value={{ lang, toggleLang, theme, toggleTheme, showToast }}>
-        {toast && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="fixed top-16 right-4 z-[200] max-w-[80vw] px-4 py-2.5 rounded-xl shadow-lg text-white text-sm font-semibold pointer-events-none"
-            style={{ background: toast.type === 'ok' ? '#16a34a' : '#dc2626' }}>
-            {toast.msg}
-          </div>
-        )}
+        {toastEl}
         <main>{children}</main>
       </Ctx.Provider>
     )
   }
+
   if (authState === 'checking') return <Splash />
   if (authState === 'unauthed') return null
 
+  // ── Paywall: only block if subscription is confirmed expired ─────────────
+  // 'unknown' = table not set up or network error → never block (safe default)
+  const isPaywalled = subStatus === 'expired' && !isPaywallFree
+
   return (
     <Ctx.Provider value={{ lang, toggleLang, theme, toggleTheme, showToast }}>
-      {authState === 'authed' && <Nav />}
-     
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed top-16 right-4 z-[200] max-w-[80vw] px-4 py-2.5 rounded-xl shadow-lg text-white text-sm font-semibold pointer-events-none transition-opacity"
-          style={{ background: toast.type === 'ok' ? '#16a34a' : '#dc2626' }}>
-          {toast.msg}
-        </div>
+      <Nav />
+      {toastEl}
+      {isPaywalled && (
+        <PaywallScreen lang={lang} onGoToProfile={() => router.push('/profile')} />
       )}
       <main className="pt-14 pb-16">
         {children}

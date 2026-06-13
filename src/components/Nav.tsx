@@ -34,14 +34,19 @@ export default function Nav() {
   const { theme, toggleTheme } = useTheme()
   const [open, setOpen] = useState(false)
 
-  const tapCount = useRef(0)
-  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const tapCount    = useRef(0)
+  const tapTimer    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [tapProgress, setTapProgress] = useState(0)   // 0 = hidden, 4-6 = show counter
+
   const handleLogoTap = () => {
     tapCount.current += 1
     if (tapTimer.current) clearTimeout(tapTimer.current)
-    tapTimer.current = setTimeout(() => { tapCount.current = 0 }, 1500)
+    // Show subtle progress counter after tap 4
+    if (tapCount.current >= 4 && tapCount.current < 7) setTapProgress(tapCount.current)
+    tapTimer.current = setTimeout(() => { tapCount.current = 0; setTapProgress(0) }, 1500)
     if (tapCount.current >= 7) {
       tapCount.current = 0
+      setTapProgress(0)
       router.push('/admin')
     }
   }
@@ -60,9 +65,18 @@ export default function Nav() {
       <header className="fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4"
         style={{background:'rgb(var(--surface))', borderBottom:'1px solid rgb(var(--border))'}}>
         
-        <button onClick={handleLogoTap} className="flex items-center gap-2 select-none">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-base"
-            style={{background:'rgba(var(--accent),0.12)'}}>🏗️</div>
+        <button onClick={handleLogoTap} className="flex items-center gap-2 select-none relative">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-base relative"
+            style={{background:'rgba(var(--accent),0.12)'}}>
+            🏗️
+            {/* Tap progress ring — appears after tap 4, disappears on reset */}
+            {tapProgress >= 4 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-white"
+                style={{background:'#d48c28', lineHeight:1}}>
+                {7 - tapProgress}
+              </span>
+            )}
+          </div>
           <span className="font-bold text-sm" style={{color:'rgb(var(--text))'}}>{ts(lang,'appName')}</span>
         </button>
         <div className="flex items-center gap-1.5">
