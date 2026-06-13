@@ -17,7 +17,7 @@ interface RazorpayOptions {
   description: string
   amount: number
   currency: string
-  prefill: { name?: string; email?: string; contact?: string }
+  prefill: { name?: string; email?: string }
   theme: { color: string }
   handler: (response: {
     razorpay_order_id: string
@@ -27,14 +27,15 @@ interface RazorpayOptions {
   modal?: { ondismiss?: () => void }
 }
 
-function loadRazorpayScript(): Promise<boolean> {
+// Wait for window.Razorpay to be available (loaded via layout Script tag)
+function waitForRazorpay(timeout = 10000): Promise<boolean> {
   return new Promise(resolve => {
     if (typeof window !== 'undefined' && window.Razorpay) { resolve(true); return }
-    const script = document.createElement('script')
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-    script.onload  = () => resolve(true)
-    script.onerror = () => resolve(false)
-    document.body.appendChild(script)
+    const start = Date.now()
+    const interval = setInterval(() => {
+      if (window.Razorpay) { clearInterval(interval); resolve(true); return }
+      if (Date.now() - start > timeout) { clearInterval(interval); resolve(false) }
+    }, 100)
   })
 }
 
@@ -74,10 +75,10 @@ function SubscribePage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
 
-      // 2. Load Razorpay script
-      const loaded = await loadRazorpayScript()
-      if (!loaded) {
-        setErrorMsg('Could not load Razorpay checkout. Check your internet connection.')
+      // 2. Wait for Razorpay (already loaded in layout, just poll until ready)
+      const ready = await waitForRazorpay()
+      if (!ready) {
+        setErrorMsg('Razorpay did not load. Please refresh the page and try again.')
         setStatus('error')
         setLoading(false)
         return
@@ -90,13 +91,12 @@ function SubscribePage() {
       })
 
       let data: Record<string, string> = {}
-      try { data = await res.json() } catch { /* empty response */ }
+      try { data = await res.json() } catch { /* empty body */ }
 
       if (!res.ok) {
         if (data.error === 'PAYMENT_NOT_CONFIGURED') {
           setStatus('not_configured')
         } else {
-          // Show the actual server error so it's debuggable
           setErrorMsg(data.error ?? `Server error ${res.status}`)
           setStatus('error')
         }
@@ -117,6 +117,7 @@ function SubscribePage() {
         prefill:     { name: userInfo?.name ?? '', email: userInfo?.email ?? '' },
         theme:       { color: '#d48c28' },
 
+        // 5. Payment success — verify on server then activate subscription
         handler: async (response) => {
           try {
             const verRes = await fetch('/api/razorpay/verify', {
@@ -135,23 +136,21 @@ function SubscribePage() {
               setErrorMsg(verData.error ?? 'Verification failed')
               setStatus('error')
             }
-          } catch (e) {
+          } catch {
             setErrorMsg('Network error during verification')
             setStatus('error')
           }
           setLoading(false)
         },
 
-        modal: {
-          ondismiss: () => setLoading(false),
-        },
+        // User closed modal without paying
+        modal: { ondismiss: () => setLoading(false) },
       })
 
       rzp.open()
 
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Unknown error'
-      setErrorMsg(msg)
+      setErrorMsg(e instanceof Error ? e.message : 'Unknown error')
       setStatus('error')
       setLoading(false)
     }
@@ -201,7 +200,6 @@ function SubscribePage() {
   return (
     <div className="page px-4 pt-4 pb-24">
 
-      {/* Header */}
       <div className="text-center mb-6">
         <div className="text-5xl mb-3">⭐</div>
         <h1 className="text-2xl font-black mb-1" style={{ color: 'rgb(var(--text))' }}>
@@ -218,7 +216,6 @@ function SubscribePage() {
         )}
       </div>
 
-      {/* Pricing card */}
       <div className="card p-5 mb-4 text-center"
         style={{ border: '1px solid rgba(var(--accent),0.3)', background: 'rgba(var(--accent),0.05)' }}>
         <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'rgb(var(--accent))' }}>
@@ -233,7 +230,6 @@ function SubscribePage() {
         </p>
       </div>
 
-      {/* Features */}
       <div className="card p-4 mb-5">
         <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'rgb(var(--muted))' }}>
           {te ? 'అన్నీ ఇందులో ఉన్నాయి' : "Everything's included"}
@@ -248,7 +244,6 @@ function SubscribePage() {
         </div>
       </div>
 
-      {/* Error messages */}
       {status === 'error' && (
         <div className="rounded-xl px-4 py-3 mb-4 text-sm font-semibold"
           style={{ background: 'rgba(220,38,38,0.1)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.2)' }}>
@@ -262,7 +257,6 @@ function SubscribePage() {
         </div>
       )}
 
-      {/* CTA */}
       <button
         onClick={handleSubscribe}
         disabled={loading}
