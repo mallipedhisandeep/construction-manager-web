@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import Script from 'next/script'
 import './globals.css'
 
 export const dynamic = 'force-dynamic'
@@ -33,11 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-        {/*
-          Inline theme script runs BEFORE first paint — eliminates white flash.
-          Sets the correct dark/light class and background-color instantly.
-          No React, no hydration delay.
-        */}
+        {/* Inline theme script — runs before first paint, eliminates white flash */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
             try {
@@ -61,6 +58,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen" style={{ backgroundColor:'rgb(var(--bg))', color:'rgb(var(--text))' }}>
         {children}
+
+        {/* Razorpay checkout — loaded globally so it's always ready */}
+        <Script
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="lazyOnload"
+        />
+
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
