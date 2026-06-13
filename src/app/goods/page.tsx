@@ -21,7 +21,7 @@ function GoodsPage() {
   const [loading,   setLoading]   = useState(true)
   const [modal,     setModal]     = useState(false)
   const [saving,    setSaving]    = useState(false)
-  const [filter,    setFilter]    = useState<'All'|'Pending'|'Delivered'|'Cancelled'>('All')
+  const [filter,    setFilter]    = useState<'All'|'Pending'|'Delivered'|'Cancelled'>('Pending')
   const [form, setForm] = useState<Partial<GoodsOrder & {priceStr:string;qtyStr:string;advStr:string}>>({
     status:'Pending',
     delivery_date: new Date().toISOString().split('T')[0],
@@ -126,7 +126,9 @@ function GoodsPage() {
     load()
   }
 
-  const filtered  = filter==='All' ? orders : orders.filter(o=>o.status===filter)
+  const GOODS_ORDER: Record<string,number> = { Pending:0, Delivered:1, Cancelled:2 }
+  const allSorted  = [...orders].sort((a,b) => (GOODS_ORDER[a.status]??1) - (GOODS_ORDER[b.status]??1))
+  const filtered   = filter==='All' ? allSorted : allSorted.filter(o=>o.status===filter)
   const totalSpend = orders.filter(o=>o.status!=='Cancelled').reduce((s,o)=>s+o.total_price,0)
   const totalAdv   = orders.filter(o=>o.status!=='Cancelled').reduce((s,o)=>s+o.advance_paid,0)
 
