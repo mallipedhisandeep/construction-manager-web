@@ -27,7 +27,6 @@ interface RazorpayOptions {
   modal?: { ondismiss?: () => void }
 }
 
-// ── Load Razorpay checkout.js once ───────────────────────────────────────────
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise(resolve => {
     if (typeof window !== 'undefined' && window.Razorpay) { resolve(true); return }
@@ -39,7 +38,6 @@ function loadRazorpayScript(): Promise<boolean> {
   })
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 function SubscribePage() {
   const { lang } = useLang()
   const te = lang === 'te'
@@ -47,6 +45,7 @@ function SubscribePage() {
 
   const [loading,    setLoading]    = useState(false)
   const [status,     setStatus]     = useState<'idle' | 'success' | 'error' | 'not_configured'>('idle')
+  const [errorMsg,   setErrorMsg]   = useState('')
   const [userInfo,   setUserInfo]   = useState<{ name: string; email: string } | null>(null)
   const [currentSub, setCurrentSub] = useState<{
     plan: string; trial_ends_at: string | null; current_period_end: string | null
@@ -65,20 +64,20 @@ function SubscribePage() {
     })
   }, [])
 
-  // ── Main payment handler ──────────────────────────────────────────────────
   const handleSubscribe = async () => {
     setLoading(true)
     setStatus('idle')
+    setErrorMsg('')
 
     try {
-      // 1. Ensure user is logged in
+      // 1. Session check
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
 
       // 2. Load Razorpay script
       const loaded = await loadRazorpayScript()
       if (!loaded) {
-        console.error('[razorpay] checkout.js failed to load')
+        setErrorMsg('Could not load Razorpay checkout. Check your internet connection.')
         setStatus('error')
         setLoading(false)
         return
@@ -89,10 +88,18 @@ function SubscribePage() {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session.access_token}` },
       })
-      const data = await res.json()
+
+      let data: Record<string, string> = {}
+      try { data = await res.json() } catch { /* empty response */ }
 
       if (!res.ok) {
-        setStatus(data.error === 'PAYMENT_NOT_CONFIGURED' ? 'not_configured' : 'error')
+        if (data.error === 'PAYMENT_NOT_CONFIGURED') {
+          setStatus('not_configured')
+        } else {
+          // Show the actual server error so it's debuggable
+          setErrorMsg(data.error ?? `Server error ${res.status}`)
+          setStatus('error')
+        }
         setLoading(false)
         return
       }
@@ -105,12 +112,11 @@ function SubscribePage() {
         order_id:    orderId,
         name:        'Construction Manager',
         description: '₹200/month — All Features',
-        amount,
-        currency,
+        amount:      Number(amount),
+        currency:    currency ?? 'INR',
         prefill:     { name: userInfo?.name ?? '', email: userInfo?.email ?? '' },
         theme:       { color: '#d48c28' },
 
-        // 5. On successful payment — verify on server
         handler: async (response) => {
           try {
             const verRes = await fetch('/api/razorpay/verify', {
@@ -126,36 +132,31 @@ function SubscribePage() {
               setTimeout(() => router.push('/profile'), 2500)
             } else {
               const verData = await verRes.json().catch(() => ({}))
-              console.error('[razorpay] verify failed:', verData)
+              setErrorMsg(verData.error ?? 'Verification failed')
               setStatus('error')
             }
           } catch (e) {
-            console.error('[razorpay] verify error:', e)
+            setErrorMsg('Network error during verification')
             setStatus('error')
           }
           setLoading(false)
         },
 
-        // User closed the modal without paying
         modal: {
-          ondismiss: () => {
-            console.log('[razorpay] modal dismissed by user')
-            setLoading(false)
-          },
+          ondismiss: () => setLoading(false),
         },
       })
 
       rzp.open()
-      // Do NOT setLoading(false) here — wait for handler or ondismiss
 
     } catch (e) {
-      console.error('[razorpay] handleSubscribe error:', e)
+      const msg = e instanceof Error ? e.message : 'Unknown error'
+      setErrorMsg(msg)
       setStatus('error')
       setLoading(false)
     }
   }
 
-  // ── Features list ─────────────────────────────────────────────────────────
   const features = te ? [
     '👷 అపరిమిత కార్మికులు',
     '📋 రోజువారీ హాజరు మేనేజ్‌మెంట్',
@@ -181,7 +182,6 @@ function SubscribePage() {
     ? Math.max(0, Math.ceil((new Date(trialEnd).getTime() - Date.now()) / 86400000))
     : null
 
-  // ── Success screen ────────────────────────────────────────────────────────
   if (status === 'success') {
     return (
       <div className="page flex flex-col items-center justify-center px-6 text-center">
@@ -198,7 +198,6 @@ function SubscribePage() {
     )
   }
 
-  // ── Main subscribe page ───────────────────────────────────────────────────
   return (
     <div className="page px-4 pt-4 pb-24">
 
@@ -249,23 +248,21 @@ function SubscribePage() {
         </div>
       </div>
 
-      {/* Status messages */}
+      {/* Error messages */}
       {status === 'error' && (
         <div className="rounded-xl px-4 py-3 mb-4 text-sm font-semibold"
           style={{ background: 'rgba(220,38,38,0.1)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.2)' }}>
-          {te ? 'చెల్లింపు విఫలమైంది. మళ్ళీ ప్రయత్నించండి.' : 'Payment failed. Please try again.'}
+          ❌ {errorMsg || (te ? 'చెల్లింపు విఫలమైంది. మళ్ళీ ప్రయత్నించండి.' : 'Payment failed. Please try again.')}
         </div>
       )}
       {status === 'not_configured' && (
         <div className="rounded-xl px-4 py-3 mb-4 text-sm font-semibold"
           style={{ background: 'rgba(var(--accent),0.1)', color: 'rgb(var(--accent))', border: '1px solid rgba(var(--accent),0.2)' }}>
-          {te
-            ? 'చెల్లింపు వ్యవస్థ కాన్ఫిగర్ కాలేదు. తర్వాత ప్రయత్నించండి.'
-            : 'Payment not configured. Please try again later.'}
+          {te ? 'చెల్లింపు వ్యవస్థ కాన్ఫిగర్ కాలేదు.' : 'Payment not configured. Contact support.'}
         </div>
       )}
 
-      {/* CTA button */}
+      {/* CTA */}
       <button
         onClick={handleSubscribe}
         disabled={loading}
