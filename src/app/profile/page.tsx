@@ -122,17 +122,27 @@ function ProfilePage() {
           {/* Google avatar or initials fallback */}
           {user?.avatar ? (
             <img
-              src={user.avatar}
+              src={user.avatar.replace(/=s\d+-c$/, '=s128-c')}
               alt={user.name}
               referrerPolicy="no-referrer"
               className="w-16 h-16 rounded-2xl object-cover flex-shrink-0"
+              onError={e => {
+                // If Google photo fails to load, hide img and show initials
+                (e.target as HTMLImageElement).style.display = 'none'
+                const sib = (e.target as HTMLImageElement).nextElementSibling as HTMLElement | null
+                if (sib) sib.style.display = 'flex'
+              }}
             />
-          ) : (
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black flex-shrink-0"
-              style={{background:'rgba(var(--accent),0.15)',color:'rgb(var(--accent))'}}>
-              {user?.name?.[0]?.toUpperCase()}
-            </div>
+          ) : null}
+          <div
+            className="w-16 h-16 rounded-2xl items-center justify-center text-2xl font-black flex-shrink-0"
+            style={{
+              background:'rgba(var(--accent),0.15)',
+              color:'rgb(var(--accent))',
+              display: user?.avatar ? 'none' : 'flex',
+            }}>
+            {user?.name?.[0]?.toUpperCase() ?? '?'}
+          </div>
           )}
           <div className="min-w-0 flex-1">
             <p className="font-black text-lg truncate" style={{color:'rgb(var(--text))'}}>{user?.name}</p>
