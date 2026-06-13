@@ -1,10 +1,9 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-// ── Razorpay global types ─────────────────────────────────────────────────────
 declare global {
   interface Window {
     Razorpay: new (opts: RazorpayOptions) => { open(): void }
@@ -27,33 +26,35 @@ interface RazorpayOptions {
   modal?: { ondismiss?: () => void }
 }
 
-// ── Load Razorpay script dynamically and wait for it ─────────────────────────
-// Returns a promise that resolves true when window.Razorpay is ready,
-// or false on network error. Safe to call multiple times (checks existing tag).
+const RZP_URL = 'https://checkout.razorpay.com/v1/checkout.js'
+
+// Loads checkout.js exactly once, waits for onload, resolves true/false.
+// Safe to call multiple times — detects existing tag or already-loaded SDK.
 function loadRazorpay(): Promise<boolean> {
   return new Promise((resolve) => {
-    // Already loaded
-    if (window.Razorpay) { resolve(true); return }
-
-    // Script tag already injected but not yet ready — wait for it
-    const existing = document.querySelector('script[src*="checkout.razorpay.com"]')
+    // SDK already available
+    if (typeof window !== 'undefined' && window.Razorpay) {
+      resolve(true)
+      return
+    }
+    // Script tag already in DOM but still loading — attach listeners
+    const existing = document.getElementById('rzp-script') as HTMLScriptElement | null
     if (existing) {
-      existing.addEventListener('load', () => resolve(!!window.Razorpay))
+      existing.addEventListener('load',  () => resolve(!!window.Razorpay))
       existing.addEventListener('error', () => resolve(false))
       return
     }
-
-    // Inject fresh script tag
-    const script = document.createElement('script')
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-    script.async = true
-    script.onload  = () => resolve(!!window.Razorpay)
-    script.onerror = () => resolve(false)
-    document.head.appendChild(script)
+    // Fresh inject
+    const s = document.createElement('script')
+    s.id    = 'rzp-script'
+    s.src   = RZP_URL
+    s.async = false          // must be synchronous so Razorpay sets up window.Razorpay immediately on load
+    s.onload  = () => resolve(!!window.Razorpay)
+    s.onerror = () => resolve(false)
+    document.head.appendChild(s)
   })
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 function SubscribePage() {
   const { lang } = useLang()
   const te = lang === 'te'
@@ -67,8 +68,8 @@ function SubscribePage() {
     plan: string; trial_ends_at: string | null; current_period_end: string | null
   } | null>(null)
 
-  // Pre-load the Razorpay script as soon as this page mounts
-  // so it's ready by the time the user taps the button
+  // Kick off script load the moment this page mounts — by the time
+  // user taps Subscribe it will almost certainly already be done.
   useEffect(() => {
     loadRazorpay()
 
@@ -90,42 +91,38 @@ function SubscribePage() {
     setErrorMsg('')
 
     try {
-      // 1. Session check
+      // 1. Must be logged in
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
 
-      // 2. Load Razorpay — waits for onload event, not a poll
+      // 2. Ensure Razorpay SDK is loaded (awaits onload — not a poll)
       const ready = await loadRazorpay()
       if (!ready) {
-        setErrorMsg('Could not load payment system. Check your internet and try again.')
+        setErrorMsg('Could not load payment SDK. Please check your internet connection and try again.')
         setStatus('error')
         setLoading(false)
         return
       }
 
-      // 3. Create order on server
+      // 3. Create Razorpay order on the server
       const res = await fetch('/api/razorpay/create-order', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session.access_token}` },
       })
 
-      let data: Record<string, string> = {}
-      try { data = await res.json() } catch { /* empty body */ }
+      let body: Record<string, string> = {}
+      try { body = await res.json() } catch { /* empty */ }
 
       if (!res.ok) {
-        if (data.error === 'PAYMENT_NOT_CONFIGURED') {
-          setStatus('not_configured')
-        } else {
-          setErrorMsg(data.error ?? `Server error ${res.status}`)
-          setStatus('error')
-        }
+        setStatus(body.error === 'PAYMENT_NOT_CONFIGURED' ? 'not_configured' : 'error')
+        setErrorMsg(body.error ?? `Server error ${res.status}`)
         setLoading(false)
         return
       }
 
-      const { orderId, keyId, amount, currency } = data
+      const { orderId, keyId, amount, currency } = body
 
-      // 4. Open Razorpay Standard Checkout modal
+      // 4. Open Standard Checkout modal
       const rzp = new window.Razorpay({
         key:         keyId,
         order_id:    orderId,
@@ -136,6 +133,7 @@ function SubscribePage() {
         prefill:     { name: userInfo?.name ?? '', email: userInfo?.email ?? '' },
         theme:       { color: '#d48c28' },
 
+        // 5. On payment success — verify signature on server
         handler: async (response) => {
           try {
             const verRes = await fetch('/api/razorpay/verify', {
@@ -150,8 +148,8 @@ function SubscribePage() {
               setStatus('success')
               setTimeout(() => router.push('/profile'), 2500)
             } else {
-              const verData = await verRes.json().catch(() => ({}))
-              setErrorMsg(verData.error ?? 'Verification failed')
+              const vd = await verRes.json().catch(() => ({}))
+              setErrorMsg(vd.error ?? 'Verification failed')
               setStatus('error')
             }
           } catch {
@@ -206,9 +204,9 @@ function SubscribePage() {
           {te ? 'సభ్యత్వం విజయవంతం!' : 'Subscription Activated!'}
         </h1>
         <p className="text-sm mb-6" style={{ color: 'rgb(var(--muted))' }}>
-          {te ? 'ప్రొఫైల్ పేజీకి తీసుకెళ్తున్నాం...' : 'Taking you to your profile...'}
+          {te ? 'ప్రొఫైల్ పేజీకి తీసుకెళ్తున్నాం...' : 'Redirecting to your profile...'}
         </p>
-        <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin"
+        <div className="w-8 h-8 border-4 rounded-full animate-spin"
           style={{ borderColor: 'rgb(var(--accent))', borderTopColor: 'transparent' }} />
       </div>
     )
