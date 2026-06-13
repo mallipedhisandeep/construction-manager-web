@@ -2,7 +2,7 @@
 
 A mobile-first Progressive Web App (PWA) for managing construction site operations — built for contractors in Telangana & Andhra Pradesh.
 
-Live at: [your-app.vercel.app](https://your-app.vercel.app)
+Live at: [your-app.vercel.app](https://construction-manager-web.vercel.app)
 
 ---
 
