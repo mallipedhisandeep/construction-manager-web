@@ -27,7 +27,8 @@ function TrashPage() {
   const [items,    setItems]    = useState<TrashItem[]>([])
   const [loading,  setLoading]  = useState(true)
   
-  const [actioning, setActioning] = useState<string | null>(null)
+  const [actioning,  setActioning]  = useState<string | null>(null)
+  const [confirmItem, setConfirmItem] = useState<TrashItem | 'all' | null>(null)
 
   const { showToast: _showToast } = useToast()
   const showToast = (msg: string, ok = true) => _showToast(msg, ok ? 'ok' : 'err')
@@ -83,20 +84,20 @@ function TrashPage() {
   }
 
   const deletePermanent = async (item: TrashItem) => {
-    if (!confirm('Permanently delete? This cannot be undone.')) return
     setActioning(item.id)
     const { error } = await supabase.from(item.table).delete().eq('id', item.id)
     setActioning(null)
+    setConfirmItem(null)
     if (error) showToast(error.message, false)
-    else { showToast('Permanently deleted'); load() }
+    else { showToast(lang==='te'?'శాశ్వతంగా తొలగించారు':'Permanently deleted'); load() }
   }
 
   const emptyTrash = async () => {
-    if (!confirm('Empty entire recycle bin? All items will be permanently deleted.')) return
     setActioning('all')
     await Promise.all(items.map(item => supabase.from(item.table).delete().eq('id', item.id)))
     setActioning(null)
-    showToast('Recycle bin emptied'); load()
+    setConfirmItem(null)
+    showToast(lang==='te'?'రీసైకిల్ బిన్ ఖాళీ చేశారు':'Recycle bin emptied'); load()
   }
 
   const daysSince = (d:string) =>
@@ -123,10 +124,10 @@ function TrashPage() {
           </div>
           {items.length > 0 && (
             <button
-              onClick={emptyTrash}
+              onClick={() => setConfirmItem('all')}
               disabled={actioning !== null}
               className="btn-danger btn-sm disabled:opacity-50">
-              {actioning === 'all' ? '⏳ Deleting...' : 'Empty All'}
+              {actioning === 'all' ? '⏳ Deleting...' : (lang==='te'?'అన్నీ తొలగించు':'Empty All')}
             </button>
           )}
         </div>
@@ -175,7 +176,7 @@ function TrashPage() {
                 {actioning === item.id ? '⏳' : `↩ ${ts(lang,'restore')}`}
               </button>
               <button
-                onClick={() => deletePermanent(item)}
+                onClick={() => setConfirmItem(item)}
                 disabled={actioning !== null}
                 className="btn-danger btn-sm disabled:opacity-50">
                 🗑️
@@ -184,6 +185,35 @@ function TrashPage() {
           </div>
         ))}
       </div>
+
+      {/* ── Permanent delete confirm modal ── */}
+      {confirmItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{background:'rgba(0,0,0,0.7)'}}>
+          <div className="card p-6 w-full max-w-sm text-center">
+            <p className="text-4xl mb-3">⚠️</p>
+            <p className="font-black text-lg mb-2" style={{color:'rgb(var(--text))'}}>
+              {lang==='te'?'శాశ్వతంగా తొలగించాలా?':'Delete permanently?'}
+            </p>
+            <p className="text-sm mb-5" style={{color:'rgb(var(--muted))'}}>
+              {confirmItem === 'all'
+                ? (lang==='te'?`అన్ని ${items.length} అంశాలు శాశ్వతంగా తొలగించబడతాయి.`:`All ${items.length} items will be deleted forever.`)
+                : (lang==='te'?`"${(confirmItem as TrashItem).label}" శాశ్వతంగా తొలగించబడుతుంది. ఇది చేయగలిగే పని కాదు.`:`"${(confirmItem as TrashItem).label}" will be deleted forever. This cannot be undone.`)}
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setConfirmItem(null)} className="btn-ghost py-3">
+                {lang==='te'?'రద్దు చేయి':'Cancel'}
+              </button>
+              <button
+                onClick={() => confirmItem === 'all' ? emptyTrash() : deletePermanent(confirmItem as TrashItem)}
+                disabled={actioning !== null}
+                className="py-3 rounded-xl font-bold text-white disabled:opacity-50"
+                style={{background:'#b91c1c'}}>
+                {actioning ? '⏳' : (lang==='te'?'తొలగించు':'Delete')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
