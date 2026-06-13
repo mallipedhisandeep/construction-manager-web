@@ -79,7 +79,6 @@ function SitesPage() {
     const { data, error } = await supabase.from('sites').select('*')
       .eq('user_id', userId)
       .is('deleted_at', null)
-      .order('status', { ascending: true })
       .order('site_name')
     if (error) showToast(error.message, false)
     setSites((data ?? []) as SiteDetail[])
@@ -222,7 +221,9 @@ function SitesPage() {
     setPayModal(false); loadPayments(selected.id); showToast(t('savedOk'))
   }
 
-  const filtered = filter==='All' ? sites : sites.filter(s=>s.status===filter)
+  const STATUS_ORDER: Record<string,number> = { Active:0, 'On Hold':1, Completed:2 }
+  const allSorted = [...sites].sort((a,b) => (STATUS_ORDER[a.status]??1) - (STATUS_ORDER[b.status]??1) || a.site_name.localeCompare(b.site_name))
+  const filtered = filter==='All' ? allSorted : allSorted.filter(s=>s.status===filter)
   const counts = {
     All:       sites.length,
     Active:    sites.filter(s=>s.status==='Active').length,
