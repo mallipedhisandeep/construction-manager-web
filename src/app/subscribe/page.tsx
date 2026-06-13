@@ -40,6 +40,7 @@ function SubscribePage() {
   const [status,     setStatus]     = useState<'idle'|'success'|'error'|'not_configured'>('idle')
   const [userInfo,   setUserInfo]   = useState<{ name:string; email:string } | null>(null)
   const [currentSub, setCurrentSub] = useState<{ plan:string; trial_ends_at:string|null; current_period_end:string|null } | null>(null)
+  const [isTestMode, setIsTestMode] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -83,7 +84,36 @@ function SubscribePage() {
         return
       }
 
-      const { orderId, keyId, amount, currency } = data
+      const { orderId, keyId, amount, currency, testMode } = data
+      if (testMode) setIsTestMode(true)
+
+      // ── TEST-MODE BYPASS ──────────────────────────────────────────────────
+      // When the server returns testMode:true (rzp_test_ key + VKYC pending),
+      // skip the Razorpay UI entirely and directly activate the subscription.
+      if (testMode) {
+        const verRes = await fetch('/api/razorpay/verify', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            razorpay_order_id:   orderId,
+            razorpay_payment_id: `pay_TEST_${Date.now()}`,
+            razorpay_signature:  'test_bypass',
+            testMode:            true,
+          }),
+        })
+        if (verRes.ok) {
+          setStatus('success')
+          setTimeout(() => router.push('/profile'), 2500)
+        } else {
+          setStatus('error')
+        }
+        setLoading(false)
+        return
+      }
+      // ─────────────────────────────────────────────────────────────────────
 
       const rzp = new window.Razorpay({
         key:         keyId,
@@ -213,6 +243,17 @@ function SubscribePage() {
       </div>
 
       {/* Status messages */}
+      {/* Test-mode info — shown when server detects rzp_test_ key */}
+      {isTestMode && (
+        <div className="rounded-xl px-4 py-3 mb-4 text-sm"
+          style={{ background:'rgba(59,130,246,0.1)', color:'#3b82f6', border:'1px solid rgba(59,130,246,0.2)' }}>
+          🧪 <strong>{te ? 'టెస్ట్ మోడ్:' : 'Test Mode:'}</strong>{' '}
+          {te
+            ? 'VKYC పెండింగ్ ఉంది. చెల్లింపు లేకుండా సభ్యత్వం యాక్టివేట్ అవుతుంది.'
+            : 'VKYC pending — subscription will activate without real payment.'}
+        </div>
+      )}
+
       {status === 'error' && (
         <div className="rounded-xl px-4 py-3 mb-4 text-sm font-semibold"
           style={{ background:'rgba(220,38,38,0.1)', color:'#dc2626', border:'1px solid rgba(220,38,38,0.2)' }}>
