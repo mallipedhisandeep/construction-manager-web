@@ -1,154 +1,202 @@
-# 🏗️ Construction Manager
+# Construction Manager
 
-A mobile-first Progressive Web App (PWA) for managing construction sites, workers, attendance, suppliers, and finances. Built with Next.js 15, React 19, Supabase, and Tailwind CSS. Supports Telugu and English.
+A mobile-first Progressive Web App (PWA) for managing construction site operations — built for contractors in Telangana & Andhra Pradesh.
+
+Live at: [your-app.vercel.app](https://your-app.vercel.app)
+
+---
+
+## What it does
+
+Construction Manager helps contractors track everything on a construction site from their phone:
+
+- **Daily Attendance** — Mark workers present by shift (6AM–6PM, 10AM–6PM, half-shifts, etc.), auto-calculate wages, record advances and payment mode
+- **Workers** — Maintain a roster with roles (Mason/Helper), work types (Centring/Brickwork), state (Telangana/Andhra/Bihar), and per-shift wage rates
+- **Sites** — Track multiple construction sites with budget, floor count, status (Active/Completed/On Hold), and site-level payments
+- **Contractors (Private Workers)** — Manage subcontractors separately from daily-wage workers
+- **Contract Work** — Record contract jobs assigned to subcontractors with price charged, amount paid and status
+- **Suppliers** — Store supplier contacts and their goods catalogue with pricing
+- **Goods Orders** — Place and track material orders (cement, sand, rods, etc.) linked to a site and supplier, with delivery status
+- **Money Tracking** — Site-level financial ledger — money received from owner, money spent on site
+- **Reports** — Attendance summaries, wage reports, P&L — shareable via WhatsApp
+- **Trash** — Soft-delete with restore support across all modules
+- **Admin Panel** — Hidden SaaS metrics dashboard (tap the logo 7× to access), protected by `NEXT_PUBLIC_ADMIN_EMAIL`
+
+---
+
+## Tech stack
+
+| Layer | Tech |
+|---|---|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS |
+| Backend / Auth / DB | Supabase (PostgreSQL + Google OAuth) |
+| Payments | Razorpay (₹200/month subscription) |
+| Deployment | Vercel |
+| PWA | Service Worker + Web Manifest |
 
 ---
 
 ## Features
 
-- **Daily Attendance** — Mark shifts per worker per day, track advance payments, view monthly summaries with running balance
-- **Workers** — Register workers with shift-based wage rates, filter by type/state/role
-- **Sites** — Manage construction sites, upload documents, track payments received from owners
-- **Private Workers** — Contract workers with job billing and payment ledger
-- **Suppliers & Goods** — Supplier catalog + goods purchase orders
-- **Money Tracking** — Consolidated cash flow across all modules
-- **Reports** — P&L overview, per-site and per-worker breakdowns, PDF export
-- **Bilingual** — Full Telugu / English toggle
+- 🌐 **Bilingual** — Full Telugu (`తెలుగు`) and English UI, toggled in-app
+- 🌙 **Dark / Light theme** — persisted per device
+- 📱 **PWA** — installable on Android/iOS home screen, works offline for cached pages
+- 💳 **Subscription** — 30-day free trial → ₹200/month via Razorpay; paywall enforced client-side
+- 🔒 **Per-user data isolation** — all tables filtered by `user_id` (Supabase RLS)
+- 🗑️ **Soft deletes** — `deleted_at` column; Trash page for recovery
+- 📤 **WhatsApp sharing** — attendance reports formatted for WhatsApp send
 
 ---
 
-## Tech Stack
+## Local setup
 
-| Layer     | Technology                    |
-|-----------|-------------------------------|
-| Framework | Next.js 15 (App Router)       |
-| UI        | React 19 + Tailwind CSS 3     |
-| Database  | Supabase (PostgreSQL)         |
-| Auth      | Supabase Auth                 |
-| Hosting   | Vercel                        |
-| PWA       | Service Worker + Web Manifest |
-
----
-
-## Getting Started
-
-### 1. Clone the repo
+### 1. Clone and install
 
 ```bash
-git clone https://github.com/mallipedhisandeep/construction-manager-web.git
+git clone https://github.com/your-username/construction-manager-web.git
 cd construction-manager-web
 npm install
 ```
 
-### 2. Set up environment variables
-
-Copy the example env file and fill in your Supabase credentials:
+### 2. Create `.env.local`
 
 ```bash
-cp .env.example .env.local
+cp env.example .env.local
 ```
 
-Then edit `.env.local`:
+Fill in your values:
+
+```env
+# Supabase — Settings → API
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# Admin panel — the Google email allowed to access /admin
+NEXT_PUBLIC_ADMIN_EMAIL=you@gmail.com
+
+# Razorpay — dashboard.razorpay.com → Settings → API Keys
+RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxxxx
+RAZORPAY_KEY_SECRET=your_razorpay_secret
+
+# Supabase service role (server-side only — never expose publicly)
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# PWA cache busting (use git commit SHA in CI)
+NEXT_PUBLIC_BUILD_ID=
+```
+
+### 3. Set up Supabase database
+
+Run the SQL files in your Supabase SQL editor in this order:
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+supabase_new_tables.sql     ← core tables
+supabase_monetization.sql   ← subscriptions table
 ```
 
-You can find these in your Supabase project under **Settings → API**.
+### 4. Enable Google OAuth in Supabase
 
-### 3. Set up the database
+1. Supabase Dashboard → Authentication → Providers → Google → Enable
+2. Add your Google OAuth client ID and secret
+3. Set **Site URL**: `http://localhost:3000`
+4. Add **Redirect URL**: `http://localhost:3000/auth/callback`
 
-Run the SQL files in your Supabase SQL editor **in this order**:
-
-1. `supabase_new_tables.sql` — creates all main tables
-2. `supabase_recycle_bin.sql` — adds soft-delete / recycle bin support
-
-### 4. Run locally
+### 5. Run locally
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
----
-
-## Environment Variables
-
-| Variable                        | Description                        |
-|---------------------------------|------------------------------------|
-| `NEXT_PUBLIC_SUPABASE_URL`      | Your Supabase project URL          |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anonymous/public key |
-
-> ⚠️ Never commit `.env.local` to git. It is already in `.gitignore`.
+Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
 ## Deploying to Vercel
 
-1. Push your code to GitHub
-2. Import the repo in [vercel.com](https://vercel.com)
-3. Add the two environment variables above in Vercel's project settings
-4. Deploy — Vercel auto-detects Next.js
+### 1. Push to GitHub and import on Vercel
+
+### 2. Add all environment variables in Vercel → Settings → Environment Variables
+
+Same variables as `.env.local` above, but with your production Supabase and Razorpay keys.
+
+### 3. Fix Supabase OAuth redirects
+
+In Supabase Dashboard → Authentication → URL Configuration:
+
+- **Site URL**: `https://your-app.vercel.app`
+- **Redirect URLs** → Add:
+  ```
+  https://your-app.vercel.app/auth/callback
+  ```
+
+If you have a custom domain, add that too.
+
+### 4. Deploy
+
+Vercel auto-deploys on every push to `main`.
 
 ---
 
-## PWA — Add to Home Screen
-
-On Android (Chrome):
-1. Open the app in Chrome
-2. Tap the three-dot menu → "Add to Home Screen"
-3. The app will open in standalone mode (no browser bar)
-
-On iOS (Safari):
-1. Open the app in Safari
-2. Tap the Share button → "Add to Home Screen"
-
----
-
-## Project Structure
+## Project structure
 
 ```
 src/
-├── app/                  # Next.js App Router pages
-│   ├── attendance/       # Daily attendance marking
-│   ├── workers/          # Worker management
-│   ├── sites/            # Site management
-│   ├── private-workers/  # Private/contract workers
-│   ├── private-work/     # Contract job entries
-│   ├── suppliers/        # Supplier catalog
-│   ├── goods/            # Goods orders
-│   ├── money/            # Cash flow overview
-│   ├── reports/          # P&L reports + PDF export
-│   ├── trash/            # Recycle bin
-│   ├── login/            # Login page
-│   └── signup/           # Signup page
+├── app/
+│   ├── page.tsx              # Dashboard (home screen)
+│   ├── attendance/           # Daily attendance marking
+│   ├── workers/              # Worker roster
+│   ├── sites/                # Site management
+│   ├── private-workers/      # Contractors
+│   ├── private-work/         # Contract jobs
+│   ├── suppliers/            # Supplier directory
+│   ├── goods/                # Goods orders
+│   ├── money/                # Site financial ledger
+│   ├── reports/              # Reports & WhatsApp share
+│   ├── subscribe/            # Subscription / Razorpay
+│   ├── profile/              # User profile
+│   ├── trash/                # Soft-deleted records
+│   ├── admin/                # Hidden admin metrics panel
+│   └── api/razorpay/         # Payment API routes
 ├── components/
-│   ├── AppShell.tsx      # Auth wrapper + nav + theme/lang context
-│   └── Nav.tsx           # Bottom navigation bar
+│   ├── AppShell.tsx          # Auth guard, paywall, theme/lang context
+│   └── Nav.tsx               # Bottom navigation bar
 └── lib/
-    ├── supabase.ts       # Supabase client
-    ├── types.ts          # TypeScript interfaces
-    ├── constants.ts      # Shared dropdown values (shifts, states, roles etc.)
-    └── strings.ts        # English / Telugu translations
-public/
-├── sw.js                 # Service Worker (PWA offline support)
-├── manifest.json         # PWA manifest
-├── icon-192.png          # PWA icon (required)
-└── icon-512.png          # PWA icon (required)
+    ├── types.ts              # All TypeScript interfaces
+    ├── constants.ts          # Dropdowns (shifts, roles, units, etc.)
+    ├── supabase.ts           # Supabase client
+    ├── auth.ts               # Auth helpers
+    └── strings.ts            # i18n strings (EN/TE)
 ```
 
 ---
 
-## Contributing
+## Subscription & Paywall
 
-This is a personal project. If you'd like to suggest changes, open an issue.
+- New users get a **30-day free trial** (set in `subscriptions` table via `trial_ends_at`)
+- After trial, a paywall screen blocks all app modules except `/profile` and `/subscribe`
+- Payment is handled by **Razorpay** at ₹200/month
+- The `/admin` page (accessed by tapping the logo 7×) shows live SaaS metrics: total users, DAU/WAU/MAU, trial vs paid breakdown
 
-idea stared from solving a dad's problem 
+---
+
+## Shift types
+
+| Code | Hours |
+|---|---|
+| 6-6 | 6 AM – 6 PM (full day) |
+| 10-6 | 10 AM – 6 PM |
+| 6-10 | 6 AM – 9 AM (morning half) |
+| 6-2 | 6 AM – 2 PM |
+| 10-2 | 10 AM – 2 PM |
+| 2-6 | 3 PM – 6 PM |
+| Absent | No work |
+
+Each worker stores a separate wage rate for every shift type.
 
 ---
 
 ## License
 
-Private — all rights reserved.
+Private / proprietary. All rights reserved.
