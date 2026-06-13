@@ -282,15 +282,17 @@ ${bal > 0 ? `🔴 చెల్లించాల్సింది: ₹${Math.ab
 📌 Carry Forward: ${sumPrevBal > 0 ? '+' : ''}₹${sumPrevBal}` : ''}
 
 ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker Owes You: ₹${Math.abs(bal)}` : '✅ All Settled'}`
-                  if (navigator.share) {
-                    navigator.share({ text }).catch(() => {})
-                  } else {
-                    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
-                  }
+                  // Use worker's stored phone → opens their WhatsApp chat directly.
+                  // Indian numbers stored as 10 digits; wa.me needs 91 prefix.
+                  const phone = sumWorker.phone?.replace(/\D/g, '')
+                  const waUrl = phone && phone.length === 10
+                    ? `https://wa.me/91${phone}?text=${encodeURIComponent(text)}`
+                    : `https://wa.me/?text=${encodeURIComponent(text)}`
+                  window.open(waUrl, '_blank')
                 }}
                 className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-lg"
                 style={{background:'rgba(37,211,102,0.12)',color:'#25d366',border:'1px solid rgba(37,211,102,0.25)'}}>
-                📤
+                💬
               </button>
             )}
           </div>
@@ -632,9 +634,29 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                 </div>
               </div>
 
-              <button onClick={saveOne} disabled={saving} className="btn-primary btn-full">
-                {saving ? '⏳ Saving...' : (lang==='te' ? '💾 సేవ్ చేయి' : '💾 Save Attendance')}
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={saveOne} disabled={saving} className="btn-primary py-3">
+                  {saving ? '⏳...' : (lang==='te' ? '💾 సేవ్ చేయి' : '💾 Save')}
+                </button>
+                <button
+                  onClick={async () => {
+                    await saveOne()
+                    const phone = modal?.phone?.replace(/\D/g, '')
+                    if (!phone || phone.length !== 10) return
+                    const w = wage(modal!, shiftPick)
+                    const adv = parseFloat(advInput) || 0
+                    const siteLbl = sites.find(s => s.id === modalSite)?.site_name ?? ''
+                    const text = lang === 'te'
+                      ? `నమస్కారం ${modal?.name}! \n📅 ${day}/${month+1}/${year} హాజరు నమోదు అయింది.\n⏰ షిఫ్ట్: ${SHIFT_LABEL[shiftPick]}\n💰 వేతనం: ₹${w}${adv > 0 ? `\n💵 అడ్వాన్స్: ₹${adv}` : ''}${siteLbl ? `\n📍 సైట్: ${siteLbl}` : ''}`
+                      : `Hi ${modal?.name}! \n📅 Attendance marked for ${day}/${month+1}/${year}.\n⏰ Shift: ${SHIFT_LABEL[shiftPick]}\n💰 Wage: ₹${w}${adv > 0 ? `\n💵 Advance: ₹${adv}` : ''}${siteLbl ? `\n📍 Site: ${siteLbl}` : ''}`
+                    window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(text)}`, '_blank')
+                  }}
+                  disabled={saving}
+                  className="py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5"
+                  style={{background:'rgba(37,211,102,0.15)',color:'#25d366',border:'1px solid rgba(37,211,102,0.3)'}}>
+                  💬 {lang==='te' ? 'పంపించు' : 'Save & Notify'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
