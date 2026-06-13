@@ -33,7 +33,6 @@ function WorkersPage() {
     const { data } = await supabase.from('workers').select('*')
       .eq('user_id', userId)
       .is('deleted_at', null)
-      .order('worker_status', { ascending: true })
       .order('name')
     setWorkers(data ?? [])
     setLoading(false)
@@ -50,8 +49,14 @@ function WorkersPage() {
     if (fRole  && w.role      !== fRole)  return false
     return true
   })
+  // Explicit sort: Active first, Inactive at bottom, then by name within each group
+  const WORKER_STATUS_ORDER: Record<string,number> = { Active:0, Inactive:1 }
+  const sortedFiltered = [...filtered].sort((a,b) =>
+    (WORKER_STATUS_ORDER[a.worker_status??'Active']??0) - (WORKER_STATUS_ORDER[b.worker_status??'Active']??0) ||
+    a.name.localeCompare(b.name)
+  )
   const grouped: Record<string,Worker[]> = {}
-  filtered.forEach(w => { grouped[w.work_type] = [...(grouped[w.work_type]??[]), w] })
+  sortedFiltered.forEach(w => { grouped[w.work_type] = [...(grouped[w.work_type]??[]), w] })
 
   const save = async () => {
     if (!form.name.trim()) { showToast('Name required','err'); return }
