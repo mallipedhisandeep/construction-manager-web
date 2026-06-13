@@ -19,7 +19,21 @@ function MoneyPage() {
   const [period,  setPeriod]  = useState<'all'|'month'>('month')
   const [sites,   setSites]   = useState<Array<{id:string;name:string;income:number;workerCost:number;goodsCost:number;net:number}>>([])
 
+  const CACHE_KEY = `cm_money_${period}`
+  const CACHE_TTL = 5 * 60 * 1000  // 5 minutes
+
   const load = useCallback(async () => {
+    // Check sessionStorage cache first — avoids 14 parallel queries on revisit
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY)
+      if (cached) {
+        const { ts: cachedAt, data: cachedData, sites: cachedSites } = JSON.parse(cached)
+        if (Date.now() - cachedAt < CACHE_TTL) {
+          setData(cachedData); setSites(cachedSites); setLoading(false); return
+        }
+      }
+    } catch {}
+
     setLoading(true)
     try {
       
@@ -87,7 +101,13 @@ function MoneyPage() {
           const goodsCost  = goodsSite?.filter(g=>g.site_id===site.id).reduce((s,o)=>s+o.total_price,0)??0
           return { id:site.id, name:site.site_name, income, workerCost, goodsCost, net:income-workerCost-goodsCost }
         })
-        setSites(perSite.filter(s=>s.income+s.workerCost+s.goodsCost>0))
+        const filteredSites = perSite.filter(s=>s.income+s.workerCost+s.goodsCost>0)
+        setSites(filteredSites)
+        // Write full result to sessionStorage cache
+        try {
+          const result2 = { siteIncome, workerWages, workerAdvances, goodsSpend, supplierPaid, privateWorkerPaid:pwOut, siteSpend, workerBalance, supplierBalance, privateWorkerBalance }
+          sessionStorage.setItem(`cm_money_${period}`, JSON.stringify({ ts: Date.now(), data: result2, sites: filteredSites }))
+        } catch {}
       }
     } catch(e) { console.error(e) }
     finally { setLoading(false) }
