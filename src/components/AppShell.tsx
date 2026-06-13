@@ -21,12 +21,9 @@ export const useLang  = (): LangCtx  => { const c = useContext(Ctx); return { la
 export const useTheme = (): ThemeCtx => { const c = useContext(Ctx); return { theme: c.theme, toggleTheme: c.toggleTheme } }
 export const useToast = (): ToastCtx => { const c = useContext(Ctx); return { showToast: c.showToast } }
 
-// Public routes that never need auth or subscription check
-const PUBLIC_PATHS     = ['/login', '/signup', '/auth/callback', '/auth/confirm']
-// Routes exempt from paywall (user can always access these even if subscription expired)
-const PAYWALL_EXEMPT   = ['/profile', '/subscribe', '/login', '/signup', '/auth/callback', '/auth/confirm']
+const PUBLIC_PATHS   = ['/login', '/signup', '/auth/callback', '/auth/confirm']
+const PAYWALL_EXEMPT = ['/profile', '/subscribe', '/login', '/signup', '/auth/callback', '/auth/confirm']
 
-// ── Subscription check ────────────────────────────────────────────────────────
 type SubStatus = 'active' | 'trialing' | 'expired' | 'lifetime' | 'unknown'
 
 async function getSubStatus(userId: string): Promise<SubStatus> {
@@ -36,43 +33,15 @@ async function getSubStatus(userId: string): Promise<SubStatus> {
       .select('plan,status,trial_ends_at,current_period_end')
       .eq('user_id', userId)
       .maybeSingle()
-    if (!data) return 'unknown'           // table not set up yet → don't block
+    if (!data) return 'unknown'
     if (data.plan === 'lifetime') return 'lifetime'
     if (data.plan === 'pro' && data.status === 'active') return 'active'
     if (data.trial_ends_at && new Date(data.trial_ends_at) > new Date()) return 'trialing'
     if (data.trial_ends_at && new Date(data.trial_ends_at) <= new Date()) return 'expired'
     return 'unknown'
   } catch {
-    // If subscriptions table doesn't exist yet, never block access
     return 'unknown'
   }
-}
-
-function Splash() {
-  return (
-    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden"
-      style={{ backgroundImage:'url(/login-bg.jpg)', backgroundSize:'cover', backgroundPosition:'center center', backgroundRepeat:'no-repeat' }}>
-      <div className="absolute inset-0"
-        style={{ background:'linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.45) 50%, rgba(4,3,1,0.92) 100%)' }}/>
-      <div className="relative z-10 flex flex-col items-center gap-5">
-        <div className="w-24 h-24 rounded-3xl flex items-center justify-center"
-          style={{ background:'linear-gradient(135deg,rgba(212,140,40,0.18),rgba(212,140,40,0.06))', border:'1.5px solid rgba(212,140,40,0.4)', boxShadow:'0 0 60px rgba(212,140,40,0.18), 0 8px 40px rgba(0,0,0,0.55)' }}>
-          <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
-            <text x="1" y="40" fontFamily="Georgia,serif" fontWeight="900" fontSize="36" fill="#cccccc">C</text>
-            <text x="27" y="40" fontFamily="Georgia,serif" fontWeight="900" fontSize="34" fill="#d48c28">M</text>
-          </svg>
-        </div>
-        <div className="flex flex-col items-center gap-1.5">
-          <p className="text-xl font-black tracking-widest uppercase" style={{ color:'#e8e3d8', letterSpacing:'0.16em' }}>Construction</p>
-          <p className="text-sm font-bold tracking-[0.32em] uppercase" style={{ color:'rgba(212,140,40,0.85)' }}>Manager</p>
-        </div>
-        <div className="mt-1 relative w-8 h-8">
-          <div className="absolute inset-0 rounded-full border-2 border-transparent animate-spin"
-            style={{ borderTopColor:'#d48c28', borderRightColor:'rgba(212,140,40,0.2)', animationDuration:'0.9s' }}/>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 // ── Paywall screen shown when trial has expired ───────────────────────────────
@@ -95,9 +64,7 @@ function PaywallScreen({ lang, onGoToProfile }: { lang: Lang; onGoToProfile: () 
         <p className="text-sm mb-3" style={{ color:'rgb(var(--muted))' }}>
           {te ? 'నెలకు · అన్ని ఫీచర్లు' : 'per month · all features'}
         </p>
-        <button
-          onClick={onGoToProfile}
-          className="btn-primary w-full py-3 text-base font-black">
+        <button onClick={onGoToProfile} className="btn-primary w-full py-3 text-base font-black">
           {te ? '⭐ సభ్యత్వం పొందండి' : '⭐ Subscribe Now'}
         </button>
       </div>
@@ -128,6 +95,8 @@ function getInitialLang(): Lang {
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [lang,      setLangState]  = useState<Lang>('en')
   const [theme,     setThemeState] = useState<Theme>('dark')
+  // FIX: start as 'checking' but render children immediately on public paths
+  // so there's no white flash on login page
   const [authState, setAuthState]  = useState<'checking'|'authed'|'unauthed'>('checking')
   const [subStatus, setSubStatus]  = useState<SubStatus>('unknown')
   const [hydrated,  setHydrated]   = useState(false)
@@ -164,7 +133,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       if (!mounted) return
       if (user) {
         setAuthState('authed')
-        // Check subscription in parallel — don't block rendering
         const status = await getSubStatus(user.id)
         if (mounted) setSubStatus(status)
       } else {
@@ -197,7 +165,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
-  // Toast element reused in both public and private renders
   const toastEl = toast && (
     <div
       role="status"
@@ -208,6 +175,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   )
 
+  // ── Public paths (login, callback etc) — render immediately, no auth gate ──
+  // This eliminates the white flash: children render right away with correct theme
   if (isPublicPath) {
     return (
       <Ctx.Provider value={{ lang, toggleLang, theme, toggleTheme, showToast }}>
@@ -217,11 +186,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (authState === 'checking') return <Splash />
+  // ── Protected paths ────────────────────────────────────────────────────────
+  // FIX: Instead of a Splash screen (icon + spinner) while auth checks,
+  // render nothing visible — body background is already set by CSS vars in
+  // globals.css and the inline script in layout.tsx so there's no white flash.
+  // A subtle full-screen bg div prevents any layout shift.
+  if (authState === 'checking') {
+    return (
+      <Ctx.Provider value={{ lang, toggleLang, theme, toggleTheme, showToast }}>
+        <div
+          className="fixed inset-0 z-[100]"
+          style={{ background: 'rgb(var(--bg))' }}
+        />
+      </Ctx.Provider>
+    )
+  }
+
   if (authState === 'unauthed') return null
 
-  // ── Paywall: only block if subscription is confirmed expired ─────────────
-  // 'unknown' = table not set up or network error → never block (safe default)
   const isPaywalled = subStatus === 'expired' && !isPaywallFree
 
   return (
