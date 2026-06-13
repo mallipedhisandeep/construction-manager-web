@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import AppShell, { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -27,6 +27,33 @@ interface RazorpayOptions {
   modal?: { ondismiss?: () => void }
 }
 
+// ── Load Razorpay script dynamically and wait for it ─────────────────────────
+// Returns a promise that resolves true when window.Razorpay is ready,
+// or false on network error. Safe to call multiple times (checks existing tag).
+function loadRazorpay(): Promise<boolean> {
+  return new Promise((resolve) => {
+    // Already loaded
+    if (window.Razorpay) { resolve(true); return }
+
+    // Script tag already injected but not yet ready — wait for it
+    const existing = document.querySelector('script[src*="checkout.razorpay.com"]')
+    if (existing) {
+      existing.addEventListener('load', () => resolve(!!window.Razorpay))
+      existing.addEventListener('error', () => resolve(false))
+      return
+    }
+
+    // Inject fresh script tag
+    const script = document.createElement('script')
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.async = true
+    script.onload  = () => resolve(!!window.Razorpay)
+    script.onerror = () => resolve(false)
+    document.head.appendChild(script)
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 function SubscribePage() {
   const { lang } = useLang()
   const te = lang === 'te'
@@ -40,7 +67,11 @@ function SubscribePage() {
     plan: string; trial_ends_at: string | null; current_period_end: string | null
   } | null>(null)
 
+  // Pre-load the Razorpay script as soon as this page mounts
+  // so it's ready by the time the user taps the button
   useEffect(() => {
+    loadRazorpay()
+
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       const name = user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? ''
@@ -63,9 +94,10 @@ function SubscribePage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
 
-      // 2. Razorpay is loaded in <head> — if somehow still missing, show clear error
-      if (typeof window === 'undefined' || !window.Razorpay) {
-        setErrorMsg('Payment system unavailable. Please hard-refresh (Ctrl+Shift+R) and try again.')
+      // 2. Load Razorpay — waits for onload event, not a poll
+      const ready = await loadRazorpay()
+      if (!ready) {
+        setErrorMsg('Could not load payment system. Check your internet and try again.')
         setStatus('error')
         setLoading(false)
         return
@@ -104,7 +136,6 @@ function SubscribePage() {
         prefill:     { name: userInfo?.name ?? '', email: userInfo?.email ?? '' },
         theme:       { color: '#d48c28' },
 
-        // 5. Payment success — verify on server then activate subscription
         handler: async (response) => {
           try {
             const verRes = await fetch('/api/razorpay/verify', {
@@ -130,7 +161,6 @@ function SubscribePage() {
           setLoading(false)
         },
 
-        // User closed modal without paying
         modal: { ondismiss: () => setLoading(false) },
       })
 
