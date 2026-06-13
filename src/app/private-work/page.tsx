@@ -28,7 +28,7 @@ function PrivateWorkPage() {
     const userId = await uid()
     if (!userId) { setLoading(false); return }
     const [{ data: w }, { data: pw }, { data: s }] = await Promise.all([
-      supabase.from('private_work').select('*').eq('user_id', userId).is('deleted_at', null).order('status',{ascending:true}).order('created_at',{ascending:false}),
+      supabase.from('private_work').select('*').eq('user_id', userId).is('deleted_at', null).order('created_at',{ascending:false}),
       supabase.from('private_workers').select('*').eq('user_id', userId).is('deleted_at', null).order('name'),
       supabase.from('sites').select('id,site_name').eq('user_id', userId).eq('status','Active').is('deleted_at', null),
     ])
@@ -38,7 +38,9 @@ function PrivateWorkPage() {
 
   useEffect(() => { load() }, [load])
 
-  const filtered    = filter==='All' ? works : works.filter(w=>w.status===filter)
+  const PW_ORDER: Record<string,number> = { Active:0, Completed:1 }
+  const allSorted   = [...works].sort((a,b) => (PW_ORDER[a.status]??1) - (PW_ORDER[b.status]??1))
+  const filtered    = filter==='All' ? allSorted : allSorted.filter(w=>w.status===filter)
   const totalPending = works.filter(w=>w.status==='Active').reduce((s,w)=>s+(w.price_charged-w.amount_paid),0)
 
   const save = async () => {
