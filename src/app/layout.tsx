@@ -63,6 +63,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 }).catch(function(){});
             });
           }
+          // Track PWA installs in Supabase for admin analytics
+          window.addEventListener('appinstalled', function() {
+            try {
+              var sb = window.__supabase_client;
+              var ua = navigator.userAgent;
+              var platform = /android/i.test(ua) ? 'android' : /ipad|iphone|ipod/i.test(ua) ? 'ios' : 'desktop';
+              // Store install event; user_id will be null if not logged in yet — that's fine
+              fetch('${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/pwa_installs', {
+                method: 'POST',
+                headers: {
+                  'apikey': '${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}',
+                  'Content-Type': 'application/json',
+                  'Prefer': 'return=minimal',
+                },
+                body: JSON.stringify({ platform: platform, user_agent: ua.slice(0, 200) })
+              }).catch(function(){});
+            } catch(e) {}
+          });
         `}} />
       </body>
     </html>
