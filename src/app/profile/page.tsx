@@ -242,23 +242,28 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
   }
 
   // ── Subscription display helpers ──────────────────────────────────────────
-  const planLabel = (p: Plan) => {
+  const planLabel = (p: Plan, expired = false) => {
+    if (expired)          return lang==='te' ? 'ట్రయల్ ముగిసింది' : 'Trial Expired'
     if (p === 'lifetime') return lang==='te' ? 'లైఫ్‌టైమ్' : 'Lifetime Free'
     if (p === 'pro')      return lang==='te' ? 'ప్రో ప్లాన్' : 'Pro Plan'
     if (p === 'trial')    return lang==='te' ? 'ఉచిత ట్రయల్' : 'Free Trial'
     return lang==='te' ? 'ఫ్రీ ప్లాన్' : 'Free Plan'
   }
-  const planColor = (p: Plan): { bg: string; text: string; border: string } => {
+  const planColor = (p: Plan, expired = false): { bg: string; text: string; border: string } => {
+    if (expired)          return { bg:'rgba(220,38,38,0.1)', text:'#dc2626', border:'rgba(220,38,38,0.25)' }
     if (p === 'lifetime') return { bg:'rgba(139,92,246,0.12)', text:'#7c3aed', border:'rgba(139,92,246,0.3)' }
     if (p === 'pro')      return { bg:'rgba(var(--accent),0.12)', text:'rgb(var(--accent))', border:'rgba(var(--accent),0.3)' }
     if (p === 'trial')    return { bg:'rgba(22,163,74,0.1)', text:'#15803d', border:'rgba(22,163,74,0.25)' }
     return { bg:'rgba(100,116,139,0.1)', text:'rgb(var(--muted))', border:'rgba(100,116,139,0.2)' }
   }
-  const planIcon = (p: Plan) => p === 'lifetime' ? '♾️' : p === 'pro' ? '⭐' : p === 'trial' ? '🎁' : '🏗️'
+  const planIcon = (p: Plan, expired = false) => expired ? '⏰' : p === 'lifetime' ? '♾️' : p === 'pro' ? '⭐' : p === 'trial' ? '🎁' : '🏗️'
 
-  const trialDaysLeft = sub.trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(sub.trialEndsAt).getTime() - Date.now()) / 86400000))
+  // Raw difference can be negative (expired), 0 (ends today), or positive (days left)
+  const trialRawDays = sub.trialEndsAt
+    ? Math.ceil((new Date(sub.trialEndsAt).getTime() - Date.now()) / 86400000)
     : null
+  const isTrialExpired = sub.plan === 'trial' && trialRawDays !== null && trialRawDays < 0
+  const trialDaysLeft  = trialRawDays !== null ? Math.max(0, trialRawDays) : null
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
@@ -266,7 +271,7 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
     </div>
   )
 
-  const pc = planColor(sub.plan)
+  const pc = planColor(sub.plan, isTrialExpired)
 
   return (
     <div className="page px-4 pt-4 pb-24">
@@ -304,7 +309,7 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
             <span
               className="text-xs px-2 py-0.5 rounded-full font-semibold inline-block"
               style={{background: pc.bg, color: pc.text, border:`1px solid ${pc.border}`}}>
-              {planIcon(sub.plan)} {planLabel(sub.plan)}
+              {planIcon(sub.plan, isTrialExpired)} {planLabel(sub.plan, isTrialExpired)}
             </span>
           </div>
         </div>
@@ -321,14 +326,15 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
               style={{background: pc.bg}}>
-              {planIcon(sub.plan)}
+              {planIcon(sub.plan, isTrialExpired)}
             </div>
             <div>
-              <p className="font-black text-sm" style={{color: pc.text}}>{planLabel(sub.plan)}</p>
+              <p className="font-black text-sm" style={{color: pc.text}}>{planLabel(sub.plan, isTrialExpired)}</p>
               <p className="text-xs" style={{color:'rgb(var(--muted))'}}>
                 {(sub.plan === 'free') && !sub.trialEndsAt && (lang==='te'?'అన్ని ఫీచర్లు అందుబాటులో ఉన్నాయి':'All features available')}
-                {sub.plan === 'trial' && trialDaysLeft !== null && trialDaysLeft > 0 && `${lang==='te'?'ట్రయల్:':'Trial:'} ${trialDaysLeft} ${lang==='te'?'రోజులు మిగిలాయి':'days left'}`}
-                {sub.plan === 'trial' && trialDaysLeft === 0 && (lang==='te'?'నేడు ముగుస్తుంది!':'Ends today!')}
+                {sub.plan === 'trial' && isTrialExpired && (lang==='te'?'యాక్సెస్ నిలిపివేయబడింది':'Access blocked')}
+                {sub.plan === 'trial' && !isTrialExpired && trialDaysLeft !== null && trialDaysLeft > 0 && `${lang==='te'?'ట్రయల్:':'Trial:'} ${trialDaysLeft} ${lang==='te'?'రోజులు మిగిలాయి':'days left'}`}
+                {sub.plan === 'trial' && !isTrialExpired && trialDaysLeft === 0 && (lang==='te'?'నేడు ముగుస్తుంది!':'Ends today!')}
                 {sub.plan === 'lifetime' && (lang==='te'?'ఎప్పటికీ ఉచితం':'Free forever · No billing')}
                 {sub.plan === 'pro' && sub.renewsAt && `${lang==='te'?'తదుపరి చెల్లింపు':'Renews'} ${new Date(sub.renewsAt).toLocaleDateString()}`}
                 {sub.plan === 'pro' && !sub.renewsAt && (lang==='te'?'యాక్టివ్':'Active')}
@@ -340,8 +346,10 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
             <button
               onClick={() => router.push('/subscribe')}
               className="px-3 py-1.5 rounded-xl text-xs font-bold transition"
-              style={{background:'rgb(var(--accent))',color:'#fff'}}>
-              {lang==='te'?'⭐ అప్‌గ్రేడ్':'⭐ Upgrade'}
+              style={{background: isTrialExpired ? '#dc2626' : 'rgb(var(--accent))', color:'#fff'}}>
+              {isTrialExpired
+                ? (lang==='te'?'⭐ సభ్యత్వం పొందండి':'⭐ Subscribe')
+                : (lang==='te'?'⭐ అప్‌గ్రేడ్':'⭐ Upgrade')}
             </button>
           )}
         </div>
@@ -350,14 +358,18 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
         {sub.trialEndsAt && trialDaysLeft !== null && (
           <div
             className="mx-4 mb-4 px-4 py-3 rounded-xl"
-            style={{background: trialDaysLeft <= 3 ? 'rgba(220,38,38,0.08)' : 'rgba(var(--accent),0.08)', border:`1px solid ${trialDaysLeft <= 3 ? 'rgba(220,38,38,0.25)' : 'rgba(var(--accent),0.2)'}`}}>
-            <p className="text-sm font-bold" style={{color: trialDaysLeft <= 3 ? '#dc2626' : 'rgb(var(--accent))'}}>
-              {trialDaysLeft === 0
-                ? (lang==='te'?'ట్రయల్ నేడు ముగుస్తుంది!':'Trial ends today!')
-                : `${lang==='te'?'ట్రయల్ ముగుస్తుంది':'Trial ends in'} ${trialDaysLeft} ${lang==='te'?'రోజులలో':'days'}`}
+            style={{background: (isTrialExpired || trialDaysLeft <= 3) ? 'rgba(220,38,38,0.08)' : 'rgba(var(--accent),0.08)', border:`1px solid ${(isTrialExpired || trialDaysLeft <= 3) ? 'rgba(220,38,38,0.25)' : 'rgba(var(--accent),0.2)'}`}}>
+            <p className="text-sm font-bold" style={{color: (isTrialExpired || trialDaysLeft <= 3) ? '#dc2626' : 'rgb(var(--accent))'}}>
+              {isTrialExpired
+                ? (lang==='te'?'⏰ ట్రయల్ ముగిసింది':'⏰ Trial has expired')
+                : trialDaysLeft === 0
+                  ? (lang==='te'?'ట్రయల్ నేడు ముగుస్తుంది!':'Trial ends today!')
+                  : `${lang==='te'?'ట్రయల్ ముగుస్తుంది':'Trial ends in'} ${trialDaysLeft} ${lang==='te'?'రోజులలో':'days'}`}
             </p>
             <p className="text-xs mt-0.5" style={{color:'rgb(var(--muted))'}}>
-              {lang==='te'?'అన్ని ఫీచర్లు ఉపయోగించవచ్చు':'Full access during trial'}
+              {isTrialExpired
+                ? (lang==='te'?'కొనసాగించడానికి సభ్యత్వం పొందండి':'Subscribe to restore full access')
+                : (lang==='te'?'అన్ని ఫీచర్లు ఉపయోగించవచ్చు':'Full access during trial')}
             </p>
           </div>
         )}
