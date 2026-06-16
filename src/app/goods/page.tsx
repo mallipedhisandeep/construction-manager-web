@@ -22,6 +22,7 @@ function GoodsPage() {
   const [modal,     setModal]     = useState(false)
   const [saving,    setSaving]    = useState(false)
   const [filter,    setFilter]    = useState<'All'|'Pending'|'Delivered'|'Cancelled'>('Pending')
+  const [search,    setSearch]    = useState('')
   const [form, setForm] = useState<Partial<GoodsOrder & {priceStr:string;qtyStr:string;advStr:string}>>({
     status:'Pending',
     delivery_date: new Date().toISOString().split('T')[0],
@@ -128,7 +129,10 @@ function GoodsPage() {
 
   const GOODS_ORDER: Record<string,number> = { Pending:0, Delivered:1, Cancelled:2 }
   const allSorted  = [...orders].sort((a,b) => (GOODS_ORDER[a.status]??1) - (GOODS_ORDER[b.status]??1))
-  const filtered   = filter==='All' ? allSorted : allSorted.filter(o=>o.status===filter)
+  const filteredByStatus = filter==='All' ? allSorted : allSorted.filter(o=>o.status===filter)
+  const filtered = search.trim()
+    ? filteredByStatus.filter(o => o.goods_name.toLowerCase().includes(search.toLowerCase()) || (o.supplier_name??'').toLowerCase().includes(search.toLowerCase()) || (o.site_name??'').toLowerCase().includes(search.toLowerCase()))
+    : filteredByStatus
   const totalSpend = orders.filter(o=>o.status!=='Cancelled').reduce((s,o)=>s+o.total_price,0)
   const totalAdv   = orders.filter(o=>o.status!=='Cancelled').reduce((s,o)=>s+o.advance_paid,0)
 
@@ -178,7 +182,7 @@ function GoodsPage() {
           </div>
         )}
 
-        <div className="flex gap-2 overflow-x-auto">
+        <div className="flex gap-2 overflow-x-auto mb-2.5">
           {(['All','Pending','Delivered','Cancelled'] as const).map(f=>(
             <button key={f} onClick={()=>setFilter(f)}
               className={`chip flex-shrink-0 ${filter===f?'chip-active':'chip-idle'} flex items-center gap-1.5`}>
@@ -195,6 +199,8 @@ function GoodsPage() {
             </button>
           ))}
         </div>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder={te?'వస్తువు, సరఫరాదారు వెతకండి...':'Search goods, supplier, site...'} className="input py-2 text-sm" />
       </div>
 
       <div className="px-4 pt-4">
