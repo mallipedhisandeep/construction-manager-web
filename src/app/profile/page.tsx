@@ -441,11 +441,23 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
 
         {/* Export / Backup */}
         <button onClick={exportData}
-          className="w-full flex items-center gap-3 px-4 py-3.5 transition hover:opacity-80">
+          className="w-full flex items-center gap-3 px-4 py-3.5 border-b transition hover:opacity-80"
+          style={{borderColor:'rgb(var(--border))'}}>
           <span className="text-xl">💾</span>
           <div className="flex-1 text-left">
             <p className="text-sm font-semibold" style={{color:'rgb(var(--text))'}}>{lang==='te'?'రిపోర్ట్ డౌన్‌లోడ్':'Download Report'}</p>
             <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'కార్మికులు, హాజరు, సైట్లు — HTML ఫైల్':'Workers, attendance, sites — opens in browser'}</p>
+          </div>
+          <span style={{color:'rgb(var(--muted))'}}>›</span>
+        </button>
+
+        {/* Help & Support */}
+        <button onClick={() => router.push('/support')}
+          className="w-full flex items-center gap-3 px-4 py-3.5 transition hover:opacity-80">
+          <span className="text-xl">🆘</span>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-semibold" style={{color:'rgb(var(--text))'}}>{lang==='te'?'సహాయం & మద్దతు':'Help & Support'}</p>
+            <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'సమస్యను నివేదించండి':'Report an issue or ask a question'}</p>
           </div>
           <span style={{color:'rgb(var(--muted))'}}>›</span>
         </button>
