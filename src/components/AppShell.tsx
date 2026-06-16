@@ -22,7 +22,7 @@ export const useTheme = (): ThemeCtx => { const c = useContext(Ctx); return { th
 export const useToast = (): ToastCtx => { const c = useContext(Ctx); return { showToast: c.showToast } }
 
 const PUBLIC_PATHS   = ['/login', '/signup', '/auth/callback', '/auth/confirm']
-const PAYWALL_EXEMPT = ['/profile', '/subscribe', '/login', '/signup', '/auth/callback', '/auth/confirm']
+const PAYWALL_EXEMPT = ['/profile', '/subscribe', '/login', '/signup', '/auth/callback', '/auth/confirm', '/support']
 
 type SubStatus = 'active' | 'trialing' | 'expired' | 'lifetime' | 'unknown'
 
