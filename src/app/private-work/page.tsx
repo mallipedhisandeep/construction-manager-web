@@ -13,6 +13,7 @@ function PrivateWorkPage() {
   const [sites,    setSites]    = useState<Pick<Site,'id'|'site_name'>[]>([])
   const [loading,  setLoading]  = useState(true)
   const [filter,   setFilter]   = useState('All')
+  const [search,   setSearch]   = useState('')
   const [modal,    setModal]    = useState<'add'|'edit'|null>(null)
   const [form,     setForm]     = useState<Partial<PrivateWork>>({ status:'Active', price_charged:0, amount_paid:0 })
   const [priceStr, setPriceStr] = useState('')
@@ -40,7 +41,10 @@ function PrivateWorkPage() {
 
   const PW_ORDER: Record<string,number> = { Active:0, Completed:1 }
   const allSorted   = [...works].sort((a,b) => (PW_ORDER[a.status]??1) - (PW_ORDER[b.status]??1))
-  const filtered    = filter==='All' ? allSorted : allSorted.filter(w=>w.status===filter)
+  const filteredByStatus = filter==='All' ? allSorted : allSorted.filter(w=>w.status===filter)
+  const filtered = search.trim()
+    ? filteredByStatus.filter(w => w.worker_name.toLowerCase().includes(search.toLowerCase()) || w.site_name.toLowerCase().includes(search.toLowerCase()) || w.work_type.toLowerCase().includes(search.toLowerCase()))
+    : filteredByStatus
   const totalPending = works.filter(w=>w.status==='Active').reduce((s,w)=>s+(w.price_charged-w.amount_paid),0)
 
   const save = async () => {
@@ -102,11 +106,13 @@ function PrivateWorkPage() {
             ⚠️ {ts(lang,'totalPending')}: ₹{totalPending.toFixed(0)}
           </div>
         )}
-        <div className="flex gap-2">
+        <div className="flex gap-2 mb-2.5">
           {['All','Active','Completed'].map(f=>(
             <button key={f} onClick={()=>setFilter(f)} className={`chip ${filter===f?'chip-active':'chip-idle'}`}>{f}</button>
           ))}
         </div>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder={lang==='te'?'పేరు, సైట్ వెతకండి...':'Search worker, site...'} className="input py-2 text-sm" />
       </div>
 
       <div className="px-4 pt-4">
