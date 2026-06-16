@@ -10,6 +10,7 @@ import type { PrivateWorker, PrivateWorkerPayment } from '@/lib/types'
 function PrivateWorkersPage() {
   const { lang } = useLang()
   const [workers, setWorkers] = useState<(PrivateWorker & { balance?: number })[]>([])
+  const [search,  setSearch]  = useState('')
   const [loading, setLoading] = useState(true)
   const [modal,   setModal]   = useState<'add'|'edit'|'pay'|'hist'|null>(null)
   const [selected,setSelected]= useState<PrivateWorker|null>(null)
@@ -81,7 +82,10 @@ function PrivateWorkersPage() {
     })
     setSaving(false)
     if (error) { showToast(error.message,false); return }
-    setModal(null); load(); showToast(ts(lang,'savedOk'))
+    await load()
+    await loadHist(selected.id!)
+    setModal('hist')
+    showToast(ts(lang,'savedOk'))
   }
 
   const del = async (w: PrivateWorker) => {
@@ -94,12 +98,14 @@ function PrivateWorkersPage() {
     <div className="page">
 
       <div className="page-header">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>🔧 {ts(lang,'privateWorkers')}</h1>
           <button onClick={()=>{ setForm({name:'',work_type:'',phone:'',notes:''}); setModal('add') }} className="btn-primary btn-sm">
             + {ts(lang,'addContractor')}
           </button>
         </div>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder={lang==='te'?'పేరు, ఫోన్ వెతకండి...':'Search name, phone...'} className="input py-2 text-sm" />
       </div>
 
       <div className="px-4 pt-4">
@@ -107,7 +113,9 @@ function PrivateWorkersPage() {
           <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{borderColor:'rgb(var(--accent))',borderTopColor:'transparent'}}/></div>
         ) : workers.length===0 ? (
           <div className="text-center py-16"><div className="text-5xl mb-3 opacity-30">🔧</div><p style={{color:'rgb(var(--muted))'}}>{ts(lang,'noContractors')}</p></div>
-        ) : workers.map(w => {
+        ) : workers.filter(w => !search.trim() || w.name.toLowerCase().includes(search.toLowerCase()) || (w.phone??'').includes(search)).length===0 ? (
+          <div className="text-center py-16"><div className="text-5xl mb-3 opacity-30">🔍</div><p style={{color:'rgb(var(--muted))'}}>{lang==='te'?'ఫలితాలు లేవు':'No matches found'}</p></div>
+        ) : workers.filter(w => !search.trim() || w.name.toLowerCase().includes(search.toLowerCase()) || (w.phone??'').includes(search)).map(w => {
           const bal = w.balance ?? 0
           return (
             <div key={w.id} className="card mb-3 p-4">
