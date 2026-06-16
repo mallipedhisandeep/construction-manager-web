@@ -37,7 +37,12 @@ interface Metrics {
   mrrEstimate: number
 }
 
-type Tab = 'overview' | 'users' | 'subs' | 'data' | 'info'
+interface Ticket {
+  id: string; user_email: string; category: string; subject: string; message: string
+  status: string; admin_reply: string | null; created_at: string
+}
+
+type Tab = 'overview' | 'users' | 'subs' | 'data' | 'tickets' | 'info'
 
 export default function AdminPage() {
   const router = useRouter()
@@ -47,6 +52,9 @@ export default function AdminPage() {
   const [metrics,     setMetrics]     = useState<Metrics | null>(null)
   const [users,       setUsers]       = useState<UserRow[]>([])
   const [subs,        setSubs]        = useState<SubRow[]>([])
+  const [tickets,     setTickets]     = useState<Ticket[]>([])
+  const [replyDraft,  setReplyDraft]  = useState<Record<string,string>>({})
+  const [replying,    setReplying]    = useState<string|null>(null)
   const [loading,     setLoading]     = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
@@ -60,7 +68,7 @@ export default function AdminPage() {
       const weekAgo  = new Date(now.getTime() - 7  * 86400000).toISOString().split('T')[0]
       const monthAgo = new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0]
 
-      const [emailsRes, subsRes, workersRes, sitesRes, attRes, pwaRes] = await Promise.all([
+      const [emailsRes, subsRes, workersRes, sitesRes, attRes, pwaRes, ticketsRes] = await Promise.all([
         // Use the SECURITY DEFINER function to get real emails
         supabase.rpc('get_user_emails'),
         supabase.from('subscriptions').select('user_id,plan,status,trial_ends_at,current_period_end'),
@@ -68,7 +76,10 @@ export default function AdminPage() {
         supabase.from('sites').select('user_id,created_at'),
         supabase.from('attendance').select('user_id,date').order('date', { ascending: false }),
         supabase.from('pwa_installs').select('user_id,installed_at'),
+        supabase.from('support_tickets').select('*').order('created_at', { ascending: false }),
       ])
+
+      setTickets(ticketsRes.data ?? [])
 
       const subsData: SubRow[]  = subsRes.data   ?? []
       const emailData: UserRow[] = emailsRes.data ?? []
@@ -144,6 +155,16 @@ export default function AdminPage() {
     })
   }, [router, loadData])
 
+  const sendReply = async (ticketId: string, status: string) => {
+    setReplying(ticketId)
+    const reply = replyDraft[ticketId] ?? ''
+    const { error } = await supabase.from('support_tickets')
+      .update({ admin_reply: reply || null, status })
+      .eq('id', ticketId)
+    setReplying(null)
+    if (!error) loadData()
+  }
+
   if (checking) return (
     <div className="min-h-screen flex items-center justify-center bg-[#0c0c0e]">
       <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
@@ -151,11 +172,14 @@ export default function AdminPage() {
   )
   if (!authed) return null
 
+  const openTicketCount = tickets.filter(t => t.status === 'open').length
+
   const TABS: { id: Tab; label: string }[] = [
     { id: 'overview', label: '📊 Overview' },
     { id: 'users',    label: '👥 Users' },
     { id: 'subs',     label: '💳 Plans' },
     { id: 'data',     label: '🗄️ Data' },
+    { id: 'tickets',  label: `🆘 Tickets${openTicketCount>0?` (${openTicketCount})`:''}` },
     { id: 'info',     label: 'ℹ️ Info' },
   ]
 
@@ -351,6 +375,57 @@ export default function AdminPage() {
             {card('Attendance',   metrics?.totalAttendance ?? '—', undefined, 'text-purple-400')}
             {card('PWA Installs', metrics?.pwaInstalls     ?? '—', undefined, 'text-amber-400')}
           </div>
+        </>)}
+
+        {/* Tickets tab */}
+        {tab === 'tickets' && (<>
+          <p className="text-xs font-black uppercase tracking-widest text-[#7a7870]">
+            {tickets.length} support tickets · {openTicketCount} open
+          </p>
+          {tickets.length === 0 ? (
+            <p className="text-center text-sm text-[#7a7870] py-8">No tickets yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {tickets.map(t => (
+                <div key={t.id} className="bg-[#161614] border border-[#2a2a28] rounded-xl p-4">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-[#dedad2] truncate">{t.subject}</p>
+                      <p className="text-[10px] text-[#7a7870]">{t.user_email} · {t.category}</p>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${
+                      t.status === 'resolved' ? 'bg-green-400/10 text-green-400 border-green-400/20' :
+                      t.status === 'in_progress' ? 'bg-amber-400/10 text-amber-400 border-amber-400/20' :
+                      'bg-red-400/10 text-red-400 border-red-400/20'
+                    }`}>
+                      {t.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#a8a29e] mb-2">{t.message}</p>
+                  <p className="text-[10px] text-[#4a4a48] mb-2">
+                    {new Date(t.created_at).toLocaleString('en-IN')}
+                  </p>
+                  <textarea
+                    value={replyDraft[t.id] ?? t.admin_reply ?? ''}
+                    onChange={e => setReplyDraft({ ...replyDraft, [t.id]: e.target.value })}
+                    placeholder="Type a reply to the user..."
+                    rows={2}
+                    className="w-full bg-[#0c0c0e] border border-[#2a2a28] rounded-lg px-3 py-2 text-xs text-[#dedad2] mb-2 resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={() => sendReply(t.id, 'in_progress')} disabled={replying===t.id}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-amber-400/10 text-amber-400 border border-amber-400/20 disabled:opacity-40">
+                      Mark In Progress
+                    </button>
+                    <button onClick={() => sendReply(t.id, 'resolved')} disabled={replying===t.id}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-green-400/10 text-green-400 border border-green-400/20 disabled:opacity-40">
+                      {replying===t.id ? 'Saving...' : 'Reply & Resolve'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </>)}
 
         {/* Info tab */}
