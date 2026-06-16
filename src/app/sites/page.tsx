@@ -50,6 +50,7 @@ function SitesPage() {
   const [sites,        setSites]        = useState<SiteDetail[]>([])
   const [loading,      setLoading]      = useState(true)
   const [filter,       setFilter]       = useState<'All'|'Active'|'Completed'>('All')
+  const [search,       setSearch]       = useState('')
   const [modal,        setModal]        = useState<ModalType>(null)
   const [selected,     setSelected]     = useState<SiteDetail|null>(null)
   const [form,         setForm]         = useState<Partial<Site>>({status:'Active',floors_count:1,budget:0})
@@ -90,9 +91,9 @@ function SitesPage() {
   // Load files and immediately sign their URLs so they open correctly
   const loadFiles = useCallback(async (siteId:string) => {
     const [{ data:ag },{ data:ff },{ data:el }] = await Promise.all([
-      supabase.from('site_agreements').select('*').eq('site_id',siteId).order('created_at',{ascending:false}),
-      supabase.from('site_floor_files').select('*').eq('site_id',siteId).order('floor_no'),
-      supabase.from('site_elevations').select('*').eq('site_id',siteId).order('created_at',{ascending:false}),
+      supabase.from('site_agreements').select('*').eq('site_id',siteId).is('deleted_at',null).order('created_at',{ascending:false}),
+      supabase.from('site_floor_files').select('*').eq('site_id',siteId).is('deleted_at',null).order('floor_no'),
+      supabase.from('site_elevations').select('*').eq('site_id',siteId).is('deleted_at',null).order('created_at',{ascending:false}),
     ])
     // Sign all URLs in parallel
     const [signedAg, signedFf, signedEl] = await Promise.all([
@@ -163,13 +164,13 @@ function SitesPage() {
     setPendingUpload({type,floor}); fileRef.current?.click()
   }
 
-  const deleteFile = async (table:string, id:string, filePath:string) => {
-    if (!confirm('Delete this file?')) return
-    const key = storageKey(filePath)
-    if (key) await supabase.storage.from(BUCKET).remove([key])
-    await supabase.from(table).delete().eq('id',id)
+  const deleteFile = async (table:string, id:string) => {
+    if (!confirm('Move this file to recycle bin?')) return
+    // Soft delete only — storage object stays until permanently deleted from Trash,
+    // so "restore" can still open/download the file.
+    await supabase.from(table).update({ deleted_at: new Date().toISOString() }).eq('id',id)
     if (selected) await loadFiles(selected.id)
-    showToast('Deleted')
+    showToast('Moved to recycle bin 🗑️')
   }
 
   const save = async () => {
@@ -223,7 +224,13 @@ function SitesPage() {
 
   const STATUS_ORDER: Record<string,number> = { Active:0, 'On Hold':1, Completed:2 }
   const allSorted = [...sites].sort((a,b) => (STATUS_ORDER[a.status]??1) - (STATUS_ORDER[b.status]??1) || a.site_name.localeCompare(b.site_name))
-  const filtered = filter==='All' ? allSorted : allSorted.filter(s=>s.status===filter)
+  const filteredByStatus = filter==='All' ? allSorted : allSorted.filter(s=>s.status===filter)
+  const filtered = search.trim()
+    ? filteredByStatus.filter(s =>
+        s.site_name.toLowerCase().includes(search.toLowerCase()) ||
+        (s.owner_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.location ?? '').toLowerCase().includes(search.toLowerCase()))
+    : filteredByStatus
   const counts = {
     All:       sites.length,
     Active:    sites.filter(s=>s.status==='Active').length,
@@ -244,13 +251,15 @@ function SitesPage() {
             + {t('addSite')}
           </button>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap mb-2.5">
           {(['All','Active','Completed'] as const).map(f=>(
             <button key={f} onClick={()=>setFilter(f)} className={`chip ${filter===f?'chip-active':'chip-idle'}`}>
               {f} ({counts[f]})
             </button>
           ))}
         </div>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder={lang==='te'?'సైట్ పేరు, యజమాని వెతకండి...':'Search site, owner, location...'} className="input py-2 text-sm" />
       </div>
 
       <div className="px-4 pt-4">
@@ -316,7 +325,15 @@ function SitesPage() {
                   <input type="number" min="0" value={form.budget?.toString()??''} onChange={e=>setForm({...form,budget:Math.max(0,+e.target.value)})} className="input"/>
                 </div>
                 <div><label className="label">{t('floors')}</label>
-                  <input type="number" min="1" value={form.floors_count?.toString()??''} onChange={e=>setForm({...form,floors_count:Math.max(1,+e.target.value)})} className="input"/>
+                  <input type="number" min="1" value={form.floors_count===undefined?'':form.floors_count}
+                    onChange={e=>{
+                      const raw = e.target.value
+                      if (raw === '') { setForm({...form, floors_count: undefined}); return }
+                      const n = parseInt(raw, 10)
+                      setForm({...form, floors_count: Number.isNaN(n) ? undefined : n})
+                    }}
+                    onBlur={()=>{ if (!form.floors_count || form.floors_count < 1) setForm({...form, floors_count: 1}) }}
+                    className="input"/>
                 </div>
               </div>
               <div>
@@ -396,7 +413,7 @@ function SitesPage() {
             {tab==='docs' && (
               <div className="divide-y" style={{borderColor:'rgb(var(--border))'}}>
                 <DocSection title="📄 Agreements" color="bg-blue-600" files={agreements} uploading={uploading==='agreement'}
-                  onUpload={()=>triggerUpload('agreement')} onDelete={f=>deleteFile('site_agreements',f.id,f.file_path)}/>
+                  onUpload={()=>triggerUpload('agreement')} onDelete={f=>deleteFile('site_agreements',f.id)}/>
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-9 h-9 bg-green-600 rounded-xl flex items-center justify-center text-white text-lg flex-shrink-0">🗺️</div>
@@ -419,14 +436,14 @@ function SitesPage() {
                           </div>
                           {files.length===0
                             ? <p className="text-xs text-center py-2.5" style={{color:'rgb(var(--muted))'}}>No files</p>
-                            : <div className="p-2 space-y-1.5">{files.map(f=><FileItem key={f.id} f={f} onDelete={()=>deleteFile('site_floor_files',f.id,f.file_path)}/>)}</div>}
+                            : <div className="p-2 space-y-1.5">{files.map(f=><FileItem key={f.id} f={f} onDelete={()=>deleteFile('site_floor_files',f.id)}/>)}</div>}
                         </div>
                       )
                     })}
                   </div>
                 </div>
                 <DocSection title="🖼️ Elevations" color="bg-purple-600" files={elevations} uploading={uploading==='elevation'}
-                  onUpload={()=>triggerUpload('elevation')} onDelete={f=>deleteFile('site_elevations',f.id,f.file_path)}/>
+                  onUpload={()=>triggerUpload('elevation')} onDelete={f=>deleteFile('site_elevations',f.id)}/>
               </div>
             )}
 
