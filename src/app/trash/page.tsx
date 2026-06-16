@@ -6,7 +6,17 @@ import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
 
 interface TrashItem {
-  id: string; table: string; label: string; subtitle: string; deleted_at: string
+  id: string; table: string; label: string; subtitle: string; deleted_at: string; filePath?: string
+}
+
+const FILE_TABLES = new Set(['site_agreements', 'site_floor_files', 'site_elevations'])
+const BUCKET = 'construction-files'
+
+function storageKeyFromPath(filePath: string): string {
+  if (!filePath.startsWith('http')) return filePath
+  const marker = `/${BUCKET}/`
+  const idx = filePath.indexOf(marker)
+  return idx >= 0 ? filePath.slice(idx + marker.length) : filePath
 }
 
 
@@ -20,6 +30,10 @@ const TRASH_TABLES = [
   // Payment tables included only if the migration has been run (deleted_at column added)
   { name:'site_payments',    labelField:'description',  subtitleField:'amount',        display:'Site Payment' },
   { name:'supplier_payments',labelField:'payment_type', subtitleField:'amount',        display:'Supplier Payment' },
+  // Site files — soft-deleted, can be restored from here
+  { name:'site_agreements',  labelField:'file_name',    subtitleField:'file_name',     display:'Site Agreement' },
+  { name:'site_floor_files', labelField:'file_name',    subtitleField:'floor_no',      display:'Floor Plan' },
+  { name:'site_elevations',  labelField:'file_name',    subtitleField:'file_name',     display:'Elevation' },
 ] as const
 
 function TrashPage() {
@@ -60,6 +74,7 @@ function TrashPage() {
           label:      `${t.display}: ${row[t.labelField]}`,
           subtitle:   String(row[t.subtitleField] ?? ''),
           deleted_at: row.deleted_at as string,
+          filePath:   FILE_TABLES.has(t.name) ? (row.file_path as string | undefined) : undefined,
         })
       })
     }
@@ -85,6 +100,10 @@ function TrashPage() {
 
   const deletePermanent = async (item: TrashItem) => {
     setActioning(item.id)
+    if (item.filePath) {
+      const key = storageKeyFromPath(item.filePath)
+      if (key) await supabase.storage.from(BUCKET).remove([key])
+    }
     const { error } = await supabase.from(item.table).delete().eq('id', item.id)
     setActioning(null)
     setConfirmItem(null)
@@ -94,6 +113,8 @@ function TrashPage() {
 
   const emptyTrash = async () => {
     setActioning('all')
+    const filePaths = items.filter(i => i.filePath).map(i => storageKeyFromPath(i.filePath!))
+    if (filePaths.length > 0) await supabase.storage.from(BUCKET).remove(filePaths)
     await Promise.all(items.map(item => supabase.from(item.table).delete().eq('id', item.id)))
     setActioning(null)
     setConfirmItem(null)
