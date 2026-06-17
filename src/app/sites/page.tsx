@@ -254,7 +254,7 @@ function SitesPage() {
         <div className="flex gap-2 flex-wrap mb-2.5">
           {(['All','Active','Completed'] as const).map(f=>(
             <button key={f} onClick={()=>setFilter(f)} className={`chip ${filter===f?'chip-active':'chip-idle'}`}>
-              {f} ({counts[f]})
+              {f==='All'?t('allStates'):f==='Active'?t('active'):t('completed')} ({counts[f]})
             </button>
           ))}
         </div>
@@ -280,7 +280,7 @@ function SitesPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-bold" style={{color:'rgb(var(--text))'}}>{s.site_name}</h3>
-                    <span className={s.status==='Active'?'badge-green':'badge-blue'}>{s.status}</span>
+                    <span className={s.status==='Active'?'badge-green':'badge-blue'}>{s.status==='Active'?t('active'):t('completed')}</span>
                   </div>
                   {s.location && <p className="text-sm mt-0.5 truncate" style={{color:'rgb(var(--muted))'}}>📍 {s.location}</p>}
                 </div>
