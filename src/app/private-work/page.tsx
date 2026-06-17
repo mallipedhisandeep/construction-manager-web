@@ -108,7 +108,7 @@ function PrivateWorkPage() {
         )}
         <div className="flex gap-2 mb-2.5">
           {['All','Active','Completed'].map(f=>(
-            <button key={f} onClick={()=>setFilter(f)} className={`chip ${filter===f?'chip-active':'chip-idle'}`}>{f}</button>
+            <button key={f} onClick={()=>setFilter(f)} className={`chip ${filter===f?'chip-active':'chip-idle'}`}>{f==='All'?(lang==='te'?'అన్నీ':'All'):f==='Active'?ts(lang,'active'):ts(lang,'completed')}</button>
           ))}
         </div>
         <input value={search} onChange={e=>setSearch(e.target.value)}
@@ -130,7 +130,7 @@ function PrivateWorkPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold" style={{color:'rgb(var(--text))'}}>{w.worker_name}</span>
-                    <span className={w.status==='Active'?'badge-green':'badge-blue'}>{w.status}</span>
+                    <span className={w.status==='Active'?'badge-green':'badge-blue'}>{w.status==='Active'?ts(lang,'active'):ts(lang,'completed')}</span>
                   </div>
                   <div className="text-sm mt-0.5" style={{color:'rgb(var(--muted))'}}>🔧 {w.work_type} · 📍 {w.site_name}</div>
                   <div className="text-xs" style={{color:'rgb(var(--muted))'}}>📅 {w.work_date}</div>
