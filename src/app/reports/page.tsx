@@ -115,52 +115,77 @@ function ReportsPage() {
     if (!w) return
     const profitLabel = te ? 'లాభంలో ఉన్నారు 🎉' : 'You are in profit 🎉'
     const lossLabel   = te ? 'నష్టంలో ఉన్నారు ⚠️' : 'You are at a loss ⚠️'
-    // FIX: sanitize all user-controlled values with esc() before document.write
-    w.document.write(`<html><head><title>CM Report</title><style>
-      body{font-family:system-ui,sans-serif;padding:24px;color:#1e293b}
-      h1{font-size:20px;font-weight:900;margin-bottom:4px}
-      h2{font-size:14px;font-weight:700;margin:16px 0 8px;color:#64748b;text-transform:uppercase;letter-spacing:.05em}
-      .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-      .card{border:1px solid #e2e8f0;border-radius:12px;padding:12px}
-      .card .val{font-size:22px;font-weight:900}.card .lbl{font-size:11px;color:#94a3b8;margin-top:2px}
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>CM Report</title><style>
+      @page{margin:16mm}
+      *{box-sizing:border-box}
+      body{font-family:system-ui,sans-serif;padding:0;margin:0;color:#1e293b;font-size:13px}
+      h1{font-size:20px;font-weight:900;margin:0 0 2px}
+      h2{font-size:11px;font-weight:700;margin:18px 0 8px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;padding-bottom:4px}
+      .meta{color:#94a3b8;font-size:11px;margin-bottom:18px}
+      .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+      .card{border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px}
+      .card .val{font-size:20px;font-weight:900;line-height:1.1}.card .lbl{font-size:10px;color:#94a3b8;margin-top:2px}
       .green{color:#16a34a}.red{color:#dc2626}.orange{color:#b45f06}.blue{color:#2563eb}
-      table{width:100%;border-collapse:collapse;font-size:13px}
-      th{text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;font-size:11px;color:#64748b;text-transform:uppercase}
-      td{padding:8px;border-bottom:1px solid #f1f5f9}
-      .hero{background:${overview.netPL>=0?'#16a34a':'#dc2626'};color:white;border-radius:16px;padding:20px;text-align:center;margin-bottom:16px}
-      .hero .big{font-size:36px;font-weight:900}.hero .sub{font-size:13px;opacity:.8;margin-top:4px}
-      @media print{body{padding:0}}
+      table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:4px}
+      th{text-align:left;padding:6px 8px;border-bottom:2px solid #e2e8f0;font-size:10px;color:#64748b;text-transform:uppercase;background:#f8fafc}
+      td{padding:6px 8px;border-bottom:1px solid #f1f5f9}
+      tr:last-child td{border-bottom:none}
+      .hero{background:${overview.netPL>=0?'#16a34a':'#dc2626'};color:white;border-radius:12px;padding:16px 20px;text-align:center;margin-bottom:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .hero .lbl{font-size:12px;opacity:.85}
+      .hero .big{font-size:32px;font-weight:900;line-height:1.1;margin:4px 0}
+      .hero .sub{font-size:12px;opacity:.75}
+      .outstanding{border:1px solid #e2e8f0;border-radius:10px;overflow:hidden}
+      .out-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #f1f5f9}
+      .out-row:last-child{border-bottom:none;font-weight:900;background:#f8fafc}
+      @media print{
+        body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+        .hero{background:${overview.netPL>=0?'#16a34a':'#dc2626'} !important}
+      }
     </style></head><body>
-      <h1>📊 Construction Manager — Full Report</h1>
-      <p style="color:#94a3b8;font-size:12px;margin-bottom:20px">Generated: ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</p>
+      <h1>📊 Construction Manager — ${te?'పూర్తి నివేదిక':'Full Report'}</h1>
+      <p class="meta">${te?'రూపొందించబడింది':'Generated'}: ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</p>
+
       <div class="hero">
-        <div>${te?'నికర లాభ / నష్టం (అన్ని సమయాలు)':'Net Profit / Loss (All Time)'}</div>
+        <div class="lbl">${te?'నికర లాభ / నష్టం (అన్ని సమయాలు)':'Net Profit / Loss (All Time)'}</div>
         <div class="big">₹${Math.abs(overview.netPL).toFixed(0)}</div>
         <div class="sub">${overview.netPL>=0?profitLabel:lossLabel}</div>
       </div>
+
+      <h2>${te?'ఆర్థిక సారాంశం':'Financial Overview'}</h2>
       <div class="grid">
         <div class="card"><div class="val blue">₹${(overview.totalBudget/100000).toFixed(1)}L</div><div class="lbl">${te?'మొత్తం బడ్జెట్':'Total Budget'}</div></div>
         <div class="card"><div class="val green">₹${overview.totalReceived.toFixed(0)}</div><div class="lbl">${te?'స్వీకరించబడింది':'Total Received'}</div></div>
         <div class="card"><div class="val orange">₹${overview.totalWorkerSpend.toFixed(0)}</div><div class="lbl">${te?'కార్మికుల వేతనాలు':'Worker Wages'}</div></div>
         <div class="card"><div class="val red">₹${overview.totalGoodsSpend.toFixed(0)}</div><div class="lbl">${te?'వస్తువుల ఖర్చు':'Goods Cost'}</div></div>
       </div>
+
       <h2>${te?'సైట్లు':'Sites'}</h2>
       <table><thead><tr>
         <th>${te?'సైటు':'Site'}</th><th>${te?'స్థితి':'Status'}</th><th>${te?'బడ్జెట్':'Budget'}</th>
         <th>${te?'స్వీకరించబడింది':'Received'}</th><th>${te?'ఖర్చు':'Spent'}</th><th>P/L</th>
       </tr></thead><tbody>
-        ${siteReports.map(s=>{const pl=s.received-(s.workerCost+s.goodsCost);return`<tr><td>${esc(s.name)}</td><td>${esc(s.status)}</td><td>₹${(s.budget/100000).toFixed(1)}L</td><td>₹${s.received.toFixed(0)}</td><td>₹${(s.workerCost+s.goodsCost).toFixed(0)}</td><td class="${pl>=0?'green':'red'}">₹${Math.abs(pl).toFixed(0)}</td></tr>`}).join('')}
+        ${siteReports.map(s=>{const pl=s.received-(s.workerCost+s.goodsCost);return`<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.status)}</td><td>₹${(s.budget/100000).toFixed(1)}L</td><td class="green">₹${s.received.toFixed(0)}</td><td class="orange">₹${(s.workerCost+s.goodsCost).toFixed(0)}</td><td class="${pl>=0?'green':'red'}"><b>${pl>=0?'+':'-'}₹${Math.abs(pl).toFixed(0)}</b></td></tr>`}).join('')}
       </tbody></table>
+
       <h2>${te?'కార్మికులు':'Workers'}</h2>
       <table><thead><tr>
         <th>${te?'పేరు':'Worker'}</th><th>${te?'రోజులు':'Days'}</th><th>${te?'సంపాదించినది':'Earned'}</th>
         <th>${te?'అడ్వాన్స్':'Advance'}</th><th>${te?'బాకీ':'Balance'}</th>
       </tr></thead><tbody>
-        ${workerReports.map(w=>`<tr><td>${esc(w.name)}</td><td>${w.daysWorked}</td><td>₹${w.totalEarned.toFixed(0)}</td><td>₹${w.totalAdv.toFixed(0)}</td><td class="${w.balance>0?'red':'green'}">₹${Math.abs(w.balance).toFixed(0)}</td></tr>`).join('')}
+        ${workerReports.map(w=>`<tr><td><b>${esc(w.name)}</b></td><td>${w.daysWorked}</td><td class="green">₹${w.totalEarned.toFixed(0)}</td><td class="orange">₹${w.totalAdv.toFixed(0)}</td><td class="${w.balance>0?'red':'green'}"><b>₹${Math.abs(w.balance).toFixed(0)}</b></td></tr>`).join('')}
       </tbody></table>
+
+      <h2>${te?'బకాయిలు':'Outstanding'}</h2>
+      <div class="outstanding">
+        <div class="out-row"><span>👷 ${te?'కార్మికుల వేతనాలు':'Worker wages due'}</span><span class="orange">₹${outstanding.workers.toFixed(0)}</span></div>
+        <div class="out-row"><span>🏪 ${te?'సరఫరాదారు బిల్లులు':'Supplier bills due'}</span><span class="red">₹${outstanding.suppliers.toFixed(0)}</span></div>
+        <div class="out-row"><span>🔧 ${te?'కాంట్రాక్టర్లు':'Private Contractors'}</span><span class="blue">₹${outstanding.privateWorkers.toFixed(0)}</span></div>
+        <div class="out-row"><span>${te?'మొత్తం బకాయి':'Total Outstanding'}</span><span class="red">₹${(outstanding.workers+outstanding.suppliers+outstanding.privateWorkers).toFixed(0)}</span></div>
+      </div>
+
+      <script>window.onload=function(){window.print()}<\/script>
     </body></html>`)
-    w.document.close(); w.focus()
-    setTimeout(() => { w.print(); w.close() }, 500)
+    w.document.close()
   }
 
   const tabs: [string, string][] = [
