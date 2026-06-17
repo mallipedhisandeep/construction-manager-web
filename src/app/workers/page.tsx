@@ -196,9 +196,9 @@ function WorkersPage() {
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                       <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
                         style={{background:`${stateColor(w.state)}22`, color:stateColor(w.state), border:`1px solid ${stateColor(w.state)}44`}}>
-                        {w.state}
+                        {({'Telangana':ts(lang,'telangana'),'Andhra':ts(lang,'andhra'),'Bihar':ts(lang,'bihar')} as Record<string,string>)[w.state] ?? w.state}
                       </span>
-                      <span className="badge-purple text-[11px]">{w.role}</span>
+                      <span className="badge-purple text-[11px]">{w.role==='Mason'?ts(lang,'mason'):w.role==='Helper'?ts(lang,'helper'):w.role}</span>
                       <span className="text-[11px]" style={{color:'rgb(var(--muted))'}}>₹{w.rate_6_6}/day</span>
                     </div>
                   </div>
