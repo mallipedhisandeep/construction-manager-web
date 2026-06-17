@@ -370,7 +370,7 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
             <div className="flex items-center gap-2 mb-2">
               <select value={year} onChange={e => { setYear(+e.target.value); setDay(1) }}
                 className="input py-1.5 text-sm w-24 flex-shrink-0">
-                {[now.getFullYear()-1, now.getFullYear(), now.getFullYear()+1].map(y => (
+                {Array.from({length: 8}, (_, i) => now.getFullYear() - 1 + i).map(y => (
                   <option key={y} value={y}>{y}</option>
                 ))}
               </select>
@@ -396,14 +396,7 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                 <span className="text-xs" style={{color:'rgb(var(--muted))'}}>
                   {Object.keys(attMap).length}/{workers.length} {lang==='te' ? 'గుర్తించారు' : 'marked'}
                 </span>
-                {workers.length > 0 && (
-                  <button
-                    onClick={() => setShowBulk(true)}
-                    className="text-xs px-2 py-1 rounded-lg font-bold"
-                    style={{background:'rgba(var(--accent),0.15)',color:'rgb(var(--accent))'}}>
-                    ⚡ {lang==='te'?'అందరికీ':'Bulk'}
-                  </button>
-                )}
+
               </div>
             </div>
           </>
@@ -624,49 +617,7 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
         </div>
       )}
 
-      {/* ── Bulk mark modal ── */}
-      {showBulk && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{background:'rgba(0,0,0,0.6)'}}>
-          <div className="w-full max-w-lg rounded-t-3xl p-5 pb-8"
-            style={{background:'rgb(var(--surface))'}}>
-            <div className="flex items-center justify-between mb-4">
-              <p className="font-black text-base" style={{color:'rgb(var(--text))'}}>
-                ⚡ {lang==='te'?'అందరికీ హాజరు':'Bulk Mark Attendance'}
-              </p>
-              <button onClick={() => setShowBulk(false)} className="text-xl" style={{color:'rgb(var(--muted))'}}>✕</button>
-            </div>
-            <p className="text-xs mb-3" style={{color:'rgb(var(--muted))'}}>
-              {lang==='te'
-                ? `ఇప్పటికే గుర్తించబడని ${workers.filter(w=>!attMap[w.id!]).length} మంది కార్మికులకు వర్తిస్తుంది`
-                : `Applies to ${workers.filter(w=>!attMap[w.id!]).length} unmarked workers`}
-            </p>
-            {/* Shift picker */}
-            <div className="grid grid-cols-4 gap-1.5 mb-4">
-              {SHIFTS.map(s => (
-                <button key={s} onClick={() => setBulkShift(s as Shift)}
-                  className="py-2 rounded-xl text-xs font-bold transition"
-                  style={{
-                    background: bulkShift===s ? SHIFT_BG[s as Shift] : 'rgb(var(--surface2))',
-                    color: bulkShift===s ? '#fff' : 'rgb(var(--muted))',
-                    border: bulkShift===s ? `1px solid ${SHIFT_BG[s as Shift]}` : '1px solid rgb(var(--border))',
-                  }}>
-                  {SHIFT_LABEL[s as Shift]}
-                </button>
-              ))}
-            </div>
-            {/* Site picker */}
-            {sites.length > 0 && (
-              <select value={bulkSite} onChange={e=>setBulkSite(e.target.value)} className="input mb-4">
-                <option value="">{lang==='te'?'సైట్ ఎంచుకోండి (ఐచ్ఛికం)':'Select site (optional)'}</option>
-                {sites.map(s=><option key={s.id} value={s.id}>{s.site_name}</option>)}
-              </select>
-            )}
-            <button onClick={bulkMarkAll} disabled={bulkSaving} className="btn-primary btn-full py-3 font-black">
-              {bulkSaving ? '⏳ Marking...' : (lang==='te'?`⚡ అందరికీ ${SHIFT_LABEL[bulkShift]} గుర్తించు`:`⚡ Mark All as ${SHIFT_LABEL[bulkShift]}`)}
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {/* ── Attendance modal ── */}
       {modal && (
