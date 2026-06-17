@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { useTheme } from '@/components/AppShell'
 
 const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? '').trim()
 
@@ -46,6 +47,27 @@ type Tab = 'overview' | 'users' | 'subs' | 'data' | 'tickets' | 'info'
 
 export default function AdminPage() {
   const router = useRouter()
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+
+  // Theme tokens
+  const t = isDark ? {
+    bg:       '#0c0c0e',
+    surface:  '#161614',
+    border:   '#2a2a28',
+    text:     '#dedad2',
+    muted:    '#7a7870',
+    faint:    '#4a4a48',
+    textarea: '#0c0c0e',
+  } : {
+    bg:       '#f5f4f0',
+    surface:  '#ffffff',
+    border:   '#e2e0d8',
+    text:     '#1a1a16',
+    muted:    '#6b6960',
+    faint:    '#9b9890',
+    textarea: '#f5f4f0',
+  }
   const [authed,      setAuthed]      = useState(false)
   const [checking,    setChecking]    = useState(true)
   const [tab,         setTab]         = useState<Tab>('overview')
@@ -166,7 +188,7 @@ export default function AdminPage() {
   }
 
   if (checking) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0c0c0e]">
+    <div className="min-h-screen flex items-center justify-center" style={{background:t.bg}}>
       <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
     </div>
   )
@@ -184,46 +206,46 @@ export default function AdminPage() {
   ]
 
   const card = (label: string, val: string | number, sub?: string, color = 'text-amber-400') => (
-    <div key={label} className="bg-[#161614] border border-[#2a2a28] rounded-2xl p-4 text-center">
+    <div key={label} className="rounded-2xl p-4 text-center" style={{background:t.surface,border:`1px solid ${t.border}`}}>
       <p className={`text-3xl font-black ${color}`}>{typeof val === 'number' ? val.toLocaleString() : val}</p>
-      <p className="text-xs mt-1 text-[#7a7870]">{label}</p>
-      {sub && <p className="text-[10px] mt-0.5 text-[#4a4a48]">{sub}</p>}
+      <p className="text-xs mt-1" style={{color:t.muted}}>{label}</p>
+      {sub && <p className="text-[10px] mt-0.5" style={{color:t.faint}}>{sub}</p>}
     </div>
   )
 
-  const row = (label: string, val: string | number, color = 'text-[#dedad2]') => (
-    <div key={label} className="bg-[#161614] border border-[#2a2a28] rounded-xl px-4 py-3 flex items-center justify-between">
-      <p className="text-sm text-[#7a7870]">{label}</p>
-      <p className={`text-sm font-black ${color}`}>{typeof val === 'number' ? val.toLocaleString() : val}</p>
+  const row = (label: string, val: string | number, color = '') => (
+    <div key={label} className="rounded-xl px-4 py-3 flex items-center justify-between" style={{background:t.surface,border:`1px solid ${t.border}`}}>
+      <p className="text-sm" style={{color:t.muted}}>{label}</p>
+      <p className={`text-sm font-black ${color}`} style={!color?{color:t.text}:{}}>{typeof val === 'number' ? val.toLocaleString() : val}</p>
     </div>
   )
 
   const planColor = (plan: string) =>
     plan === 'pro'      ? 'text-amber-400' :
     plan === 'lifetime' ? 'text-purple-400' :
-    plan === 'trial'    ? 'text-blue-400' : 'text-[#7a7870]'
+    plan === 'trial'    ? 'text-blue-400' : 'text-gray-400'
 
   const planBadgeBg = (plan: string) =>
     plan === 'pro'      ? 'bg-amber-400/10 text-amber-400 border-amber-400/20' :
     plan === 'lifetime' ? 'bg-purple-400/10 text-purple-400 border-purple-400/20' :
     plan === 'trial'    ? 'bg-blue-400/10 text-blue-400 border-blue-400/20' :
-                          'bg-[#2a2a28] text-[#7a7870] border-[#3a3a38]'
+                          'bg-gray-100 text-gray-500 border-gray-200 dark:bg-[#2a2a28] dark:text-[#7a7870] dark:border-[#3a3a38]'
 
   return (
-    <div className="min-h-screen pb-16 bg-[#0c0c0e] text-[#dedad2]">
+    <div className="min-h-screen pb-16" style={{background:t.bg, color:t.text}}>
 
       {/* Header */}
-      <div className="sticky top-0 z-40 px-4 py-4 bg-[#161614] border-b border-[#2a2a28]">
+      <div className="sticky top-0 z-40 px-4 py-4" style={{background:t.surface, borderBottom:`1px solid ${t.border}`}}>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="font-black text-lg text-[#dedad2]">🔐 Admin Panel</p>
-            <p className="text-xs text-[#7a7870]">
+            <p className="font-black text-lg" style={{color:t.text}}>🔐 Admin Panel</p>
+            <p className="text-xs" style={{color:t.muted}}>
               {lastRefresh ? `Refreshed ${lastRefresh.toLocaleTimeString()}` : 'Loading...'}
             </p>
           </div>
           <div className="flex gap-2">
             <button onClick={loadData} disabled={loading}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold border border-[#2a2a28] text-[#7a7870] hover:opacity-80 disabled:opacity-40">
+              className="px-3 py-1.5 rounded-xl text-xs font-bold hover:opacity-80 disabled:opacity-40" style={{border:`1px solid ${t.border}`,color:t.muted}}>
               {loading ? '⏳' : '🔄'} Refresh
             </button>
             <button onClick={() => router.push('/')} className="text-sm font-bold text-amber-400 hover:opacity-80">
@@ -237,7 +259,7 @@ export default function AdminPage() {
               className="px-3 py-1.5 text-xs font-bold rounded-lg whitespace-nowrap transition flex-shrink-0"
               style={{
                 background: tab === t.id ? 'rgba(212,140,40,0.15)' : 'transparent',
-                color:      tab === t.id ? '#d48c28' : '#7a7870',
+                color:      tab === t.id ? '#d48c28' : t.muted,
                 border:     tab === t.id ? '1px solid rgba(212,140,40,0.3)' : '1px solid transparent',
               }}>
               {t.label}
@@ -250,7 +272,7 @@ export default function AdminPage() {
 
         {/* Overview */}
         {tab === 'overview' && (<>
-          <p className="text-xs font-black uppercase tracking-widest text-[#7a7870]">Users</p>
+          <p className="text-xs font-black uppercase tracking-widest" style={{color:t.muted}}>Users</p>
           <div className="grid grid-cols-2 gap-3">
             {card('Total Users',    metrics?.totalUsers        ?? '—', undefined,       'text-amber-400')}
             {card('New This Month', metrics?.newUsersThisMonth ?? '—', undefined,       'text-green-400')}
@@ -258,23 +280,23 @@ export default function AdminPage() {
             {card('PWA Installs',   metrics?.pwaInstalls       ?? '—', 'App installed', 'text-purple-400')}
           </div>
 
-          <p className="text-xs font-black uppercase tracking-widest text-[#7a7870] pt-2">Engagement</p>
+          <p className="text-xs font-black uppercase tracking-widest pt-2" style={{color:t.muted}}>Engagement</p>
           <div className="grid grid-cols-3 gap-3">
             {card('DAU', metrics?.dauCount ?? '—', 'Active today',  'text-green-400')}
             {card('WAU', metrics?.wauCount ?? '—', 'Last 7 days',  'text-blue-400')}
             {card('MAU', metrics?.mauCount ?? '—', 'Last 30 days', 'text-amber-400')}
           </div>
 
-          <p className="text-xs font-black uppercase tracking-widest text-[#7a7870] pt-2">Revenue</p>
+          <p className="text-xs font-black uppercase tracking-widest pt-2" style={{color:t.muted}}>Revenue</p>
           <div className="grid grid-cols-2 gap-3">
             {card('MRR (est.)', metrics ? `₹${metrics.mrrEstimate.toLocaleString()}` : '—', 'Pro × ₹200', 'text-green-400')}
             {card('Pro Users',  metrics?.proUsers ?? '—', 'Paying', 'text-amber-400')}
           </div>
 
-          <p className="text-xs font-black uppercase tracking-widest text-[#7a7870] pt-2">Conversion Funnel</p>
+          <p className="text-xs font-black uppercase tracking-widest pt-2" style={{color:t.muted}}>Conversion Funnel</p>
           <div className="space-y-2">
             {[
-              { label: 'Total signups',              val: metrics?.totalUsers    ?? 0, color: 'text-[#dedad2]' },
+              { label: 'Total signups',              val: metrics?.totalUsers    ?? 0, color: '' },
               { label: 'On free trial',              val: metrics?.trialUsers    ?? 0, color: 'text-blue-400' },
               { label: 'Trial expired (not converted)', val: metrics?.expiredTrials ?? 0, color: 'text-red-400' },
               { label: 'Converted → Pro',            val: metrics?.proUsers      ?? 0, color: 'text-green-400' },
@@ -282,12 +304,12 @@ export default function AdminPage() {
             ].map(({ label, val, color }) => {
               const pct = metrics?.totalUsers ? Math.round((val / metrics.totalUsers) * 100) : 0
               return (
-                <div key={label} className="bg-[#161614] border border-[#2a2a28] rounded-xl px-4 py-3">
+                <div key={label} className="rounded-xl px-4 py-3" style={{background:t.surface,border:`1px solid ${t.border}`}}>
                   <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-xs text-[#7a7870]">{label}</p>
-                    <p className={`text-sm font-black ${color}`}>{val} <span className="text-[10px] font-normal text-[#4a4a48]">({pct}%)</span></p>
+                    <p className="text-xs" style={{color:t.muted}}>{label}</p>
+                    <p className={`text-sm font-black ${color}`}>{val} <span className="text-[10px] font-normal" style={{color:t.faint}}>({pct}%)</span></p>
                   </div>
-                  <div className="h-1 rounded-full bg-[#2a2a28]">
+                  <div className="h-1 rounded-full" style={{background:t.border}}>
                     <div className="h-1 rounded-full bg-amber-500 transition-all" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
@@ -298,7 +320,7 @@ export default function AdminPage() {
 
         {/* Users tab — now shows email */}
         {tab === 'users' && (<>
-          <p className="text-xs font-black uppercase tracking-widest text-[#7a7870]">
+          <p className="text-xs font-black uppercase tracking-widest" style={{color:t.muted}}>
             {users.length} registered users
           </p>
           {loading ? (
@@ -306,7 +328,7 @@ export default function AdminPage() {
               <div className="w-6 h-6 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : users.length === 0 ? (
-            <p className="text-center text-sm text-[#7a7870] py-8">No users yet.</p>
+            <p className="text-center text-sm py-8" style={{color:t.muted}}>No users yet.</p>
           ) : (
             <div className="space-y-2">
               {users
@@ -314,19 +336,19 @@ export default function AdminPage() {
                 .map(u => {
                   const sub = subs.find(s => s.user_id === u.id)
                   return (
-                    <div key={u.id} className="bg-[#161614] border border-[#2a2a28] rounded-xl px-4 py-3">
+                    <div key={u.id} className="rounded-xl px-4 py-3" style={{background:t.surface,border:`1px solid ${t.border}`}}>
                       <div className="flex items-start justify-between gap-2">
                         {/* Email — prominent */}
-                        <p className="text-sm font-semibold text-[#dedad2] truncate flex-1">{u.email}</p>
+                        <p className="text-sm font-semibold truncate flex-1" style={{color:t.text}}>{u.email}</p>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${planBadgeBg(sub?.plan ?? 'free')}`}>
                           {sub?.plan ?? 'no sub'}
                         </span>
                       </div>
                       <div className="flex items-center justify-between mt-1.5">
-                        <p className="text-[10px] text-[#4a4a48]">
+                        <p className="text-[10px]" style={{color:t.faint}}>
                           Joined {u.created_at ? new Date(u.created_at).toLocaleDateString('en-IN') : '?'}
                         </p>
-                        <p className="text-[10px] text-[#4a4a48]">
+                        <p className="text-[10px]" style={{color:t.faint}}>
                           Last seen {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString('en-IN') : 'never'}
                         </p>
                       </div>
@@ -349,15 +371,15 @@ export default function AdminPage() {
 
         {/* Plans tab */}
         {tab === 'subs' && (<>
-          <p className="text-xs font-black uppercase tracking-widest text-[#7a7870]">Plan Distribution</p>
+          <p className="text-xs font-black uppercase tracking-widest" style={{color:t.muted}}>Plan Distribution</p>
           <div className="grid grid-cols-2 gap-3">
-            {card('Free',     metrics?.freeUsers     ?? '—', undefined, 'text-[#7a7870]')}
+            {card('Free',     metrics?.freeUsers     ?? '—', undefined, 'text-gray-400')}
             {card('Trial',    metrics?.trialUsers    ?? '—', undefined, 'text-blue-400')}
             {card('Pro',      metrics?.proUsers      ?? '—', undefined, 'text-amber-400')}
             {card('Lifetime', metrics?.lifetimeUsers ?? '—', undefined, 'text-purple-400')}
           </div>
 
-          <p className="text-xs font-black uppercase tracking-widest text-[#7a7870] pt-2">Revenue Metrics</p>
+          <p className="text-xs font-black uppercase tracking-widest pt-2" style={{color:t.muted}}>Revenue Metrics</p>
           <div className="space-y-2">
             {row('MRR (estimated)',   metrics ? `₹${metrics.mrrEstimate.toLocaleString()}` : '—', 'text-green-400')}
             {row('ARR (estimated)',   metrics ? `₹${(metrics.mrrEstimate * 12).toLocaleString()}` : '—', 'text-green-400')}
@@ -368,7 +390,7 @@ export default function AdminPage() {
 
         {/* Data tab */}
         {tab === 'data' && (<>
-          <p className="text-xs font-black uppercase tracking-widest text-[#7a7870]">Platform Data (all users)</p>
+          <p className="text-xs font-black uppercase tracking-widest" style={{color:t.muted}}>Platform Data (all users)</p>
           <div className="grid grid-cols-2 gap-3">
             {card('Workers',      metrics?.totalWorkers    ?? '—', undefined, 'text-green-400')}
             {card('Sites',        metrics?.totalSites      ?? '—', undefined, 'text-blue-400')}
@@ -379,19 +401,19 @@ export default function AdminPage() {
 
         {/* Tickets tab */}
         {tab === 'tickets' && (<>
-          <p className="text-xs font-black uppercase tracking-widest text-[#7a7870]">
+          <p className="text-xs font-black uppercase tracking-widest" style={{color:t.muted}}>
             {tickets.length} support tickets · {openTicketCount} open
           </p>
           {tickets.length === 0 ? (
-            <p className="text-center text-sm text-[#7a7870] py-8">No tickets yet.</p>
+            <p className="text-center text-sm py-8" style={{color:t.muted}}>No tickets yet.</p>
           ) : (
             <div className="space-y-2">
               {tickets.map(t => (
-                <div key={t.id} className="bg-[#161614] border border-[#2a2a28] rounded-xl p-4">
+                <div key={t.id} className="rounded-xl p-4" style={{background:t.surface,border:`1px solid ${t.border}`}}>
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-[#dedad2] truncate">{t.subject}</p>
-                      <p className="text-[10px] text-[#7a7870]">{t.user_email} · {t.category}</p>
+                      <p className="text-sm font-bold truncate" style={{color:t.text}}>{t.subject}</p>
+                      <p className="text-[10px]" style={{color:t.muted}}>{t.user_email} · {t.category}</p>
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${
                       t.status === 'resolved' ? 'bg-green-400/10 text-green-400 border-green-400/20' :
@@ -401,8 +423,8 @@ export default function AdminPage() {
                       {t.status}
                     </span>
                   </div>
-                  <p className="text-xs text-[#a8a29e] mb-2">{t.message}</p>
-                  <p className="text-[10px] text-[#4a4a48] mb-2">
+                  <p className="text-xs mb-2" style={{color:t.muted}}>{t.message}</p>
+                  <p className="text-[10px] mb-2" style={{color:t.faint}}>
                     {new Date(t.created_at).toLocaleString('en-IN')}
                   </p>
                   <textarea
@@ -410,7 +432,8 @@ export default function AdminPage() {
                     onChange={e => setReplyDraft({ ...replyDraft, [t.id]: e.target.value })}
                     placeholder="Type a reply to the user..."
                     rows={2}
-                    className="w-full bg-[#0c0c0e] border border-[#2a2a28] rounded-lg px-3 py-2 text-xs text-[#dedad2] mb-2 resize-none"
+                    className="w-full rounded-lg px-3 py-2 text-xs mb-2 resize-none"
+                    style={{background:t.textarea,border:`1px solid ${t.border}`,color:t.text}}
                   />
                   <div className="flex gap-2">
                     <button onClick={() => sendReply(t.id, 'in_progress')} disabled={replying===t.id}
