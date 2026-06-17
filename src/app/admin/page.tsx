@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { useTheme } from '@/components/AppShell'
+import AppShell, { useTheme } from '@/components/AppShell'
 
 const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? '').trim()
 
@@ -45,7 +45,7 @@ interface Ticket {
 
 type Tab = 'overview' | 'users' | 'subs' | 'data' | 'tickets' | 'info'
 
-export default function AdminPage() {
+function AdminPage() {
   const router = useRouter()
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -470,3 +470,5 @@ export default function AdminPage() {
     </div>
   )
 }
+
+export default function Admin() { return <AppShell><AdminPage /></AppShell> }
