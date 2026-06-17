@@ -49,11 +49,14 @@ function PrivateWorkersPage() {
     const userId = await uid()
     const [{ data: pays }, { data: work }] = await Promise.all([
       supabase.from('private_worker_payments').select('*').eq('worker_id', workerId).eq('user_id', userId).order('date',{ascending:false}),
-      supabase.from('private_work').select('*').eq('worker_id', workerId).eq('user_id', userId).is('deleted_at',null).gt('amount_paid',0).order('work_date',{ascending:false}),
+      supabase.from('private_work').select('*').eq('worker_id', workerId).eq('user_id', userId).is('deleted_at',null).order('work_date',{ascending:false}),
     ])
     const entries: typeof hist = []
     pays?.forEach(p => entries.push({ date:p.date, amount:p.amount, isOut:p.direction==='dad_to_worker', label:p.direction==='dad_to_worker'?ts(lang,'youToWorker'):ts(lang,'workerToYou'), sublabel:`${p.mode}${p.notes?` · ${p.notes}`:''}`, id:p.id, canDel:true }))
-    work?.forEach(w => entries.push({ date:w.work_date, amount:w.amount_paid, isOut:true, label:`Work — ${w.site_name}`, sublabel:w.work_type, canDel:false }))
+    work?.forEach(w => {
+      if (w.price_charged > 0) entries.push({ date:w.work_date, amount:w.price_charged, isOut:false, label:`Work Assigned — ${w.site_name}`, sublabel:`${w.work_type}${w.notes?' · '+w.notes:''}`, canDel:false })
+      if (w.amount_paid > 0) entries.push({ date:w.work_date, amount:w.amount_paid, isOut:true, label:`Paid via Work — ${w.site_name}`, sublabel:w.work_type, canDel:false })
+    })
     entries.sort((a,b)=>b.date.localeCompare(a.date))
     setHist(entries)
   }
