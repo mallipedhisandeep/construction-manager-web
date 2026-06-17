@@ -231,14 +231,17 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
 </body>
 </html>`
 
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href     = url
-    a.download = `CM-Report-${new Date().toISOString().split('T')[0]}.html`
-    a.click()
-    URL.revokeObjectURL(url)
-    showToast(lang === 'te' ? 'రిపోర్ట్ డౌన్‌లోడ్ అయింది!' : 'Report downloaded!')
+    // Inject auto-print trigger + PDF-friendly styles
+    const printHtml = html
+      .replace('@media print { body { padding: 0; } }',
+        '@page{margin:16mm} @media print{body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact} .stat{-webkit-print-color-adjust:exact;print-color-adjust:exact}}')
+      .replace('</body>', '<script>window.onload=function(){window.print()}<\/script></body>')
+
+    const w = window.open('', '_blank')
+    if (!w) return
+    w.document.write(printHtml)
+    w.document.close()
+    showToast(lang === 'te' ? 'PDF తెరవబడుతోంది...' : 'Opening PDF...')
   }
 
   // ── Subscription display helpers ──────────────────────────────────────────
@@ -446,7 +449,7 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
           <span className="text-xl">💾</span>
           <div className="flex-1 text-left">
             <p className="text-sm font-semibold" style={{color:'rgb(var(--text))'}}>{lang==='te'?'రిపోర్ట్ డౌన్‌లోడ్':'Download Report'}</p>
-            <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'కార్మికులు, హాజరు, సైట్లు — HTML ఫైల్':'Workers, attendance, sites — opens in browser'}</p>
+            <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'కార్మికులు, హాజరు, సైట్లు — PDF':'Workers, attendance, sites — saves as PDF'}</p>
           </div>
           <span style={{color:'rgb(var(--muted))'}}>›</span>
         </button>
