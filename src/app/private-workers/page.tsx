@@ -29,7 +29,7 @@ function PrivateWorkersPage() {
     const [{ data: workers }, { data: allWork }, { data: allPays }] = await Promise.all([
       supabase.from('private_workers').select('*').eq('user_id', userId).is('deleted_at', null).order('name'),
       supabase.from('private_work').select('worker_id,price_charged,amount_paid').eq('user_id', userId).is('deleted_at', null),
-      supabase.from('private_worker_payments').select('worker_id,amount,direction').eq('user_id', userId).is('deleted_at', null),
+      supabase.from('private_worker_payments').select('worker_id,amount,direction').eq('user_id', userId),
     ])
     if (!workers) { setLoading(false); return }
 
@@ -48,8 +48,8 @@ function PrivateWorkersPage() {
   const loadHist = async (workerId: string) => {
     const userId = await uid()
     const [{ data: pays }, { data: work }] = await Promise.all([
-      supabase.from('private_worker_payments').select('*').eq('worker_id', workerId).eq('user_id', userId).is('deleted_at',null).order('created_at',{ascending:false}),
-      supabase.from('private_work').select('*').eq('worker_id', workerId).eq('user_id', userId).gt('amount_paid',0).order('work_date',{ascending:false}),
+      supabase.from('private_worker_payments').select('*').eq('worker_id', workerId).eq('user_id', userId).order('date',{ascending:false}),
+      supabase.from('private_work').select('*').eq('worker_id', workerId).eq('user_id', userId).is('deleted_at',null).gt('amount_paid',0).order('work_date',{ascending:false}),
     ])
     const entries: typeof hist = []
     pays?.forEach(p => entries.push({ date:p.date, amount:p.amount, isOut:p.direction==='dad_to_worker', label:p.direction==='dad_to_worker'?ts(lang,'youToWorker'):ts(lang,'workerToYou'), sublabel:`${p.mode}${p.notes?` · ${p.notes}`:''}`, id:p.id, canDel:true }))
@@ -213,7 +213,7 @@ function PrivateWorkersPage() {
               <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
             </div>
             <div className="p-5 space-y-2">
-              {hist.length===0 ? <p className="text-center py-4" style={{color:'rgb(var(--muted))'}}>{ts(lang,'noWork')}</p> :
+              {hist.length===0 ? <p className="text-center py-4" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'చెల్లింపు చరిత్ర లేదు':'No payment history'}</p> :
                hist.map((h,i)=>(
                 <div key={i} className="card p-3 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
