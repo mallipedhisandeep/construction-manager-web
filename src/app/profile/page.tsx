@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import AppShell, { useLang, useTheme, useToast } from '@/components/AppShell'
+import { useLang, useTheme, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { ts } from '@/lib/strings'
 import { useRouter } from 'next/navigation'
@@ -19,6 +19,20 @@ interface SubInfo {
   plan: Plan
   trialEndsAt: string | null   // ISO date string, null if not on trial
   renewsAt: string | null       // ISO date string for next billing date
+}
+
+// Escape user-entered text before interpolating into the HTML report below —
+// without this, a worker/site/supplier name or note containing HTML/script
+// could execute in the same-origin print window this report opens into
+// (which has access to the same localStorage as the main app, including the
+// Supabase session token). Mirrors the esc() helper in reports/page.tsx.
+function esc(val: unknown): string {
+  return String(val ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 function ProfilePage() {
@@ -83,7 +97,7 @@ function ProfilePage() {
 
     const [{ data: workers }, { data: sites }, { data: att }, { data: suppliers }, { data: goods }] = await Promise.all([
       supabase.from('workers').select('*').eq('user_id', u.id).is('deleted_at', null).order('name'),
-      supabase.from('sites').select('*').eq('user_id', u.id).is('deleted_at', null).order('name'),
+      supabase.from('sites').select('*').eq('user_id', u.id).is('deleted_at', null).order('site_name'),
       supabase.from('attendance').select('*').eq('user_id', u.id).order('date', { ascending: false }),
       supabase.from('suppliers').select('*').eq('user_id', u.id).is('deleted_at', null).order('name'),
       supabase.from('goods_orders').select('*').eq('user_id', u.id).is('deleted_at', null).order('delivery_date', { ascending: false }),
@@ -98,20 +112,20 @@ function ProfilePage() {
 
     const workerRows = (workers ?? []).map((w: Record<string, string | number>) => `
       <tr>
-        <td>${w.name ?? ''}</td>
-        <td>${w.phone ?? '-'}</td>
-        <td>${w.role ?? '-'}</td>
-        <td style="text-align:right">₹${w.rate_6_6 ?? 0}</td>
-        <td style="text-align:center">${w.status ?? 'Active'}</td>
+        <td>${esc(w.name ?? '')}</td>
+        <td>${esc(w.phone ?? '-')}</td>
+        <td>${esc(w.role ?? '-')}</td>
+        <td style="text-align:right">₹${esc(w.rate_6_6 ?? 0)}</td>
+        <td style="text-align:center">${esc(w.worker_status ?? 'Active')}</td>
       </tr>`).join('')
 
     const siteRows = (sites ?? []).map((s: Record<string, string | number>) => `
       <tr>
-        <td>${s.name ?? ''}</td>
-        <td>${s.owner_name ?? '-'}</td>
-        <td>${s.location ?? '-'}</td>
+        <td>${esc(s.site_name ?? '')}</td>
+        <td>${esc(s.owner_name ?? '-')}</td>
+        <td>${esc(s.location ?? '-')}</td>
         <td style="text-align:right">₹${Number(s.budget ?? 0).toLocaleString('en-IN')}</td>
-        <td style="text-align:center">${s.status ?? '-'}</td>
+        <td style="text-align:center">${esc(s.status ?? '-')}</td>
       </tr>`).join('')
 
     // Group attendance by month
@@ -135,13 +149,13 @@ function ProfilePage() {
           </tr></thead>
           <tbody>
             ${(rows as Record<string, string | number>[]).map(r => `<tr>
-              <td>${r.date ?? ''}</td>
-              <td>${r.worker_name ?? '-'}</td>
-              <td>${r.site_name ?? '-'}</td>
-              <td>${r.shift ?? '-'}</td>
-              <td style="text-align:right">₹${r.wage ?? 0}</td>
-              <td style="text-align:right">₹${r.advance ?? 0}</td>
-              <td>${r.payment_mode ?? 'Cash'}</td>
+              <td>${esc(r.date ?? '')}</td>
+              <td>${esc(r.worker_name ?? '-')}</td>
+              <td>${esc(r.site_name ?? '-')}</td>
+              <td>${esc(r.shift ?? '-')}</td>
+              <td style="text-align:right">₹${esc(r.wage ?? 0)}</td>
+              <td style="text-align:right">₹${esc(r.advance ?? 0)}</td>
+              <td>${esc(r.payment_mode ?? 'Cash')}</td>
             </tr>`).join('')}
           </tbody>
           <tfoot><tr>
@@ -155,21 +169,21 @@ function ProfilePage() {
 
     const supplierRows = (suppliers ?? []).map((s: Record<string, string>) => `
       <tr>
-        <td>${s.name ?? ''}</td>
-        <td>${s.phone ?? '-'}</td>
-        <td>${s.shop_name ?? '-'}</td>
-        <td>${s.notes ?? '-'}</td>
+        <td>${esc(s.name ?? '')}</td>
+        <td>${esc(s.phone ?? '-')}</td>
+        <td>${esc(s.shop_name ?? '-')}</td>
+        <td>${esc(s.notes ?? '-')}</td>
       </tr>`).join('')
 
     const goodsRows = (goods ?? []).map((g: Record<string, string | number>) => `
       <tr>
-        <td>${g.delivery_date ?? ''}</td>
-        <td>${g.goods_name ?? ''}</td>
-        <td>${g.supplier_name ?? '-'}</td>
-        <td>${g.site_name ?? '-'}</td>
-        <td style="text-align:right">${g.quantity ?? 0} ${g.unit ?? ''}</td>
+        <td>${esc(g.delivery_date ?? '')}</td>
+        <td>${esc(g.goods_name ?? '')}</td>
+        <td>${esc(g.supplier_name ?? '-')}</td>
+        <td>${esc(g.site_name ?? '-')}</td>
+        <td style="text-align:right">${esc(g.quantity ?? 0)} ${esc(g.unit ?? '')}</td>
         <td style="text-align:right">₹${Number(g.total_price ?? 0).toLocaleString('en-IN')}</td>
-        <td style="text-align:center">${g.status ?? '-'}</td>
+        <td style="text-align:center">${esc(g.status ?? '-')}</td>
       </tr>`).join('')
 
     const html = `<!DOCTYPE html>
@@ -200,7 +214,7 @@ function ProfilePage() {
 </head>
 <body>
 <h1>🏗️ Construction Manager</h1>
-<p class="meta">Report for <strong>${name}</strong> · Generated on ${date}</p>
+<p class="meta">Report for <strong>${esc(name)}</strong> · Generated on ${date}</p>
 
 <div class="summary">
   <div class="stat"><div class="stat-val">${(workers ?? []).length}</div><div class="stat-lbl">Workers</div></div>
@@ -491,4 +505,4 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
   )
 }
 
-export default function Profile() { return <AppShell><ProfilePage /></AppShell> }
+export default function Profile() { return <ProfilePage /> }
