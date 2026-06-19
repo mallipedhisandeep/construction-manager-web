@@ -46,7 +46,11 @@ CREATE POLICY "Users can insert own install"
   ON public.pwa_installs FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Admin read all installs"
+-- NOTE: real admin-wide reads now go through /api/admin/data using the
+-- service_role key server-side (see src/lib/supabaseAdmin.ts), which
+-- bypasses RLS entirely for the verified admin only. This client-facing
+-- policy intentionally stays scoped to the user's own rows.
+CREATE POLICY "Users can read own installs"
   ON public.pwa_installs FOR SELECT
   USING (auth.uid() = user_id);
 
