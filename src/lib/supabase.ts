@@ -4,8 +4,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 // Module-level throws crash Next.js SSR/build when env vars are missing,
 // producing cryptic "cannot read properties of undefined" errors.
 function createSupabaseClient(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
 
   if (!url || url === 'https://placeholder.supabase.co') {
     throw new Error(
