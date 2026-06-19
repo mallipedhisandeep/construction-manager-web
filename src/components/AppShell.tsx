@@ -21,8 +21,8 @@ export const useLang  = (): LangCtx  => { const c = useContext(Ctx); return { la
 export const useTheme = (): ThemeCtx => { const c = useContext(Ctx); return { theme: c.theme, toggleTheme: c.toggleTheme } }
 export const useToast = (): ToastCtx => { const c = useContext(Ctx); return { showToast: c.showToast } }
 
-const PUBLIC_PATHS   = ['/login', '/signup', '/auth/callback', '/auth/confirm']
-const PAYWALL_EXEMPT = ['/profile', '/subscribe', '/login', '/signup', '/auth/callback', '/auth/confirm', '/support']
+const PUBLIC_PATHS   = ['/login', '/auth/callback', '/auth/confirm']
+const PAYWALL_EXEMPT = ['/profile', '/subscribe', '/login', '/auth/callback', '/auth/confirm', '/support']
 
 type SubStatus = 'active' | 'trialing' | 'expired' | 'lifetime' | 'unknown'
 
@@ -210,12 +210,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <Ctx.Provider value={{ lang, toggleLang, theme, toggleTheme, showToast }}>
       <Nav />
       {toastEl}
-      {isPaywalled && (
+      {isPaywalled ? (
         <PaywallScreen lang={lang} onGoToProfile={() => router.push('/profile')} />
+      ) : (
+        <main className="pt-14 pb-16">
+          {children}
+        </main>
       )}
-      <main className="pt-14 pb-16">
-        {children}
-      </main>
     </Ctx.Provider>
   )
 }
