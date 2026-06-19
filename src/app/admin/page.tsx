@@ -2,9 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import AppShell, { useTheme } from '@/components/AppShell'
-
-const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? '').trim()
+import { useTheme } from '@/components/AppShell'
 
 interface UserRow {
   id: string
@@ -83,6 +81,20 @@ function AdminPage() {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { setAuthed(false); setChecking(false); router.replace('/'); return }
+
+      const res = await fetch('/api/admin/data', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      if (!res.ok) {
+        setAuthed(false); setChecking(false)
+        router.replace('/')
+        return
+      }
+      setAuthed(true); setChecking(false)
+      const json = await res.json()
+
       const now      = new Date()
       const today    = now.toISOString().split('T')[0]
       const d7       = new Date(now.getTime() - 7  * 86400000).toISOString()
@@ -90,21 +102,10 @@ function AdminPage() {
       const weekAgo  = new Date(now.getTime() - 7  * 86400000).toISOString().split('T')[0]
       const monthAgo = new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0]
 
-      const [emailsRes, subsRes, workersRes, sitesRes, attRes, pwaRes, ticketsRes] = await Promise.all([
-        // Use the SECURITY DEFINER function to get real emails
-        supabase.rpc('get_user_emails'),
-        supabase.from('subscriptions').select('user_id,plan,status,trial_ends_at,current_period_end'),
-        supabase.from('workers').select('user_id,created_at'),
-        supabase.from('sites').select('user_id,created_at'),
-        supabase.from('attendance').select('user_id,date').order('date', { ascending: false }),
-        supabase.from('pwa_installs').select('user_id,installed_at'),
-        supabase.from('support_tickets').select('*').order('created_at', { ascending: false }),
-      ])
+      setTickets(json.tickets ?? [])
 
-      setTickets(ticketsRes.data ?? [])
-
-      const subsData: SubRow[]  = subsRes.data   ?? []
-      const emailData: UserRow[] = emailsRes.data ?? []
+      const subsData: SubRow[]   = json.subs  ?? []
+      const emailData: UserRow[] = json.users ?? []
       setSubs(subsData)
 
       // Build user rows with real emails
@@ -114,19 +115,19 @@ function AdminPage() {
       // Fill in any users not yet in auth.users result (edge case)
       const allIds = new Set([
         ...emailData.map(u => u.id),
-        ...(workersRes.data ?? []).map((r: { user_id: string }) => r.user_id),
-        ...(sitesRes.data  ?? []).map((r: { user_id: string }) => r.user_id),
+        ...(json.workers ?? []).map((r: { user_id: string }) => r.user_id),
+        ...(json.sites  ?? []).map((r: { user_id: string }) => r.user_id),
         ...subsData.map(s => s.user_id),
       ])
 
       const firstSeen: Record<string, string> = {}
-      ;[...(workersRes.data ?? []), ...(sitesRes.data ?? [])].forEach((r: { user_id: string; created_at: string }) => {
+      ;[...(json.workers ?? []), ...(json.sites ?? [])].forEach((r: { user_id: string; created_at: string }) => {
         if (!firstSeen[r.user_id] || r.created_at < firstSeen[r.user_id])
           firstSeen[r.user_id] = r.created_at
       })
 
       const attByUser: Record<string, string> = {}
-      ;(attRes.data ?? []).forEach((r: { user_id: string; date: string }) => {
+      ;(json.attendance ?? []).forEach((r: { user_id: string; date: string }) => {
         if (!attByUser[r.user_id] || r.date > attByUser[r.user_id]) attByUser[r.user_id] = r.date
       })
 
@@ -154,37 +155,32 @@ function AdminPage() {
         totalUsers, newUsersThisWeek, newUsersThisMonth,
         dauCount, wauCount, mauCount,
         freeUsers, trialUsers, proUsers, lifetimeUsers, expiredTrials,
-        totalWorkers:    workersRes.data?.length ?? 0,
-        totalSites:      sitesRes.data?.length   ?? 0,
-        totalAttendance: attRes.data?.length      ?? 0,
-        pwaInstalls:     pwaRes.data?.length      ?? 0,
+        totalWorkers:    json.workers?.length    ?? 0,
+        totalSites:      json.sites?.length      ?? 0,
+        totalAttendance: json.attendance?.length ?? 0,
+        pwaInstalls:     json.pwaInstalls?.length ?? 0,
         mrrEstimate:     proUsers * 200,
       })
       setLastRefresh(new Date())
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
-  }, [])
+  }, [router])
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (ADMIN_EMAIL && user?.email === ADMIN_EMAIL) {
-        setAuthed(true)
-        loadData()
-      } else {
-        router.replace('/')
-      }
-      setChecking(false)
-    })
-  }, [router, loadData])
+    loadData()
+  }, [loadData])
 
   const sendReply = async (ticketId: string, status: string) => {
     setReplying(ticketId)
     const reply = replyDraft[ticketId] ?? ''
-    const { error } = await supabase.from('support_tickets')
-      .update({ admin_reply: reply || null, status })
-      .eq('id', ticketId)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/admin/reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({ ticketId, status, reply }),
+    })
     setReplying(null)
-    if (!error) loadData()
+    if (res.ok) loadData()
   }
 
   if (checking) return (
@@ -254,15 +250,15 @@ function AdminPage() {
           </div>
         </div>
         <div className="flex gap-0.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
+          {TABS.map(tabItem => (
+            <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
               className="px-3 py-1.5 text-xs font-bold rounded-lg whitespace-nowrap transition flex-shrink-0"
               style={{
-                background: tab === t.id ? 'rgba(212,140,40,0.15)' : 'transparent',
-                color:      tab === t.id ? '#d48c28' : t.muted,
-                border:     tab === t.id ? '1px solid rgba(212,140,40,0.3)' : '1px solid transparent',
+                background: tab === tabItem.id ? 'rgba(212,140,40,0.15)' : 'transparent',
+                color:      tab === tabItem.id ? '#d48c28' : t.muted,
+                border:     tab === tabItem.id ? '1px solid rgba(212,140,40,0.3)' : '1px solid transparent',
               }}>
-              {t.label}
+              {tabItem.label}
             </button>
           ))}
         </div>
@@ -408,41 +404,41 @@ function AdminPage() {
             <p className="text-center text-sm py-8" style={{color:t.muted}}>No tickets yet.</p>
           ) : (
             <div className="space-y-2">
-              {tickets.map(t => (
-                <div key={t.id} className="rounded-xl p-4" style={{background:t.surface,border:`1px solid ${t.border}`}}>
+              {tickets.map(tk => (
+                <div key={tk.id} className="rounded-xl p-4" style={{background:t.surface,border:`1px solid ${t.border}`}}>
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold truncate" style={{color:t.text}}>{t.subject}</p>
-                      <p className="text-[10px]" style={{color:t.muted}}>{t.user_email} · {t.category}</p>
+                      <p className="text-sm font-bold truncate" style={{color:t.text}}>{tk.subject}</p>
+                      <p className="text-[10px]" style={{color:t.muted}}>{tk.user_email} · {tk.category}</p>
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${
-                      t.status === 'resolved' ? 'bg-green-400/10 text-green-400 border-green-400/20' :
-                      t.status === 'in_progress' ? 'bg-amber-400/10 text-amber-400 border-amber-400/20' :
+                      tk.status === 'resolved' ? 'bg-green-400/10 text-green-400 border-green-400/20' :
+                      tk.status === 'in_progress' ? 'bg-amber-400/10 text-amber-400 border-amber-400/20' :
                       'bg-red-400/10 text-red-400 border-red-400/20'
                     }`}>
-                      {t.status}
+                      {tk.status}
                     </span>
                   </div>
-                  <p className="text-xs mb-2" style={{color:t.muted}}>{t.message}</p>
+                  <p className="text-xs mb-2" style={{color:t.muted}}>{tk.message}</p>
                   <p className="text-[10px] mb-2" style={{color:t.faint}}>
-                    {new Date(t.created_at).toLocaleString('en-IN')}
+                    {new Date(tk.created_at).toLocaleString('en-IN')}
                   </p>
                   <textarea
-                    value={replyDraft[t.id] ?? t.admin_reply ?? ''}
-                    onChange={e => setReplyDraft({ ...replyDraft, [t.id]: e.target.value })}
+                    value={replyDraft[tk.id] ?? tk.admin_reply ?? ''}
+                    onChange={e => setReplyDraft({ ...replyDraft, [tk.id]: e.target.value })}
                     placeholder="Type a reply to the user..."
                     rows={2}
                     className="w-full rounded-lg px-3 py-2 text-xs mb-2 resize-none"
                     style={{background:t.textarea,border:`1px solid ${t.border}`,color:t.text}}
                   />
                   <div className="flex gap-2">
-                    <button onClick={() => sendReply(t.id, 'in_progress')} disabled={replying===t.id}
+                    <button onClick={() => sendReply(tk.id, 'in_progress')} disabled={replying===tk.id}
                       className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-amber-400/10 text-amber-400 border border-amber-400/20 disabled:opacity-40">
                       Mark In Progress
                     </button>
-                    <button onClick={() => sendReply(t.id, 'resolved')} disabled={replying===t.id}
+                    <button onClick={() => sendReply(tk.id, 'resolved')} disabled={replying===tk.id}
                       className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-green-400/10 text-green-400 border border-green-400/20 disabled:opacity-40">
-                      {replying===t.id ? 'Saving...' : 'Reply & Resolve'}
+                      {replying===tk.id ? 'Saving...' : 'Reply & Resolve'}
                     </button>
                   </div>
                 </div>
@@ -455,7 +451,7 @@ function AdminPage() {
         {tab === 'info' && (
           <div className="space-y-2">
             {[
-              { label: 'Admin Email', val: ADMIN_EMAIL ? `${ADMIN_EMAIL.slice(0, 3)}***` : '(not set)' },
+              { label: 'Admin Auth',  val: 'Server-side (ADMIN_EMAIL env var, not client-exposed)' },
               { label: 'App Version', val: 'v1.0.0' },
               { label: 'Framework',   val: 'Next.js 15' },
               { label: 'Database',    val: 'Supabase (PostgreSQL)' },
@@ -471,4 +467,4 @@ function AdminPage() {
   )
 }
 
-export default function Admin() { return <AppShell><AdminPage /></AppShell> }
+export default function Admin() { return <AdminPage /> }
