@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import AppShell, { useLang, useToast } from '@/components/AppShell'
+import { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
@@ -67,13 +67,14 @@ function WorkersPage() {
     try {
       const userId = await uid()
       
-      if (modal === 'add') {
-        const { data: existing } = await supabase.from('workers')
-          .select('id').eq('user_id', userId).eq('phone', form.phone).is('deleted_at', null).limit(1)
-        if (existing && existing.length > 0) {
-          showToast('A worker with this phone number already exists','err')
-          setSaving(false); return
-        }
+      const { data: existing } = await supabase.from('workers')
+        .select('id').eq('user_id', userId).eq('phone', form.phone).is('deleted_at', null).limit(2)
+      const duplicateExists = modal === 'add'
+        ? (existing && existing.length > 0)
+        : (existing && existing.some(w => w.id !== form.id))
+      if (duplicateExists) {
+        showToast('A worker with this phone number already exists','err')
+        setSaving(false); return
       }
       const { error } = modal==='add'
         ? await supabase.from('workers').insert({ ...form, user_id: userId })
@@ -88,7 +89,8 @@ function WorkersPage() {
 
   const del = async (w:Worker) => {
     if (!confirm(ts(lang,'deleteConfirm'))) return
-    await supabase.from('workers').update({ deleted_at: new Date().toISOString() }).eq('id', w.id!)
+    const { error } = await supabase.from('workers').update({ deleted_at: new Date().toISOString() }).eq('id', w.id!)
+    if (error) { showToast(error.message,'err'); return }
     setModal(null); load(); showToast('Moved to recycle bin 🗑️')
   }
 
@@ -350,4 +352,4 @@ const Empty = ({msg,icon}:{msg:string;icon:string}) => (
   <div className="text-center py-16"><div className="text-5xl mb-3 opacity-30">{icon}</div><p className="font-medium" style={{color:'rgb(var(--muted))'}}>{msg}</p></div>
 )
 
-export default function Workers() { return <AppShell><WorkersPage /></AppShell> }
+export default function Workers() { return <WorkersPage /> }
