@@ -10,8 +10,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 export function createAdminClient(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
 
   if (!url) throw new Error('[supabaseAdmin] NEXT_PUBLIC_SUPABASE_URL is missing')
   if (!serviceKey) throw new Error('[supabaseAdmin] SUPABASE_SERVICE_ROLE_KEY is missing')
@@ -38,12 +38,12 @@ export async function getUserFromRequest(req: Request) {
 // admin email. ADMIN_EMAIL is a server-only env var (no NEXT_PUBLIC_ prefix)
 // so it is never present in client-side JavaScript.
 export async function requireAdmin(req: Request) {
-  const adminEmail = (process.env.ADMIN_EMAIL ?? '').trim()
+  const adminEmail = (process.env.ADMIN_EMAIL ?? process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? '').trim().toLowerCase()
   if (!adminEmail) return { ok: false as const, status: 403 as const, error: 'Admin not configured' }
 
   const user = await getUserFromRequest(req)
   if (!user) return { ok: false as const, status: 401 as const, error: 'Not authenticated' }
-  if (user.email !== adminEmail) return { ok: false as const, status: 403 as const, error: 'Not authorized' }
+  if ((user.email ?? '').trim().toLowerCase() !== adminEmail) return { ok: false as const, status: 403 as const, error: 'Not authorized' }
 
   return { ok: true as const, user }
 }
