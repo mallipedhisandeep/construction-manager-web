@@ -39,7 +39,7 @@ const en = {
   siteName:'Site Name', location:'Location',
   ownerName:'Owner Name', ownerPhone:'Owner Phone',
   budget:'Budget (₹)', floors:'Floors', startDate:'Start Date',
-  status:'Status', active:'Active', completed:'Completed', activeSites:'Active Sites',
+  status:'Status', active:'Active', onHold:'On Hold', completed:'Completed', activeSites:'Active Sites',
 
   // Attendance
   markAttendance:'Mark Attendance', shift:'Shift', absent:'Absent',
@@ -75,7 +75,7 @@ const en = {
   // Trash
   restore:'Restore', deletePermanent:'Delete Forever',
   noTrash:'Recycle bin is empty',
-  trashNote:'Items deleted in last 30 days',
+  trashNote:'Deleted items stay here until you restore or permanently delete them',
 
   // Misc
   errorLoading:'Error loading',
@@ -120,7 +120,7 @@ const te: typeof en = {
   siteName:'సైటు పేరు', location:'లొకేషన్',
   ownerName:'యజమాని పేరు', ownerPhone:'యజమాని ఫోన్',
   budget:'బడ్జెట్ (రూ)', floors:'అంతస్తులు', startDate:'ప్రారంభ తేదీ',
-  status:'స్థితి', active:'చురుకు', completed:'పూర్తి', activeSites:'చురుకైన సైట్లు',
+  status:'స్థితి', active:'చురుకు', onHold:'తాత్కాలికంగా నిలిపివేయబడింది', completed:'పూర్తి', activeSites:'చురుకైన సైట్లు',
 
   // Attendance
   markAttendance:'హాజరు గుర్తించు', shift:'షిఫ్ట్', absent:'గైర్హాజరు',
@@ -156,7 +156,7 @@ const te: typeof en = {
   // Trash
   restore:'పునరుద్ధరించు', deletePermanent:'శాశ్వతంగా తొలగించు',
   noTrash:'చెత్తబుట్ట ఖాళీగా ఉంది',
-  trashNote:'గత 30 రోజుల్లో తొలగించబడిన వస్తువులు',
+  trashNote:'తొలగించిన వస్తువులు మీరు పునరుద్ధరించే లేదా శాశ్వతంగా తొలగించే వరకు ఇక్కడ ఉంటాయి',
 
   // Misc
   errorLoading:'లోపం సంభవించింది',

@@ -9,10 +9,10 @@ export const SHIFTS      = ['6-6', '10-6', '6-10', '6-2', '10-2', '2-6', 'Absent
 export const SHIFT_LABELS: Record<string, string> = {
   '6-6':  '6AM – 6PM',
   '10-6': '10AM – 6PM',
-  '6-10': '6AM – 9AM',
+  '6-10': '6AM – 10AM',
   '6-2':  '6AM – 2PM',
   '10-2': '10AM – 2PM',
-  '2-6':  '3PM – 6PM',
+  '2-6':  '2PM – 6PM',
   'Absent': 'Absent',
 }
 export const PAYMENT_MODES  = ['Cash', 'Online', 'Cheque', 'None'] as const
