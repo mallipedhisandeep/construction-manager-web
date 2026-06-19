@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import AppShell, { useLang, useToast } from '@/components/AppShell'
+import { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { GOODS_UNITS } from '@/lib/constants'
@@ -40,7 +40,7 @@ function SuppliersPage() {
         .eq('user_id', userId)
         .neq('status','Cancelled')
         .is('deleted_at', null),
-      supabase.from('supplier_goods').select('supplier_id').eq('user_id', userId),
+      supabase.from('supplier_goods').select('supplier_id').eq('user_id', userId).is('deleted_at', null),
     ])
     if (!data) { setLoading(false); return }
 
@@ -67,7 +67,7 @@ function SuppliersPage() {
     setSelected(sup); setView('detail'); setTab('goods')
     const userId = await uid()
     const [{ data:g }, { data:p }] = await Promise.all([
-      supabase.from('supplier_goods').select('*').eq('supplier_id', sup.id).eq('user_id', userId).order('goods_name'),
+      supabase.from('supplier_goods').select('*').eq('supplier_id', sup.id).eq('user_id', userId).is('deleted_at', null).order('goods_name'),
       // FIX: filter deleted payments in detail view too
       supabase.from('supplier_payments').select('*').eq('supplier_id', sup.id).eq('user_id', userId).is('deleted_at', null).order('created_at',{ascending:false}),
     ])
@@ -126,22 +126,25 @@ function SuppliersPage() {
   }
 
   const deleteGoods = async (id: string) => {
-    if (!confirm(te ? 'తొలగించాలా?' : 'Delete this item?')) return
-    await supabase.from('supplier_goods').delete().eq('id', id)
+    if (!confirm(te ? 'చెత్తబుట్టకు తరలించాలా?' : 'Move this item to recycle bin?')) return
+    const { error } = await supabase.from('supplier_goods').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    if (error) { showToast(error.message, false); return }
     if (selected) loadDetail(selected); load()
-    showToast(te ? 'తొలగించబడింది' : 'Deleted')
+    showToast(te ? 'చెత్తబుట్టకు తరలించబడింది 🗑️' : 'Moved to recycle bin 🗑️')
   }
 
   const deletePayment = async (id: string) => {
     if (!confirm(te ? 'తొలగించాలా?' : 'Delete this payment?')) return
-    await supabase.from('supplier_payments').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    const { error } = await supabase.from('supplier_payments').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    if (error) { showToast(error.message, false); return }
     if (selected) loadDetail(selected); load()
     showToast(te ? 'తొలగించబడింది' : 'Deleted')
   }
 
   const deleteSup = async () => {
     if (!selected || !confirm(te ? 'ఖచ్చితంగా తొలగించాలా?' : 'Delete this supplier?')) return
-    await supabase.from('suppliers').update({ deleted_at: new Date().toISOString() }).eq('id', selected.id)
+    const { error } = await supabase.from('suppliers').update({ deleted_at: new Date().toISOString() }).eq('id', selected.id)
+    if (error) { showToast(error.message, false); return }
     setView('list'); setSelected(null); load()
     showToast(te ? 'చెత్తబుట్టకు తరలించబడింది 🗑️' : 'Moved to recycle bin 🗑️')
   }
@@ -394,4 +397,4 @@ function SuppliersPage() {
   )
 }
 
-export default function Suppliers() { return <AppShell><SuppliersPage /></AppShell> }
+export default function Suppliers() { return <SuppliersPage /> }
