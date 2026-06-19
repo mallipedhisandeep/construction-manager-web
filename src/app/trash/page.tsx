@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import AppShell, { useLang, useToast } from '@/components/AppShell'
+import { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
@@ -30,6 +30,8 @@ const TRASH_TABLES = [
   // Payment tables included only if the migration has been run (deleted_at column added)
   { name:'site_payments',    labelField:'description',  subtitleField:'amount',        display:'Site Payment' },
   { name:'supplier_payments',labelField:'payment_type', subtitleField:'amount',        display:'Supplier Payment' },
+  { name:'private_worker_payments', labelField:'notes', subtitleField:'amount',        display:'Contractor Payment' },
+  { name:'supplier_goods',   labelField:'goods_name',   subtitleField:'price_per_unit',display:'Supplier Catalog Item' },
   // Site files — soft-deleted, can be restored from here
   { name:'site_agreements',  labelField:'file_name',    subtitleField:'file_name',     display:'Site Agreement' },
   { name:'site_floor_files', labelField:'file_name',    subtitleField:'floor_no',      display:'Floor Plan' },
@@ -239,4 +241,4 @@ function TrashPage() {
   )
 }
 
-export default function Trash() { return <AppShell><TrashPage /></AppShell> }
+export default function Trash() { return <TrashPage /> }
