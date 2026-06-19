@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import AppShell, { useLang, useTheme, useToast } from '@/components/AppShell'
+import { useLang, useTheme, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts, MONTHS } from '@/lib/strings'
@@ -130,35 +130,31 @@ function AttendancePage() {
 
   const saveOne = async () => {
     if (!modal || !modal.id) return
+    const currentWage = wage(modal, shiftPick)
+    const currentAdv  = parseFloat(advInput) || 0
+    if (currentAdv < 0) { showToast(lang==='te'?'అడ్వాన్స్ నెగటివ్‌గా ఉండకూడదు':'Advance cannot be negative', false); return }
+    if (shiftPick !== 'Absent' && currentAdv > currentWage) {
+      showToast(lang==='te'?'అడ్వాన్స్ ఆ రోజు వేతనం కంటే ఎక్కువ ఉండకూడదు':"Advance can't exceed the day's wage", false); return
+    }
     setSaving(true)
     try {
       const userId  = await uid()
       const existing = attMap[modal.id]
-      const workerWage = wage(modal, shiftPick)
       const payload = {
         worker_id:       modal.id,
         date_key:        dKey,
         date:            new Date(year, month, day).toISOString(),
         attendance_type: shiftPick,
-        wage:            workerWage,
-        advance:         parseFloat(advInput) || 0,
-        payment_mode:    payMode,          
-        balance_after:   0,               
+        wage:            currentWage,
+        advance:         currentAdv,
+        payment_mode:    payMode,
+        // balance_after is recomputed server-side by a trigger immediately
+        // after this write (see supabase_attendance_balance_trigger.sql) —
+        // this placeholder is never what actually gets stored.
+        balance_after:   0,
         site_id:         modalSite || null,
         user_id:         userId,
       }
-      // Compute balance_after: sum of all wages minus all advances for this worker up to this date
-      const { data: prevRecs } = await supabase.from('attendance')
-        .select('wage,advance,attendance_type')
-        .eq('worker_id', modal.id)
-        .eq('user_id', userId)
-        .lte('date_key', dKey)
-        .neq('date_key', dKey) // exclude current day
-      const prevEarned = prevRecs?.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+(a.wage??0),0) ?? 0
-      const prevAdv    = prevRecs?.reduce((s,a)=>s+(a.advance??0),0) ?? 0
-      const currentWage = shiftPick === 'Absent' ? 0 : wage(modal, shiftPick)
-      const currentAdv  = parseFloat(advInput) || 0
-      payload.balance_after = prevEarned + currentWage - prevAdv - currentAdv
 
       const { error } = existing?.id
         ? await supabase.from('attendance').update(payload).eq('id', existing.id)
@@ -188,21 +184,18 @@ function AttendancePage() {
       // Only mark workers NOT already marked today
       const unmarked = workers.filter(w => !attMap[w.id!])
       if (unmarked.length === 0) { showToast(lang==='te'?'అందరూ ఇప్పటికే గుర్తించారు':'All already marked'); setBulkSaving(false); setShowBulk(false); return }
-      const inserts = await Promise.all(unmarked.map(async w => {
-        const { data: prevRecs } = await supabase.from('attendance')
-          .select('wage,advance,attendance_type')
-          .eq('worker_id', w.id!).eq('user_id', userId).lt('date_key', dKey)
-        const prevEarned = prevRecs?.filter(a=>a.attendance_type!=='Absent').reduce((s,a)=>s+(a.wage??0),0)??0
-        const prevAdv    = prevRecs?.reduce((s,a)=>s+(a.advance??0),0)??0
+      const inserts = unmarked.map(w => {
         const w2 = bulkShift === 'Absent' ? 0 : wage(w, bulkShift)
         return {
           worker_id: w.id!, date_key: dKey,
           date: new Date(year, month, day).toISOString(),
           attendance_type: bulkShift, wage: w2, advance: 0,
-          payment_mode: 'Cash', balance_after: prevEarned + w2 - prevAdv,
+          // balance_after is recomputed server-side by a trigger right after
+          // this insert (see supabase_attendance_balance_trigger.sql)
+          payment_mode: 'Cash', balance_after: 0,
           site_id: bulkSite || null, user_id: userId,
         }
-      }))
+      })
       const { error } = await supabase.from('attendance').insert(inserts)
       if (error) throw error
       setShowBulk(false)
@@ -213,22 +206,14 @@ function AttendancePage() {
     } finally { setBulkSaving(false) }
   }
 
-  // ── Recalculate all balances for a worker (fixes stale balance_after) ──────
+  // ── Recalculate all balances for a worker ───────────────────────────────────
+  // Balances are now kept correct automatically by a DB trigger on every
+  // write (see supabase_attendance_balance_trigger.sql). This button is a
+  // manual fallback to resync rows that existed before that migration ran —
+  // it's now a single RPC call instead of one network request per row.
   const recalcBalances = async (workerId: string) => {
-    const userId = await uid()
-    if (!userId) return
-    const { data: allRecs } = await supabase.from('attendance')
-      .select('id,date_key,wage,advance,attendance_type')
-      .eq('worker_id', workerId).eq('user_id', userId)
-      .order('date_key', { ascending: true })
-    if (!allRecs || allRecs.length === 0) return
-    let runEarned = 0, runAdv = 0
-    const updates = allRecs.map(r => {
-      const w2 = r.attendance_type !== 'Absent' ? (r.wage ?? 0) : 0
-      runEarned += w2; runAdv += (r.advance ?? 0)
-      return supabase.from('attendance').update({ balance_after: runEarned - runAdv }).eq('id', r.id)
-    })
-    await Promise.all(updates)
+    const { error } = await supabase.rpc('recalc_my_worker_balance', { p_worker_id: workerId })
+    if (error) { showToast(error.message, false); return }
     await loadDay()
     showToast(lang==='te'?'బ్యాలెన్స్ అప్‌డేట్ అయింది':'Balances recalculated')
   }
@@ -396,7 +381,14 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                 <span className="text-xs" style={{color:'rgb(var(--muted))'}}>
                   {Object.keys(attMap).length}/{workers.length} {lang==='te' ? 'గుర్తించారు' : 'marked'}
                 </span>
-
+                {Object.keys(attMap).length < workers.length && (
+                  <button
+                    onClick={() => { setBulkShift('6-6'); setBulkSite(''); setShowBulk(true) }}
+                    className="text-xs font-bold px-2.5 py-1 rounded-lg"
+                    style={{background:'rgb(var(--accent))', color:'#fff'}}>
+                    {lang==='te' ? '⚡ అందరినీ గుర్తించు' : '⚡ Mark all'}
+                  </button>
+                )}
               </div>
             </div>
           </>
@@ -735,10 +727,71 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
           </div>
         </div>
       )}
+
+      {showBulk && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center"
+          style={{background:'rgba(0,0,0,0.6)', backdropFilter:'blur(4px)'}}
+          onClick={() => setShowBulk(false)}>
+          <div className="w-full max-w-lg rounded-t-3xl shadow-2xl"
+            style={{background:'rgb(var(--surface))'}}
+            onClick={e => e.stopPropagation()}>
+
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b"
+              style={{borderColor:'rgb(var(--border))'}}>
+              <div>
+                <p className="font-black text-base" style={{color:'rgb(var(--text))'}}>
+                  {lang==='te' ? 'అందరినీ గుర్తించు' : 'Mark all unmarked workers'}
+                </p>
+                <p className="text-xs" style={{color:'rgb(var(--muted))'}}>
+                  {months[month]} {day}, {year} · {workers.filter(w => !attMap[w.id!]).length} {lang==='te' ? 'మంది మిగిలారు' : 'remaining'}
+                </p>
+              </div>
+              <button onClick={() => setShowBulk(false)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <p className="label mb-2">{lang==='te' ? 'షిఫ్ట్ / హాజరు' : 'Shift / Attendance'}</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {SHIFTS.map(s => (
+                    <button key={s} onClick={() => setBulkShift(s)}
+                      className="py-2.5 rounded-xl text-xs font-bold transition-all"
+                      style={{
+                        background: bulkShift===s ? SHIFT_BG[s] : 'rgb(var(--surface2))',
+                        color:      bulkShift===s ? '#fff' : 'rgb(var(--muted))',
+                        border:     bulkShift===s ? `1px solid ${SHIFT_BG[s]}` : '1px solid rgb(var(--border))',
+                      }}>
+                      {SHIFT_LABEL[s]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="label mb-2">{lang==='te' ? 'సైట్ (ఐచ్ఛికం)' : 'Site (optional)'}</p>
+                <select value={bulkSite} onChange={e => setBulkSite(e.target.value)} className="input">
+                  <option value="">{lang==='te' ? '— ఏదీ లేదు —' : '— None —'}</option>
+                  {sites.map(s => <option key={s.id} value={s.id}>{s.site_name}</option>)}
+                </select>
+              </div>
+
+              <p className="text-xs" style={{color:'rgb(var(--muted))'}}>
+                {lang==='te'
+                  ? 'ఇప్పటికే గుర్తించిన వారిని ఇది మార్చదు — మిగిలిన వారిని మాత్రమే గుర్తిస్తుంది.'
+                  : "This won't change anyone already marked today — only the remaining workers get this shift."}
+              </p>
+
+              <button onClick={bulkMarkAll} disabled={bulkSaving} className="btn-primary btn-full py-3">
+                {bulkSaving ? '⏳...' : (lang==='te' ? '⚡ గుర్తించు' : '⚡ Mark all remaining')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 export default function Attendance() {
-  return <AppShell><AttendancePage /></AppShell>
+  return <AttendancePage />
 }
