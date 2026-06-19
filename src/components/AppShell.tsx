@@ -24,16 +24,27 @@ export const useToast = (): ToastCtx => { const c = useContext(Ctx); return { sh
 const PUBLIC_PATHS   = ['/login', '/auth/callback', '/auth/confirm']
 const PAYWALL_EXEMPT = ['/profile', '/subscribe', '/login', '/auth/callback', '/auth/confirm', '/support']
 
+// 'unknown' = no subscription row yet (new user, trigger delay, or existing user
+// before monetization was added). Treat as 'trialing' so they are NOT paywalled.
 type SubStatus = 'active' | 'trialing' | 'expired' | 'lifetime' | 'unknown'
 
 async function getSubStatus(userId: string): Promise<SubStatus> {
   try {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('subscriptions')
       .select('plan,status,trial_ends_at,current_period_end')
       .eq('user_id', userId)
       .maybeSingle()
+
+    // RLS error or network error — don't block the user
+    if (error) {
+      console.warn('[AppShell] subscriptions query error (treating as trialing):', error.message)
+      return 'unknown'
+    }
+
+    // No row yet (new user, trigger delay, or pre-monetization user)
     if (!data) return 'unknown'
+
     if (data.plan === 'lifetime') return 'lifetime'
     if (data.plan === 'pro' && data.status === 'active') return 'active'
     if (data.trial_ends_at && new Date(data.trial_ends_at) > new Date()) return 'trialing'
@@ -95,8 +106,6 @@ function getInitialLang(): Lang {
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [lang,      setLangState]  = useState<Lang>('en')
   const [theme,     setThemeState] = useState<Theme>('dark')
-  // FIX: start as 'checking' but render children immediately on public paths
-  // so there's no white flash on login page
   const [authState, setAuthState]  = useState<'checking'|'authed'|'unauthed'>('checking')
   const [subStatus, setSubStatus]  = useState<SubStatus>('unknown')
   const [hydrated,  setHydrated]   = useState(false)
@@ -129,22 +138,47 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+
+    const checkAuth = async () => {
+      try {
+        // Use getSession first (cheaper, cached) then verify with getUser
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!mounted) return
+
+        if (session?.user) {
+          setAuthState('authed')
+          // Fetch subscription status in background — don't block render
+          getSubStatus(session.user.id).then(status => {
+            if (mounted) setSubStatus(status)
+          })
+        } else {
+          setAuthState('unauthed')
+          if (!isPublicPath) router.replace('/login')
+        }
+      } catch (err) {
+        console.error('[AppShell] auth check failed:', err)
+        if (mounted) {
+          setAuthState('unauthed')
+          if (!isPublicPath) router.replace('/login')
+        }
+      }
+    }
+
+    checkAuth()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return
-      if (user) {
+      if (session?.user) {
         setAuthState('authed')
-        const status = await getSubStatus(user.id)
-        if (mounted) setSubStatus(status)
+        getSubStatus(session.user.id).then(status => {
+          if (mounted) setSubStatus(status)
+        })
       } else {
         setAuthState('unauthed')
         if (!isPublicPath) router.replace('/login')
       }
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return
-      if (session) { setAuthState('authed') }
-      else { setAuthState('unauthed'); if (!isPublicPath) router.replace('/login') }
-    })
+
     return () => { mounted = false; subscription.unsubscribe() }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -176,7 +210,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   )
 
   // ── Public paths (login, callback etc) — render immediately, no auth gate ──
-  // This eliminates the white flash: children render right away with correct theme
   if (isPublicPath) {
     return (
       <Ctx.Provider value={{ lang, toggleLang, theme, toggleTheme, showToast }}>
@@ -187,10 +220,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   // ── Protected paths ────────────────────────────────────────────────────────
-  // FIX: Instead of a Splash screen (icon + spinner) while auth checks,
-  // render nothing visible — body background is already set by CSS vars in
-  // globals.css and the inline script in layout.tsx so there's no white flash.
-  // A subtle full-screen bg div prevents any layout shift.
   if (authState === 'checking') {
     return (
       <Ctx.Provider value={{ lang, toggleLang, theme, toggleTheme, showToast }}>
@@ -204,6 +233,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   if (authState === 'unauthed') return null
 
+  // 'unknown' = no subscription row yet — treat as allowed (not paywalled)
   const isPaywalled = subStatus === 'expired' && !isPaywallFree
 
   return (
