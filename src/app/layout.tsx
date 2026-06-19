@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
-
-export const dynamic = 'force-dynamic'
+import AppShell from '@/components/AppShell'
 
 const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev'
 
@@ -56,7 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}} />
       </head>
       <body className="min-h-screen" style={{ backgroundColor:'rgb(var(--bg))', color:'rgb(var(--text))' }}>
-        {children}
+        <AppShell>{children}</AppShell>
 
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
@@ -78,14 +77,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             try {
               var ua = navigator.userAgent;
               var platform = /android/i.test(ua) ? 'android' : /ipad|iphone|ipod/i.test(ua) ? 'ios' : 'desktop';
+              var sessionRaw = localStorage.getItem('cm-auth-token');
+              var session = sessionRaw ? JSON.parse(sessionRaw) : null;
+              var accessToken = session && session.access_token;
+              var userId = session && session.user && session.user.id;
+              if (!accessToken || !userId) return; // RLS requires both — nothing to record if not logged in
               fetch('${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/pwa_installs', {
                 method: 'POST',
                 headers: {
                   'apikey': '${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}',
+                  'Authorization': 'Bearer ' + accessToken,
                   'Content-Type': 'application/json',
                   'Prefer': 'return=minimal',
                 },
-                body: JSON.stringify({ platform: platform, user_agent: ua.slice(0, 200) })
+                body: JSON.stringify({ user_id: userId, platform: platform, user_agent: ua.slice(0, 200) })
               }).catch(function(){});
             } catch(e) {}
           });

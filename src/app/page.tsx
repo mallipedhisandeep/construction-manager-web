@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import AppShell, { useLang, useTheme } from '@/components/AppShell'
+import { useLang, useTheme } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 
 const modules = [
@@ -32,7 +32,7 @@ function Dashboard() {
       const u = data.user
       if (!u) return
       const raw = u.user_metadata?.full_name ?? u.email?.split('@')[0] ?? ''
-      setUser(raw.replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase()) || 'Admin')
+      setUser(raw.replace(/[._]/g,' ').replace(/\b\w/g,(c:string)=>c.toUpperCase()) || 'Admin')
       Promise.all([
         supabase.from('workers').select('id',{count:'exact',head:true}).eq('user_id',u.id).is('deleted_at',null),
         supabase.from('sites').select('id',{count:'exact',head:true}).eq('user_id',u.id).eq('status','Active').is('deleted_at',null),
@@ -113,4 +113,4 @@ function Dashboard() {
   )
 }
 
-export default function Home() { return <AppShell><Dashboard /></AppShell> }
+export default function Home() { return <Dashboard /> }
