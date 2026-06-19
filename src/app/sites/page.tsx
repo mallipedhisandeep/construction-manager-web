@@ -1,9 +1,10 @@
 'use client'
 import { useEffect, useState, useCallback, useRef } from 'react'
-import AppShell, { useLang, useToast } from '@/components/AppShell'
+import { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
+import { SITE_STATUSES } from '@/lib/constants'
 import type { Site } from '@/lib/types'
 
 // FileRow now stores the storage object path (for signing) + a runtime signedUrl
@@ -49,7 +50,7 @@ function SitesPage() {
   const t = (k: Parameters<typeof ts>[1]) => ts(lang, k)
   const [sites,        setSites]        = useState<SiteDetail[]>([])
   const [loading,      setLoading]      = useState(true)
-  const [filter,       setFilter]       = useState<'All'|'Active'|'Completed'>('All')
+  const [filter,       setFilter]       = useState<'All'|'Active'|'On Hold'|'Completed'>('All')
   const [search,       setSearch]       = useState('')
   const [modal,        setModal]        = useState<ModalType>(null)
   const [selected,     setSelected]     = useState<SiteDetail|null>(null)
@@ -119,16 +120,30 @@ function SitesPage() {
     loadFiles(s.id); loadPayments(s.id)
   }
 
+  const MAX_FILE_BYTES = 15 * 1024 * 1024 // 15MB — also configure a matching limit on the storage bucket itself server-side
+
   const handleFileSelected = async (e:React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file||!pendingUpload||!selected) return
+
+    if (file.size > MAX_FILE_BYTES) {
+      showToast(`File is too large (max ${MAX_FILE_BYTES / (1024*1024)}MB)`, false)
+      e.target.value = ''
+      return
+    }
+
     setUploading(pendingUpload.type)
     try {
       const userId = await uid()
       if (!userId) throw new Error('Not logged in')
 
+      // Sanitize the filename before it becomes part of the storage key —
+      // strip anything that isn't alphanumeric/dot/dash/underscore so stray
+      // characters in a user-picked file can't produce an unexpected key.
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100)
+
       // Path starts with userId/ so storage RLS policy allows the upload
-      const path = `${userId}/${pendingUpload.type}/${selected.id}/${Date.now()}_${file.name}`
+      const path = `${userId}/${pendingUpload.type}/${selected.id}/${Date.now()}_${safeName}`
 
       const { data:up, error:upErr } = await supabase.storage.from(BUCKET).upload(path, file)
       if (upErr) throw upErr
@@ -136,19 +151,25 @@ function SitesPage() {
       // Store the raw storage path (not a public URL) — we sign it on read
       const storagePath = up.path
 
-      if (pendingUpload.type === 'agreement')
-        await supabase.from('site_agreements').insert({
+      let insertErr = null
+      if (pendingUpload.type === 'agreement') {
+        const { error } = await supabase.from('site_agreements').insert({
           site_id: selected.id, file_path: storagePath, file_name: file.name, user_id: userId,
         })
-      else if (pendingUpload.type === 'floor')
-        await supabase.from('site_floor_files').insert({
+        insertErr = error
+      } else if (pendingUpload.type === 'floor') {
+        const { error } = await supabase.from('site_floor_files').insert({
           site_id: selected.id, floor_no: pendingUpload.floor??0,
           file_name: file.name, file_path: storagePath, user_id: userId,
         })
-      else
-        await supabase.from('site_elevations').insert({
+        insertErr = error
+      } else {
+        const { error } = await supabase.from('site_elevations').insert({
           site_id: selected.id, file_name: file.name, file_path: storagePath, user_id: userId,
         })
+        insertErr = error
+      }
+      if (insertErr) throw insertErr
 
       await loadFiles(selected.id)
       showToast('File uploaded!')
@@ -234,6 +255,7 @@ function SitesPage() {
   const counts = {
     All:       sites.length,
     Active:    sites.filter(s=>s.status==='Active').length,
+    'On Hold': sites.filter(s=>s.status==='On Hold').length,
     Completed: sites.filter(s=>s.status==='Completed').length,
   }
   const totalReceived = sitePayments.reduce((s,p)=>s+p.amount,0)
@@ -252,9 +274,9 @@ function SitesPage() {
           </button>
         </div>
         <div className="flex gap-2 flex-wrap mb-2.5">
-          {(['All','Active','Completed'] as const).map(f=>(
+          {(['All','Active','On Hold','Completed'] as const).map(f=>(
             <button key={f} onClick={()=>setFilter(f)} className={`chip ${filter===f?'chip-active':'chip-idle'}`}>
-              {f==='All'?t('allStates'):f==='Active'?t('active'):t('completed')} ({counts[f]})
+              {f==='All'?t('allStates'):f==='Active'?t('active'):f==='On Hold'?t('onHold'):t('completed')} ({counts[f]})
             </button>
           ))}
         </div>
@@ -339,11 +361,11 @@ function SitesPage() {
               <div>
                 <label className="label">{t('status')}</label>
                 <div className="flex gap-2">
-                  {['Active','Completed'].map(st=>(
+                  {SITE_STATUSES.map(st=>(
                     <button key={st} onClick={()=>setForm({...form,status:st})}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition ${form.status===st?st==='Active'?'bg-green-600 text-white border-green-600':'bg-blue-600 text-white border-blue-600':'border-slate-200 dark:border-slate-600'}`}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition ${form.status===st?st==='Active'?'bg-green-600 text-white border-green-600':st==='On Hold'?'bg-amber-500 text-white border-amber-500':'bg-blue-600 text-white border-blue-600':'border-slate-200 dark:border-slate-600'}`}
                       style={{color: form.status===st ? undefined : 'rgb(var(--muted))'}}>
-                      {st==='Active'?t('active'):t('completed')}
+                      {st==='Active'?t('active'):st==='On Hold'?t('onHold'):t('completed')}
                     </button>
                   ))}
                 </div>
@@ -575,4 +597,4 @@ function FileItem({ f, onDelete }: { f:FileRow; onDelete:()=>void }) {
   )
 }
 
-export default function Sites() { return <AppShell><SitesPage /></AppShell> }
+export default function Sites() { return <SitesPage /> }
