@@ -22,7 +22,7 @@ export const useTheme = (): ThemeCtx => { const c = useContext(Ctx); return { th
 export const useToast = (): ToastCtx => { const c = useContext(Ctx); return { showToast: c.showToast } }
 
 const PUBLIC_PATHS   = ['/login', '/auth/callback', '/auth/confirm']
-const PAYWALL_EXEMPT = ['/profile', '/subscribe', '/login', '/auth/callback', '/auth/confirm', '/support']
+const PAYWALL_EXEMPT = ['/profile', '/subscribe', '/login', '/auth/callback', '/auth/confirm', '/support', '/admin']
 
 // 'unknown' = no subscription row yet (new user, trigger delay, or existing user
 // before monetization was added). Treat as 'trialing' so they are NOT paywalled.
