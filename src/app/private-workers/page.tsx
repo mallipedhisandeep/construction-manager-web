@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import AppShell, { useLang, useToast } from '@/components/AppShell'
+import { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
@@ -29,7 +29,7 @@ function PrivateWorkersPage() {
     const [{ data: workers }, { data: allWork }, { data: allPays }] = await Promise.all([
       supabase.from('private_workers').select('*').eq('user_id', userId).is('deleted_at', null).order('name'),
       supabase.from('private_work').select('worker_id,price_charged,amount_paid').eq('user_id', userId).is('deleted_at', null),
-      supabase.from('private_worker_payments').select('worker_id,amount,direction').eq('user_id', userId),
+      supabase.from('private_worker_payments').select('worker_id,amount,direction').eq('user_id', userId).is('deleted_at', null),
     ])
     if (!workers) { setLoading(false); return }
 
@@ -48,7 +48,7 @@ function PrivateWorkersPage() {
   const loadHist = async (workerId: string) => {
     const userId = await uid()
     const [{ data: pays }, { data: work }] = await Promise.all([
-      supabase.from('private_worker_payments').select('*').eq('worker_id', workerId).eq('user_id', userId).order('date',{ascending:false}),
+      supabase.from('private_worker_payments').select('*').eq('worker_id', workerId).eq('user_id', userId).is('deleted_at', null).order('date',{ascending:false}),
       supabase.from('private_work').select('*').eq('worker_id', workerId).eq('user_id', userId).is('deleted_at',null).order('work_date',{ascending:false}),
     ])
     const entries: typeof hist = []
@@ -228,7 +228,7 @@ function PrivateWorkersPage() {
                     <div className="text-xs" style={{color:'rgb(var(--muted))'}}>{h.date} · {h.sublabel}</div>
                   </div>
                   {h.canDel && h.id && (
-                    <button onClick={async()=>{ await supabase.from('private_worker_payments').update({deleted_at:new Date().toISOString()}).eq('id',h.id!); loadHist(selected!.id!); load() }} className="text-red-400 text-xs p-1.5">🗑️</button>
+                    <button onClick={async()=>{ const { error } = await supabase.from('private_worker_payments').update({deleted_at:new Date().toISOString()}).eq('id',h.id!); if (error) { showToast(error.message, false) } else { loadHist(selected!.id!); load() } }} className="text-red-400 text-xs p-1.5">🗑️</button>
                   )}
                 </div>
                ))
@@ -241,4 +241,4 @@ function PrivateWorkersPage() {
   )
 }
 
-export default function PrivateWorkers() { return <AppShell><PrivateWorkersPage /></AppShell> }
+export default function PrivateWorkers() { return <PrivateWorkersPage /> }
