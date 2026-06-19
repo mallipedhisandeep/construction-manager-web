@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import AppShell, { useLang, useToast } from '@/components/AppShell'
+import { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { GOODS_UNITS } from '@/lib/constants'
@@ -72,6 +72,9 @@ function GoodsPage() {
     const price = parseFloat(form.priceStr||'0')
     if (qty <= 0) { showToast(te ? 'పరిమాణం 0 కంటే ఎక్కువ ఉండాలి' : 'Quantity must be greater than 0', false); return }
     if (price <= 0) { showToast(te ? 'ధర 0 కంటే ఎక్కువ ఉండాలి' : 'Price must be greater than 0', false); return }
+    const advCheck = parseFloat(form.advStr||'0')
+    if (advCheck < 0) { showToast(te ? 'అడ్వాన్స్ నెగటివ్‌గా ఉండకూడదు' : 'Advance cannot be negative', false); return }
+    if (advCheck > qty * price) { showToast(te ? 'అడ్వాన్స్ మొత్తం ఖరీదు కంటే ఎక్కువ ఉండకూడదు' : 'Advance cannot exceed the order total', false); return }
     setSaving(true)
     const sup  = suppliers.find(s=>s.id===form.supplier_id)
     const site = sites.find(s=>s.id===form.site_id)
@@ -111,7 +114,8 @@ function GoodsPage() {
   }
 
   const updateStatus = async (id:string, status:string) => {
-    await supabase.from('goods_orders').update({status}).eq('id',id)
+    const { error } = await supabase.from('goods_orders').update({status}).eq('id',id)
+    if (error) { showToast(error.message, false); return }
     load()
   }
 
@@ -123,6 +127,17 @@ function GoodsPage() {
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
     if (error) { showToast(error.message, false); return }
+
+    // The advance payment created alongside this order (supplier_payments.goods_order_id)
+    // would otherwise keep counting toward the supplier's balance for an order
+    // that no longer exists in any active view.
+    const { error: payErr } = await supabase
+      .from('supplier_payments')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('goods_order_id', id)
+      .is('deleted_at', null)
+    if (payErr) console.error('Failed to cascade-delete linked advance payment:', payErr.message)
+
     showToast(te ? 'చెత్తబుట్టకు తరలించబడింది 🗑️' : 'Moved to recycle bin 🗑️')
     load()
   }
@@ -347,4 +362,4 @@ function GoodsPage() {
     </div>
   )
 }
-export default function Goods() { return <AppShell><GoodsPage /></AppShell> }
+export default function Goods() { return <GoodsPage /> }
