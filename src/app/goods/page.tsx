@@ -83,6 +83,7 @@ function GoodsPage() {
 
     try {
       const userId = await uid()
+      if (!userId) throw new Error('Not logged in')
       const { data:order, error } = await supabase.from('goods_orders').insert({
         supplier_id: form.supplier_id, supplier_name: sup?.name??'',
         goods_name: form.goods_name, unit: form.unit,
