@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import AppShell, { useLang, useToast } from '@/components/AppShell'
+import { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
@@ -60,6 +60,7 @@ function PrivateWorkPage() {
     const worker = pWorkers.find(w=>w.id===form.worker_id)
     const site   = sites.find(s=>s.id===form.site_id)
     const userId = await uid()
+    if (!userId) { setSaving(false); showToast('Not logged in', false); return }
     const data   = {
       ...form,
       worker_name:   worker?.name??'',
@@ -225,4 +226,4 @@ function PrivateWorkPage() {
   )
 }
 
-export default function PrivateWork() { return <AppShell><PrivateWorkPage /></AppShell> }
+export default function PrivateWork() { return <PrivateWorkPage /> }
