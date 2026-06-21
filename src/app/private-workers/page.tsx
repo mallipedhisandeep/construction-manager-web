@@ -65,6 +65,7 @@ function PrivateWorkersPage() {
     if (!form.name.trim()) { showToast('Name required',false); return }
     setSaving(true)
     const userId = await uid()
+    if (!userId) { setSaving(false); showToast('Not logged in',false); return }
     const { error } = modal==='add'
       ? await supabase.from('private_workers').insert({ ...form, user_id: userId })
       : await supabase.from('private_workers').update(form).eq('id', selected!.id!)
@@ -77,6 +78,7 @@ function PrivateWorkersPage() {
     if (!payForm.amount || !selected) return
     setSaving(true)
     const userId = await uid()
+    if (!userId) { setSaving(false); showToast('Not logged in',false); return }
     const { error } = await supabase.from('private_worker_payments').insert({
       worker_id: selected.id, amount: +payForm.amount,
       direction: payForm.direction, mode: payForm.mode,
