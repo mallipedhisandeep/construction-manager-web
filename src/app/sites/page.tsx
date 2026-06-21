@@ -199,7 +199,12 @@ function SitesPage() {
     setSaving(true)
     try {
       const userId = await uid()
-      const data = { ...form, site_name_search: form.site_name!.toLowerCase() }
+      if (!userId) throw new Error('Not logged in')
+      // NOTE: site_name_search is a Postgres GENERATED ALWAYS AS (lower(site_name))
+      // STORED column — Postgres computes it automatically. Sending it in an
+      // insert/update payload is rejected by Postgres ("cannot insert into a
+      // generated column"), which previously made every single site save fail.
+      const data = { ...form }
       const { error } = modal==='add'
         ? await supabase.from('sites').insert({...data, user_id: userId})
         : await supabase.from('sites').update(data).eq('id', selected!.id)
