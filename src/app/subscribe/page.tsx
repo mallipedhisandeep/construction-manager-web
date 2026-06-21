@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import AppShell, { useLang } from '@/components/AppShell'
+import { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -303,4 +303,4 @@ function SubscribePage() {
   )
 }
 
-export default function Subscribe() { return <AppShell><SubscribePage /></AppShell> }
+export default function Subscribe() { return <SubscribePage /> }
