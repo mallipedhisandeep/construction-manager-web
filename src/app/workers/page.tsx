@@ -66,7 +66,8 @@ function WorkersPage() {
     setSaving(true)
     try {
       const userId = await uid()
-      
+      if (!userId) throw new Error('Not logged in')
+
       const { data: existing } = await supabase.from('workers')
         .select('id').eq('user_id', userId).eq('phone', form.phone).is('deleted_at', null).limit(2)
       const duplicateExists = modal === 'add'
