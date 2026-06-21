@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import AppShell, { useLang, useToast } from '@/components/AppShell'
+import { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
@@ -167,4 +167,4 @@ function SupportPage() {
   )
 }
 
-export default function Support() { return <AppShell><SupportPage /></AppShell> }
+export default function Support() { return <SupportPage /> }
