@@ -85,6 +85,7 @@ function SuppliersPage() {
         notes:     sForm.notes ?? '',
       }
       const userId = await uid()
+      if (!userId) throw new Error('Not logged in')
       const { error } = modal==='supplier' && selected
         ? await supabase.from('suppliers').update(payload).eq('id', selected.id)
         : await supabase.from('suppliers').insert({ ...payload, user_id: userId })
@@ -99,6 +100,7 @@ function SuppliersPage() {
     setSaving(true)
     try {
       const userId = await uid()
+      if (!userId) throw new Error('Not logged in')
       const { error } = await supabase.from('supplier_goods').insert({ ...gForm, supplier_id: selected.id, user_id: userId })
       if (error) throw error
       setModal(null); loadDetail(selected)
@@ -111,6 +113,7 @@ function SuppliersPage() {
     setSaving(true)
     try {
       const userId = await uid()
+      if (!userId) throw new Error('Not logged in')
       const { error } = await supabase.from('supplier_payments').insert({
         ...pForm,
         supplier_id:  selected.id,
