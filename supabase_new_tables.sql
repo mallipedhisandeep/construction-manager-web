@@ -3,6 +3,14 @@
 -- Run in Supabase → SQL Editor
 -- ============================================================
 
+-- REQUIRED: uuid_generate_v4() (used as the default for every id column
+-- below) lives in the uuid-ossp extension, which is NOT enabled by default
+-- on a fresh Supabase project. Without this line, every single INSERT into
+-- suppliers / supplier_goods / supplier_payments / goods_orders /
+-- site_payments fails with: function uuid_generate_v4() does not exist.
+-- This is almost certainly why Suppliers and Goods Orders could not be saved.
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Site Payments (owner pays us / us paying at site level)
 CREATE TABLE IF NOT EXISTS site_payments (
   id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -18,8 +26,9 @@ CREATE TABLE IF NOT EXISTS site_payments (
 );
 GRANT ALL ON public.site_payments TO authenticated;
 ALTER TABLE site_payments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users own their site_payments" ON site_payments;
 CREATE POLICY "Users own their site_payments"
-  ON site_payments FOR ALL USING (auth.uid() = user_id);
+  ON site_payments FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- Suppliers
 CREATE TABLE IF NOT EXISTS suppliers (
@@ -34,8 +43,9 @@ CREATE TABLE IF NOT EXISTS suppliers (
 );
 GRANT ALL ON public.suppliers TO authenticated;
 ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users own their suppliers" ON suppliers;
 CREATE POLICY "Users own their suppliers"
-  ON suppliers FOR ALL USING (auth.uid() = user_id);
+  ON suppliers FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- Supplier Goods Catalog (what each supplier sells + price)
 -- NOTE: user_id added here so goods can be isolated per user even when
@@ -51,8 +61,9 @@ CREATE TABLE IF NOT EXISTS supplier_goods (
 );
 GRANT ALL ON public.supplier_goods TO authenticated;
 ALTER TABLE supplier_goods ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users own their supplier_goods" ON supplier_goods;
 CREATE POLICY "Users own their supplier_goods"
-  ON supplier_goods FOR ALL USING (auth.uid() = user_id);
+  ON supplier_goods FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- Supplier Payments (advances + regular payments)
 CREATE TABLE IF NOT EXISTS supplier_payments (
@@ -70,8 +81,9 @@ CREATE TABLE IF NOT EXISTS supplier_payments (
 );
 GRANT ALL ON public.supplier_payments TO authenticated;
 ALTER TABLE supplier_payments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users own their supplier_payments" ON supplier_payments;
 CREATE POLICY "Users own their supplier_payments"
-  ON supplier_payments FOR ALL USING (auth.uid() = user_id);
+  ON supplier_payments FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- Goods Orders / Purchases
 CREATE TABLE IF NOT EXISTS goods_orders (
@@ -95,8 +107,9 @@ CREATE TABLE IF NOT EXISTS goods_orders (
 );
 GRANT ALL ON public.goods_orders TO authenticated;
 ALTER TABLE goods_orders ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users own their goods_orders" ON goods_orders;
 CREATE POLICY "Users own their goods_orders"
-  ON goods_orders FOR ALL USING (auth.uid() = user_id);
+  ON goods_orders FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- ── Migration: if these tables already exist, add the missing columns ─────────
 -- Run these only if upgrading an existing deployment:
