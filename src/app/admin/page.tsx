@@ -68,6 +68,7 @@ function AdminPage() {
   }
   const [authed,      setAuthed]      = useState(false)
   const [checking,    setChecking]    = useState(true)
+  const [authError,   setAuthError]   = useState<string|null>(null)
   const [tab,         setTab]         = useState<Tab>('overview')
   const [metrics,     setMetrics]     = useState<Metrics | null>(null)
   const [users,       setUsers]       = useState<UserRow[]>([])
@@ -82,17 +83,36 @@ function AdminPage() {
     setLoading(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { setAuthed(false); setChecking(false); router.replace('/'); return }
+      if (!session) {
+        setAuthed(false); setChecking(false); setLoading(false)
+        setAuthError('You are not signed in.')
+        router.replace('/login')
+        return
+      }
 
       const res = await fetch('/api/admin/data', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
       if (!res.ok) {
-        setAuthed(false); setChecking(false)
-        router.replace('/')
+        // Surface the real reason (not configured / wrong email / expired
+        // session) instead of silently bouncing back to '/', which just
+        // looked like the admin page was stuck buffering forever.
+        let reason = `Request failed (HTTP ${res.status})`
+        try {
+          const errJson = await res.json()
+          if (errJson?.error) reason = errJson.error
+        } catch { /* response wasn't JSON — keep generic reason */ }
+        setAuthed(false); setChecking(false); setLoading(false)
+        setAuthError(
+          res.status === 403
+            ? `Access denied: this account is not the configured admin (${reason}). Make sure ADMIN_EMAIL in Vercel's environment variables exactly matches the Google account email you are signed in with, then redeploy.`
+            : res.status === 401
+            ? 'Your session has expired. Please sign in again.'
+            : reason
+        )
         return
       }
-      setAuthed(true); setChecking(false)
+      setAuthed(true); setChecking(false); setAuthError(null)
       const json = await res.json()
 
       const now      = new Date()
@@ -162,7 +182,11 @@ function AdminPage() {
         mrrEstimate:     proUsers * 200,
       })
       setLastRefresh(new Date())
-    } catch (e) { console.error(e) }
+    } catch (e) {
+      console.error(e)
+      setAuthed(false); setChecking(false)
+      setAuthError(e instanceof Error ? e.message : 'Network error loading admin data.')
+    }
     finally { setLoading(false) }
   }, [router])
 
@@ -188,7 +212,21 @@ function AdminPage() {
       <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
     </div>
   )
-  if (!authed) return null
+  if (!authed) return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center" style={{background:t.bg}}>
+      <div className="text-5xl">🔒</div>
+      <p className="font-bold text-base" style={{color:t.text}}>Admin access unavailable</p>
+      <p className="text-sm max-w-sm" style={{color:t.muted}}>{authError ?? 'Something went wrong loading the admin panel.'}</p>
+      <div className="flex gap-2 mt-2">
+        <button onClick={loadData} className="px-4 py-2 rounded-xl text-sm font-bold" style={{background:t.surface,border:`1px solid ${t.border}`,color:t.text}}>
+          🔄 Try again
+        </button>
+        <button onClick={() => router.push('/')} className="px-4 py-2 rounded-xl text-sm font-bold text-amber-400" style={{background:t.surface,border:`1px solid ${t.border}`}}>
+          ← Back home
+        </button>
+      </div>
+    </div>
+  )
 
   const openTicketCount = tickets.filter(t => t.status === 'open').length
 
