@@ -13,7 +13,10 @@ export interface Attendance {
   advance: number; payment_mode: string; balance_after: number
 }
 export interface Site {
-  id?: string; site_name: string; site_name_search: string
+  id?: string; site_name: string
+  // site_name_search is a DB-generated column (lower(site_name)) — it is
+  // populated automatically by Postgres and must NEVER be sent in an
+  // insert/update payload, so it is intentionally not a writable field here.
   location?: string; owner_name?: string; owner_phone?: string
   start_date?: string; budget: number; floors_count: number
   status: string; notes?: string
