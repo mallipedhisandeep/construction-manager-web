@@ -16,6 +16,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
+import { notifyAdmin } from '@/lib/push'
 
 const PLAN_AMOUNT = 20000 // ₹200 in paise — must match create-order
 
@@ -158,6 +159,16 @@ export async function POST(req: Request) {
     }
 
     console.log('[verify] Subscription activated for user:', user.id)
+
+    // Best-effort — a push failure must never break the user's successful
+    // payment response.
+    notifyAdmin({
+      title: '💰 New subscription payment',
+      body:  `${user.email ?? user.id} just paid for Pro (₹${(PLAN_AMOUNT/100).toFixed(0)})`,
+      url:   '/admin?tab=subs',
+      tag:   'new-subscription',
+    }).catch(e => console.error('[verify] notifyAdmin failed:', e))
+
     return NextResponse.json({ success: true })
 
   } catch (e) {
