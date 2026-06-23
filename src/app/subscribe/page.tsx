@@ -11,65 +11,52 @@ declare global {
 }
 interface RazorpayOptions {
   key: string
-  order_id: string
+  subscription_id: string
   name: string
   description: string
-  amount: number
-  currency: string
   prefill: { name?: string; email?: string }
   theme: { color: string }
-  handler: (response: {
-    razorpay_order_id: string
-    razorpay_payment_id: string
-    razorpay_signature: string
-  }) => void
+  handler: () => void
   modal?: { ondismiss?: () => void }
 }
 
 const RZP_URL = 'https://checkout.razorpay.com/v1/checkout.js'
 
-// Loads checkout.js exactly once, waits for onload, resolves true/false.
-// Safe to call multiple times — detects existing tag or already-loaded SDK.
 function loadRazorpay(): Promise<boolean> {
   return new Promise((resolve) => {
-    // SDK already available
-    if (typeof window !== 'undefined' && window.Razorpay) {
-      resolve(true)
-      return
-    }
-    // Script tag already in DOM but still loading — attach listeners
+    if (typeof window !== 'undefined' && window.Razorpay) { resolve(true); return }
     const existing = document.getElementById('rzp-script') as HTMLScriptElement | null
     if (existing) {
       existing.addEventListener('load',  () => resolve(!!window.Razorpay))
       existing.addEventListener('error', () => resolve(false))
       return
     }
-    // Fresh inject
     const s = document.createElement('script')
     s.id    = 'rzp-script'
     s.src   = RZP_URL
-    s.async = false          // must be synchronous so Razorpay sets up window.Razorpay immediately on load
+    s.async = false
     s.onload  = () => resolve(!!window.Razorpay)
     s.onerror = () => resolve(false)
     document.head.appendChild(s)
   })
 }
 
+type Cycle = 'monthly' | 'yearly'
+
 function SubscribePage() {
   const { lang } = useLang()
   const te = lang === 'te'
   const router = useRouter()
 
+  const [cycle,      setCycle]      = useState<Cycle>('monthly')
   const [loading,    setLoading]    = useState(false)
   const [status,     setStatus]     = useState<'idle' | 'success' | 'error' | 'not_configured'>('idle')
   const [errorMsg,   setErrorMsg]   = useState('')
   const [userInfo,   setUserInfo]   = useState<{ name: string; email: string } | null>(null)
   const [currentSub, setCurrentSub] = useState<{
-    plan: string; trial_ends_at: string | null; current_period_end: string | null
+    plan: string; status: string; trial_ends_at: string | null; current_period_end: string | null
   } | null>(null)
 
-  // Kick off script load the moment this page mounts — by the time
-  // user taps Subscribe it will almost certainly already be done.
   useEffect(() => {
     loadRazorpay()
 
@@ -91,11 +78,9 @@ function SubscribePage() {
     setErrorMsg('')
 
     try {
-      // 1. Must be logged in
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
 
-      // 2. Ensure Razorpay SDK is loaded (awaits onload — not a poll)
       const ready = await loadRazorpay()
       if (!ready) {
         setErrorMsg('Could not load payment SDK. Please check your internet connection and try again.')
@@ -104,10 +89,11 @@ function SubscribePage() {
         return
       }
 
-      // 3. Create Razorpay order on the server
-      const res = await fetch('/api/razorpay/create-order', {
+      // Create a recurring Razorpay Subscription (not a one-time order).
+      const res = await fetch('/api/razorpay/create-subscription', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${session.access_token}` },
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cycle }),
       })
 
       let body: Record<string, string> = {}
@@ -120,42 +106,25 @@ function SubscribePage() {
         return
       }
 
-      const { orderId, keyId, amount, currency } = body
+      const { subscriptionId, keyId } = body
 
-      // 4. Open Standard Checkout modal
       const rzp = new window.Razorpay({
-        key:         keyId,
-        order_id:    orderId,
-        name:        'Construction Manager',
-        description: '₹200/month — All Features',
-        amount:      Number(amount),
-        currency:    currency ?? 'INR',
-        prefill:     { name: userInfo?.name ?? '', email: userInfo?.email ?? '' },
-        theme:       { color: '#d48c28' },
+        key:              keyId,
+        subscription_id:  subscriptionId,
+        name:             'Construction Manager',
+        description:      cycle === 'monthly' ? '₹240/month — All Features' : '₹2500/year — All Features',
+        prefill:          { name: userInfo?.name ?? '', email: userInfo?.email ?? '' },
+        theme:            { color: '#d48c28' },
 
-        // 5. On payment success — verify signature on server
-        handler: async (response) => {
-          try {
-            const verRes = await fetch('/api/razorpay/verify', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type':  'application/json',
-              },
-              body: JSON.stringify(response),
-            })
-            if (verRes.ok) {
-              setStatus('success')
-              setTimeout(() => router.push('/profile'), 2500)
-            } else {
-              const vd = await verRes.json().catch(() => ({}))
-              setErrorMsg(vd.error ?? 'Verification failed')
-              setStatus('error')
-            }
-          } catch {
-            setErrorMsg('Network error during verification')
-            setStatus('error')
-          }
+        // The mandate authorization itself is confirmed here, but the
+        // actual subscription activation (and writing to our DB) happens
+        // via the /api/razorpay/webhook subscription.activated event —
+        // that's the source of truth, not this client-side handler. We
+        // just show a success screen and let the webhook catch up
+        // (usually within a second or two).
+        handler: () => {
+          setStatus('success')
+          setTimeout(() => router.push('/profile'), 3000)
           setLoading(false)
         },
 
@@ -196,6 +165,8 @@ function SubscribePage() {
     ? Math.max(0, Math.ceil((new Date(trialEnd).getTime() - Date.now()) / 86400000))
     : null
 
+  const isPastDue = currentSub?.status === 'past_due'
+
   if (status === 'success') {
     return (
       <div className="page flex flex-col items-center justify-center px-6 text-center">
@@ -229,19 +200,55 @@ function SubscribePage() {
             🎁 {te ? `ట్రయల్ ${trialDaysLeft} రోజులు మిగిలాయి` : `${trialDaysLeft} trial days left`}
           </div>
         )}
+        {isPastDue && (
+          <div className="inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold"
+            style={{ background: 'rgba(220,38,38,0.12)', color: '#dc2626' }}>
+            ⚠️ {te ? 'చివరి చెల్లింపు విఫలమైంది' : 'Last payment failed — please renew'}
+          </div>
+        )}
+      </div>
+
+      {/* Plan toggle */}
+      <div className="flex gap-2 mb-4 p-1 rounded-2xl" style={{ background: 'rgb(var(--surface2))' }}>
+        <button onClick={() => setCycle('monthly')}
+          className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
+          style={{
+            background: cycle === 'monthly' ? 'rgb(var(--accent))' : 'transparent',
+            color:      cycle === 'monthly' ? '#fff' : 'rgb(var(--text))',
+          }}>
+          {te ? 'మాసిక' : 'Monthly'}
+        </button>
+        <button onClick={() => setCycle('yearly')}
+          className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all relative"
+          style={{
+            background: cycle === 'yearly' ? 'rgb(var(--accent))' : 'transparent',
+            color:      cycle === 'yearly' ? '#fff' : 'rgb(var(--text))',
+          }}>
+          {te ? 'వార్షిక' : 'Yearly'}
+          <span className="absolute -top-2 -right-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
+            style={{ background: '#4caf50', color: '#fff' }}>
+            {te ? 'ఆదా' : 'SAVE 13%'}
+          </span>
+        </button>
       </div>
 
       <div className="card p-5 mb-4 text-center"
         style={{ border: '1px solid rgba(var(--accent),0.3)', background: 'rgba(var(--accent),0.05)' }}>
         <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'rgb(var(--accent))' }}>
-          {te ? 'మాసిక ప్లాన్' : 'Monthly Plan'}
+          {cycle === 'monthly' ? (te ? 'మాసిక ప్లాన్' : 'Monthly Plan') : (te ? 'వార్షిక ప్లాన్' : 'Yearly Plan')}
         </p>
         <div className="flex items-end justify-center gap-1 mb-1">
-          <span className="text-4xl font-black" style={{ color: 'rgb(var(--text))' }}>₹200</span>
-          <span className="text-sm mb-1.5" style={{ color: 'rgb(var(--muted))' }}>/{te ? 'నెల' : 'month'}</span>
+          <span className="text-4xl font-black" style={{ color: 'rgb(var(--text))' }}>
+            {cycle === 'monthly' ? '₹240' : '₹2500'}
+          </span>
+          <span className="text-sm mb-1.5" style={{ color: 'rgb(var(--muted))' }}>
+            /{cycle === 'monthly' ? (te ? 'నెల' : 'month') : (te ? 'సంవత్సరం' : 'year')}
+          </span>
         </div>
         <p className="text-xs" style={{ color: 'rgb(var(--muted))' }}>
-          {te ? '≈ రోజుకు ₹6.67 · ఎప్పుడైనా రద్దు చేయవచ్చు' : '≈ ₹6.67/day · Cancel anytime'}
+          {cycle === 'monthly'
+            ? (te ? '≈ రోజుకు ₹8 · ఆటో-రెన్యూవల్, ఎప్పుడైనా రద్దు చేయవచ్చు' : '≈ ₹8/day · Auto-renews monthly, cancel anytime')
+            : (te ? '≈ నెలకు ₹208 · ఆటో-రెన్యూవల్, ఎప్పుడైనా రద్దు చేయవచ్చు' : '≈ ₹208/month · Auto-renews yearly, cancel anytime')}
         </p>
       </div>
 
@@ -278,7 +285,9 @@ function SubscribePage() {
         className="btn-primary w-full py-4 text-base font-black mb-3 disabled:opacity-50">
         {loading
           ? (te ? '⏳ ప్రాసెస్ అవుతోంది...' : '⏳ Processing...')
-          : (te ? '⭐ ఇప్పుడు సభ్యత్వం పొందండి — ₹200/నెల' : '⭐ Subscribe Now — ₹200/month')}
+          : (te
+              ? `⭐ ఇప్పుడు సభ్యత్వం పొందండి — ${cycle === 'monthly' ? '₹240/నెల' : '₹2500/సంవత్సరం'}`
+              : `⭐ Subscribe Now — ${cycle === 'monthly' ? '₹240/month' : '₹2500/year'}`)}
       </button>
 
       {userInfo?.email && (
