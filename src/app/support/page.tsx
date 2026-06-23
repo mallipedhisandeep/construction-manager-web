@@ -10,11 +10,19 @@ interface Ticket {
   admin_reply: string | null; created_at: string
 }
 
-const CATEGORIES = [
-  { key: 'bug',     en: 'Bug / Something broken', te: 'బగ్ / పని చేయడం లేదు' },
-  { key: 'billing', en: 'Billing / Payment',       te: 'బిల్లింగ్ / చెల్లింపు' },
-  { key: 'data',    en: 'Data issue',              te: 'డేటా సమస్య' },
-  { key: 'other',   en: 'Other',                   te: 'ఇతరం' },
+const MODULES = [
+  { key: 'workers',      en: 'Workers',              te: 'వర్కర్స్' },
+  { key: 'attendance',   en: 'Attendance',           te: 'అటెండెన్స్' },
+  { key: 'sites',        en: 'Sites',                te: 'సైట్స్' },
+  { key: 'contractors',  en: 'Contractors',          te: 'కాంట్రాక్టర్లు' },
+  { key: 'contract_work',en: 'Contract Work',        te: 'కాంట్రాక్ట్ పని' },
+  { key: 'suppliers',    en: 'Suppliers',            te: 'సరఫరాదారులు' },
+  { key: 'goods_orders', en: 'Goods Orders',         te: 'వస్తువుల ఆర్డర్లు' },
+  { key: 'money',        en: 'Money Tracking',       te: 'డబ్బు ట్రాకింగ్' },
+  { key: 'reports',      en: 'Reports',              te: 'రిపోర్ట్లు' },
+  { key: 'billing',      en: 'Billing / Subscription', te: 'బిల్లింగ్ / సబ్‌స్క్రిప్షన్' },
+  { key: 'account',      en: 'Account / Login',      te: 'ఖాతా / లాగిన్' },
+  { key: 'other',        en: 'Something else',       te: 'ఇతరం' },
 ]
 
 function SupportPage() {
@@ -26,8 +34,7 @@ function SupportPage() {
 
   const [tickets,  setTickets]  = useState<Ticket[]>([])
   const [loading,  setLoading]  = useState(true)
-  const [category, setCategory] = useState('bug')
-  const [subject,  setSubject]  = useState('')
+  const [category, setCategory] = useState('workers')
   const [message,  setMessage]  = useState('')
   const [sending,  setSending]  = useState(false)
 
@@ -44,25 +51,28 @@ function SupportPage() {
   useEffect(() => { load() }, [load])
 
   const submit = async () => {
-    if (!subject.trim() || !message.trim()) {
-      showToast(te ? 'వివరాలు పూరించండి' : 'Please fill in all fields', false)
+    if (!message.trim()) {
+      showToast(te ? 'వివరాలు పూరించండి' : 'Please describe the issue', false)
       return
     }
     setSending(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSending(false); return }
 
+    const moduleLabel = MODULES.find(m => m.key === category)
+    const subject = (te ? moduleLabel?.te : moduleLabel?.en) ?? 'Other'
+
     const { error } = await supabase.from('support_tickets').insert({
       user_id:    user.id,
       user_email: user.email,
       category,
-      subject:    subject.trim(),
+      subject,
       message:    message.trim(),
       status:     'open',
     })
     setSending(false)
     if (error) { showToast(error.message, false); return }
-    setSubject(''); setMessage('')
+    setMessage('')
     showToast(te ? 'పంపబడింది! త్వరలో సంప్రదిస్తాం.' : 'Sent! We\'ll get back to you soon.')
     load()
   }
@@ -91,31 +101,27 @@ function SupportPage() {
       {/* New ticket form */}
       <div className="card p-4 mb-5">
         <p className="text-sm font-bold mb-3" style={{color:'rgb(var(--text))'}}>
-          {te ? 'కొత్త సమస్యను నివేదించండి' : 'Report a new issue'}
+          {te ? 'మాకు తెలియజేయండి' : 'Tell us what happened'}
         </p>
 
-        <label className="label">{te ? 'వర్గం' : 'Category'}</label>
+        <label className="label">{te ? 'ఏ భాగంలో సమస్య వచ్చింది?' : 'Which part of the app is this about?'}</label>
         <div className="grid grid-cols-2 gap-2 mb-3">
-          {CATEGORIES.map(c => (
-            <button key={c.key} onClick={() => setCategory(c.key)}
+          {MODULES.map(m => (
+            <button key={m.key} onClick={() => setCategory(m.key)}
               className="py-2 px-2 rounded-xl text-xs font-semibold transition-all"
               style={{
-                background: category===c.key ? 'rgb(var(--accent))' : 'rgb(var(--surface2))',
-                color:      category===c.key ? '#fff' : 'rgb(var(--text))',
-                border:     `1px solid ${category===c.key ? 'transparent' : 'rgb(var(--border))'}`,
+                background: category===m.key ? 'rgb(var(--accent))' : 'rgb(var(--surface2))',
+                color:      category===m.key ? '#fff' : 'rgb(var(--text))',
+                border:     `1px solid ${category===m.key ? 'transparent' : 'rgb(var(--border))'}`,
               }}>
-              {te ? c.te : c.en}
+              {te ? m.te : m.en}
             </button>
           ))}
         </div>
 
-        <label className="label">{te ? 'విషయం' : 'Subject'}</label>
-        <input value={subject} onChange={e => setSubject(e.target.value)} className="input mb-3"
-          placeholder={te ? 'సమస్యను ఒక్క వాక్యంలో చెప్పండి' : 'Briefly describe the issue'} />
-
-        <label className="label">{te ? 'వివరాలు' : 'Details'}</label>
+        <label className="label">{te ? 'ఏమి జరిగింది?' : 'What went wrong?'}</label>
         <textarea value={message} onChange={e => setMessage(e.target.value)} rows={4} className="input resize-none mb-3"
-          placeholder={te ? 'ఏమి జరిగింది? ఎప్పుడు జరిగింది?' : 'What happened? When did it happen?'} />
+          placeholder={te ? 'మీరు ఏమి చేయాలని అనుకున్నారు, నిజానికి ఏమి జరిగింది?' : 'What were you trying to do, and what happened instead?'} />
 
         <button onClick={submit} disabled={sending} className="btn-primary w-full py-3 font-bold disabled:opacity-50">
           {sending ? (te ? '⏳ పంపుతోంది...' : '⏳ Sending...') : (te ? '📨 పంపండి' : '📨 Submit')}
