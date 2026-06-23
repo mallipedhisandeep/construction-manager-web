@@ -1,7 +1,7 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useTheme } from '@/components/AppShell'
 
 interface UserRow {
@@ -45,6 +45,7 @@ type Tab = 'overview' | 'users' | 'subs' | 'data' | 'tickets' | 'info'
 
 function AdminPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
@@ -69,7 +70,9 @@ function AdminPage() {
   const [authed,      setAuthed]      = useState(false)
   const [checking,    setChecking]    = useState(true)
   const [authError,   setAuthError]   = useState<string|null>(null)
-  const [tab,         setTab]         = useState<Tab>('overview')
+  const VALID_TABS: Tab[] = ['overview','users','subs','data','tickets','info']
+  const initialTab = (searchParams.get('tab') as Tab | null)
+  const [tab,         setTab]         = useState<Tab>(initialTab && VALID_TABS.includes(initialTab) ? initialTab : 'overview')
   const [metrics,     setMetrics]     = useState<Metrics | null>(null)
   const [users,       setUsers]       = useState<UserRow[]>([])
   const [subs,        setSubs]        = useState<SubRow[]>([])
@@ -78,6 +81,8 @@ function AdminPage() {
   const [replying,    setReplying]    = useState<string|null>(null)
   const [loading,     setLoading]     = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const [pushStatus,  setPushStatus]  = useState<'unknown'|'unsupported'|'subscribed'|'unsubscribed'|'denied'>('unknown')
+  const [pushBusy,    setPushBusy]    = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -94,22 +99,27 @@ function AdminPage() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
       if (!res.ok) {
-        // Surface the real reason (not configured / wrong email / expired
-        // session) instead of silently bouncing back to '/', which just
-        // looked like the admin page was stuck buffering forever.
         let reason = `Request failed (HTTP ${res.status})`
         try {
           const errJson = await res.json()
           if (errJson?.error) reason = errJson.error
         } catch { /* response wasn't JSON — keep generic reason */ }
+
+        // Not signed in / signed in as someone other than the configured
+        // admin → silently send them home, no message. This is a normal,
+        // expected outcome for every non-admin user who lands here, not an
+        // error worth surfacing.
+        if (res.status === 401 || res.status === 403) {
+          setAuthed(false); setChecking(false); setLoading(false)
+          router.replace('/')
+          return
+        }
+
+        // Anything else (500, network/config problems) is a real setup
+        // issue worth showing, since silently redirecting here would just
+        // look like the page is stuck buffering with no way to diagnose it.
         setAuthed(false); setChecking(false); setLoading(false)
-        setAuthError(
-          res.status === 403
-            ? `Access denied: this account is not the configured admin (${reason}). Make sure ADMIN_EMAIL in Vercel's environment variables exactly matches the Google account email you are signed in with, then redeploy.`
-            : res.status === 401
-            ? 'Your session has expired. Please sign in again.'
-            : reason
-        )
+        setAuthError(reason)
         return
       }
       setAuthed(true); setChecking(false); setAuthError(null)
@@ -193,6 +203,86 @@ function AdminPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  // ── Push notifications ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setPushStatus('unsupported')
+      return
+    }
+    if (Notification.permission === 'denied') { setPushStatus('denied'); return }
+    navigator.serviceWorker.ready
+      .then(reg => reg.pushManager.getSubscription())
+      .then(sub => setPushStatus(sub ? 'subscribed' : 'unsubscribed'))
+      .catch(() => setPushStatus('unsubscribed'))
+  }, [])
+
+  function urlBase64ToUint8Array(base64String: string) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4)
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+    const rawData = atob(base64)
+    return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)))
+  }
+
+  const enablePush = async () => {
+    setPushBusy(true)
+    try {
+      const permission = await Notification.requestPermission()
+      if (permission !== 'granted') { setPushStatus('denied'); return }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not signed in')
+
+      const keyRes = await fetch('/api/admin/push/vapid-key', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const keyJson = await keyRes.json()
+      if (!keyRes.ok) throw new Error(keyJson.error ?? 'Could not load push key')
+
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(keyJson.publicKey),
+      })
+
+      const saveRes = await fetch('/api/admin/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ subscription: sub.toJSON() }),
+      })
+      const saveJson = await saveRes.json()
+      if (!saveRes.ok) throw new Error(saveJson.error ?? 'Could not save subscription')
+
+      setPushStatus('subscribed')
+    } catch (e) {
+      console.error('[push] enable failed:', e)
+      alert(e instanceof Error ? e.message : 'Could not enable push notifications')
+    } finally {
+      setPushBusy(false)
+    }
+  }
+
+  const disablePush = async () => {
+    setPushBusy(true)
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.getSubscription()
+      if (sub) {
+        const { data: { session } } = await supabase.auth.getSession()
+        await fetch('/api/admin/push/subscribe', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        })
+        await sub.unsubscribe()
+      }
+      setPushStatus('unsubscribed')
+    } catch (e) {
+      console.error('[push] disable failed:', e)
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   const sendReply = async (ticketId: string, status: string) => {
     setReplying(ticketId)
@@ -488,6 +578,32 @@ function AdminPage() {
         {/* Info tab */}
         {tab === 'info' && (
           <div className="space-y-2">
+            <div className="rounded-xl p-3 mb-2" style={{background:t.surface, border:`1px solid ${t.border}`}}>
+              <p className="text-sm font-bold mb-1" style={{color:t.text}}>🔔 Push notifications</p>
+              <p className="text-xs mb-3" style={{color:t.muted}}>
+                Get notified on this device for new signups, new subscriptions, and new support tickets — even if the app is closed.
+              </p>
+              {pushStatus === 'unsupported' && (
+                <p className="text-xs" style={{color:t.muted}}>Not supported in this browser. Install the app to your home screen first, then open it from there.</p>
+              )}
+              {pushStatus === 'denied' && (
+                <p className="text-xs" style={{color:'#e0a030'}}>Notifications are blocked for this site. Enable them in your browser/phone settings, then reload this page.</p>
+              )}
+              {(pushStatus === 'subscribed') && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold" style={{color:'#4caf50'}}>✓ Enabled on this device</span>
+                  <button onClick={disablePush} disabled={pushBusy} className="px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-50" style={{background:t.bg, border:`1px solid ${t.border}`, color:t.text}}>
+                    {pushBusy ? '...' : 'Turn off'}
+                  </button>
+                </div>
+              )}
+              {pushStatus === 'unsubscribed' && (
+                <button onClick={enablePush} disabled={pushBusy} className="px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50" style={{background:'rgb(var(--accent))', color:'#fff'}}>
+                  {pushBusy ? 'Enabling...' : '🔔 Enable on this device'}
+                </button>
+              )}
+            </div>
+
             {[
               { label: 'Admin Auth',  val: 'Server-side (ADMIN_EMAIL env var, not client-exposed)' },
               { label: 'App Version', val: 'v1.0.0' },
@@ -505,4 +621,10 @@ function AdminPage() {
   )
 }
 
-export default function Admin() { return <AdminPage /> }
+export default function Admin() {
+  return (
+    <Suspense fallback={null}>
+      <AdminPage />
+    </Suspense>
+  )
+}
