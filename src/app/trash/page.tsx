@@ -89,12 +89,23 @@ function TrashPage() {
   useEffect(() => { load() }, [load])
 
   const restore = async (item: TrashItem) => {
-   
+
     setActioning(item.id)
     const { error } = await supabase
       .from(item.table)
       .update({ deleted_at: null })
       .eq('id', item.id)
+
+    // Cascade restore: bringing back a contractor should also bring back
+    // their payments and contract-work entries (deleted alongside them when
+    // the worker was deleted), otherwise Money Tracking/Reports stay short.
+    if (!error && item.table === 'private_workers') {
+      await Promise.all([
+        supabase.from('private_worker_payments').update({ deleted_at: null }).eq('worker_id', item.id),
+        supabase.from('private_work').update({ deleted_at: null }).eq('worker_id', item.id),
+      ])
+    }
+
     setActioning(null)
     if (error) showToast(error.message, false)
     else { showToast(ts(lang,'restore') + '!'); load() }
