@@ -19,6 +19,8 @@ interface SubInfo {
   plan: Plan
   trialEndsAt: string | null   // ISO date string, null if not on trial
   renewsAt: string | null       // ISO date string for next billing date
+  cancelAtPeriodEnd: boolean
+  billingCycle: 'monthly' | 'yearly' | null
 }
 
 // Escape user-entered text before interpolating into the HTML report below —
@@ -41,9 +43,13 @@ function ProfilePage() {
   const router = useRouter()
   const [user,  setUser]  = useState<{ name: string; email: string; avatar?: string } | null>(null)
   const [stats, setStats] = useState<Stats>({ workers:0, sites:0, attendance:0, suppliers:0, privateWorkers:0 })
-  const [sub,   setSub]   = useState<SubInfo>({ plan:'free', trialEndsAt: null, renewsAt: null })
+  const [sub,   setSub]   = useState<SubInfo>({ plan:'free', trialEndsAt: null, renewsAt: null, cancelAtPeriodEnd: false, billingCycle: null })
   const [loading, setLoading] = useState(true)
   const [showSignOut, setShowSignOut] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [pushStatus, setPushStatus] = useState<'unknown'|'unsupported'|'subscribed'|'unsubscribed'|'denied'>('unknown')
+  const [pushBusy, setPushBusy] = useState(false)
 
   const { showToast } = useToast()
 
@@ -66,17 +72,19 @@ function ProfilePage() {
           supabase.from('suppliers').select('id',{count:'exact',head:true}).eq('user_id', u.id).is('deleted_at',null),
           supabase.from('private_workers').select('id',{count:'exact',head:true}).eq('user_id', u.id).is('deleted_at',null),
           // subscriptions table — safe to attempt even if table doesn't exist yet
-          supabase.from('subscriptions').select('plan,status,trial_ends_at,current_period_end').eq('user_id', u.id).maybeSingle(),
+          supabase.from('subscriptions').select('plan,status,trial_ends_at,current_period_end,cancel_at_period_end,billing_cycle').eq('user_id', u.id).maybeSingle(),
         ])
         setStats({ workers:w??0, sites:s??0, attendance:a??0, suppliers:su??0, privateWorkers:pw??0 })
 
         // Map subscription row to local UI state
-        const row = (subResult as { data?: { plan?: string; status?: string; trial_ends_at?: string; current_period_end?: string } | null }).data
+        const row = (subResult as { data?: { plan?: string; status?: string; trial_ends_at?: string; current_period_end?: string; cancel_at_period_end?: boolean; billing_cycle?: string } | null }).data
         if (row) {
           setSub({
             plan: (row.plan as Plan) ?? 'free',
             trialEndsAt: row.trial_ends_at ?? null,
             renewsAt: row.current_period_end ?? null,
+            cancelAtPeriodEnd: row.cancel_at_period_end ?? false,
+            billingCycle: (row.billing_cycle as 'monthly' | 'yearly' | null) ?? null,
           })
         }
       }
@@ -88,6 +96,77 @@ function ProfilePage() {
   const signOut = async () => {
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  const cancelSubscription = async () => {
+    setCancelling(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/razorpay/cancel-subscription', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session?.access_token ?? ''}` },
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { showToast(json.error ?? 'Could not cancel', false); return }
+      setSub(s => ({ ...s, cancelAtPeriodEnd: true }))
+      setShowCancelConfirm(false)
+      showToast(lang==='te' ? 'రద్దు చేయబడింది' : 'Subscription will not renew')
+    } catch {
+      showToast(lang==='te' ? 'నెట్‌వర్క్ లోపం' : 'Network error', false)
+    } finally {
+      setCancelling(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { setPushStatus('unsupported'); return }
+    if (Notification.permission === 'denied') { setPushStatus('denied'); return }
+    navigator.serviceWorker.ready
+      .then(reg => reg.pushManager.getSubscription())
+      .then(s => setPushStatus(s ? 'subscribed' : 'unsubscribed'))
+      .catch(() => setPushStatus('unsubscribed'))
+  }, [])
+
+  function urlBase64ToUint8Array(base64String: string) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4)
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+    const rawData = atob(base64)
+    return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)))
+  }
+
+  const enableReminders = async () => {
+    setPushBusy(true)
+    try {
+      const permission = await Notification.requestPermission()
+      if (permission !== 'granted') { setPushStatus('denied'); return }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not signed in')
+
+      const keyRes = await fetch('/api/push/vapid-key', { headers: { Authorization: `Bearer ${session.access_token}` } })
+      const keyJson = await keyRes.json()
+      if (!keyRes.ok) throw new Error(keyJson.error ?? 'Could not load push key')
+
+      const reg = await navigator.serviceWorker.ready
+      const subResult = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(keyJson.publicKey),
+      })
+
+      const saveRes = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ subscription: subResult.toJSON() }),
+      })
+      if (!saveRes.ok) { const j = await saveRes.json().catch(()=>({})); throw new Error(j.error ?? 'Could not save subscription') }
+
+      setPushStatus('subscribed')
+      showToast(lang==='te' ? 'రిమైండర్‌లు ఆన్ చేయబడ్డాయి' : 'Reminders enabled')
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Could not enable reminders', false)
+    } finally {
+      setPushBusy(false)
+    }
   }
 
   const exportData = async () => {
@@ -353,7 +432,8 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
                 {sub.plan === 'trial' && !isTrialExpired && trialDaysLeft !== null && trialDaysLeft > 0 && `${lang==='te'?'ట్రయల్:':'Trial:'} ${trialDaysLeft} ${lang==='te'?'రోజులు మిగిలాయి':'days left'}`}
                 {sub.plan === 'trial' && !isTrialExpired && trialDaysLeft === 0 && (lang==='te'?'నేడు ముగుస్తుంది!':'Ends today!')}
                 {sub.plan === 'lifetime' && (lang==='te'?'ఎప్పటికీ ఉచితం':'Free forever · No billing')}
-                {sub.plan === 'pro' && sub.renewsAt && `${lang==='te'?'తదుపరి చెల్లింపు':'Renews'} ${new Date(sub.renewsAt).toLocaleDateString()}`}
+                {sub.plan === 'pro' && sub.cancelAtPeriodEnd && sub.renewsAt && `${lang==='te'?'యాక్సెస్ ముగుస్తుంది':'Access ends'} ${new Date(sub.renewsAt).toLocaleDateString()}`}
+                {sub.plan === 'pro' && !sub.cancelAtPeriodEnd && sub.renewsAt && `${lang==='te'?'తదుపరి చెల్లింపు':'Renews'} ${new Date(sub.renewsAt).toLocaleDateString()} (${sub.billingCycle === 'yearly' ? (lang==='te'?'వార్షిక':'yearly') : (lang==='te'?'మాసిక':'monthly')})`}
                 {sub.plan === 'pro' && !sub.renewsAt && (lang==='te'?'యాక్టివ్':'Active')}
               </p>
             </div>
@@ -391,6 +471,34 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
           </div>
         )}
 
+        {/* Expiry reminder push opt-in — shown for anyone with a trial or
+            paid plan that could lapse, so they get a phone alert 3 days
+            before it ends instead of finding out when saves stop working */}
+        {(sub.plan === 'trial' || sub.plan === 'pro') && pushStatus !== 'unsupported' && (
+          <div className="mx-4 mb-4 px-4 py-3 rounded-xl flex items-center justify-between gap-3"
+            style={{background:'rgb(var(--surface2))'}}>
+            <div>
+              <p className="text-xs font-bold" style={{color:'rgb(var(--text))'}}>
+                🔔 {lang==='te'?'గడువు రిమైండర్‌లు':'Expiry reminders'}
+              </p>
+              <p className="text-xs" style={{color:'rgb(var(--muted))'}}>
+                {lang==='te'?'గడువుకు 3 రోజుల ముందు నోటిఫికేషన్':'Phone alert 3 days before it ends'}
+              </p>
+            </div>
+            {pushStatus === 'subscribed' ? (
+              <span className="text-xs font-bold" style={{color:'#4caf50'}}>✓ {lang==='te'?'ఆన్':'On'}</span>
+            ) : pushStatus === 'denied' ? (
+              <span className="text-xs" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'బ్లాక్ చేయబడింది':'Blocked'}</span>
+            ) : (
+              <button onClick={enableReminders} disabled={pushBusy}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-50"
+                style={{background:'rgb(var(--accent))', color:'#fff'}}>
+                {pushBusy ? '...' : (lang==='te'?'ఆన్ చేయండి':'Turn on')}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Pricing info row */}
         {(sub.plan === 'free' || sub.plan === 'trial') && (
           <div
@@ -399,9 +507,29 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
             <p className="text-xs" style={{color:'rgb(var(--muted))'}}>
               {lang==='te'?'ప్రో ప్లాన్ ధర':'Pro plan pricing'}
             </p>
-            <p className="text-sm font-black" style={{color:'rgb(var(--text))'}}>
-              ₹200<span className="text-xs font-medium" style={{color:'rgb(var(--muted))'}}>/{lang==='te'?'నెల':'month'}</span>
+            <p className="text-sm font-black text-right" style={{color:'rgb(var(--text))'}}>
+              ₹240<span className="text-xs font-medium" style={{color:'rgb(var(--muted))'}}>/{lang==='te'?'నెల':'mo'}</span>
+              <span className="text-xs font-medium mx-1" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'లేదా':'or'}</span>
+              ₹2500<span className="text-xs font-medium" style={{color:'rgb(var(--muted))'}}>/{lang==='te'?'సంవత్సరం':'yr'}</span>
             </p>
+          </div>
+        )}
+
+        {/* Cancel / manage subscription */}
+        {sub.plan === 'pro' && !sub.cancelAtPeriodEnd && (
+          <div className="px-4 py-3 border-t" style={{borderColor:'rgb(var(--border))'}}>
+            <button
+              onClick={() => setShowCancelConfirm(true)}
+              className="text-xs font-bold" style={{color:'#dc2626'}}>
+              {lang==='te' ? 'సభ్యత్వం రద్దు చేయండి' : 'Cancel subscription'}
+            </button>
+          </div>
+        )}
+        {sub.plan === 'pro' && sub.cancelAtPeriodEnd && (
+          <div className="px-4 py-3 border-t text-xs" style={{borderColor:'rgb(var(--border))', color:'rgb(var(--muted))'}}>
+            {lang==='te'
+              ? 'రద్దు చేయబడింది — చివరి తేదీ వరకు యాక్సెస్ ఉంటుంది.'
+              : "Cancelled — you'll keep access until the date above, then it won't renew."}
           </div>
         )}
       </div>
@@ -497,6 +625,29 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setShowSignOut(false)} className="btn-ghost py-3">{ts(lang,'cancel')}</button>
               <button onClick={signOut} className="py-3 rounded-xl font-bold text-white" style={{background:'#b91c1c'}}>{ts(lang,'signOut')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Cancel subscription confirm */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{background:'rgba(0,0,0,0.6)'}}>
+          <div className="card p-6 w-full max-w-sm text-center">
+            <p className="text-4xl mb-3">⚠️</p>
+            <p className="font-black text-lg mb-2" style={{color:'rgb(var(--text))'}}>
+              {lang==='te'?'సభ్యత్వం రద్దు చేయాలా?':'Cancel subscription?'}
+            </p>
+            <p className="text-sm mb-5" style={{color:'rgb(var(--muted))'}}>
+              {lang==='te'
+                ? 'మీ ప్రస్తుత వ్యవధి ముగిసే వరకు యాక్సెస్ ఉంటుంది. మీ డేటా సురక్షితంగా ఉంటుంది.'
+                : "You'll keep full access until your current period ends, then it won't renew. Your data is never deleted."}
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setShowCancelConfirm(false)} className="btn-ghost py-3">{ts(lang,'cancel')}</button>
+              <button onClick={cancelSubscription} disabled={cancelling}
+                className="py-3 rounded-xl font-bold text-white disabled:opacity-50" style={{background:'#b91c1c'}}>
+                {cancelling ? '...' : (lang==='te'?'రద్దు చేయండి':'Confirm cancel')}
+              </button>
             </div>
           </div>
         </div>
