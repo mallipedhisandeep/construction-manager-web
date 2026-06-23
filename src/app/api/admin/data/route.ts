@@ -54,7 +54,17 @@ export async function GET(req: Request) {
   ])
 
   const firstErr = subsErr || workersErr || sitesErr || attErr || pwaErr || ticketsErr
-  if (firstErr) return NextResponse.json({ error: firstErr.message }, { status: 500 })
+  if (firstErr) {
+    // "permission denied for table X" here (unlike on the client) means the
+    // service-role client itself isn't actually using the service role key —
+    // it bypasses RLS entirely, so a permission error at this point almost
+    // always means SUPABASE_SERVICE_ROLE_KEY in Vercel's env vars is missing,
+    // truncated, or is actually the anon/publishable key by mistake.
+    const hint = /permission denied/i.test(firstErr.message)
+      ? ' This usually means SUPABASE_SERVICE_ROLE_KEY in Vercel is missing or incorrect (it must be the "service_role" secret key from Supabase → Project Settings → API, not the anon/publishable key). Update it in Vercel → Settings → Environment Variables, then redeploy.'
+      : ''
+    return NextResponse.json({ error: firstErr.message + hint }, { status: 500 })
+  }
 
   return NextResponse.json({
     users,
