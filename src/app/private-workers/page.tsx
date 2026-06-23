@@ -95,7 +95,18 @@ function PrivateWorkersPage() {
 
   const del = async (w: PrivateWorker) => {
     if (!confirm(ts(lang,'deleteConfirm'))) return
-    await supabase.from('private_workers').update({ deleted_at: new Date().toISOString() }).eq('id', w.id!)
+    const now = new Date().toISOString()
+    const userId = await uid()
+    const { error } = await supabase.from('private_workers').update({ deleted_at: now }).eq('id', w.id!)
+    if (error) { showToast(error.message, false); return }
+    // Cascade: also soft-delete this worker's payments and contract-work
+    // entries so they stop being counted in Money Tracking and Reports.
+    // Restoring the worker from Trash does NOT currently restore these —
+    // restore them individually from Trash too if needed.
+    await Promise.all([
+      supabase.from('private_worker_payments').update({ deleted_at: now }).eq('worker_id', w.id!).eq('user_id', userId).is('deleted_at', null),
+      supabase.from('private_work').update({ deleted_at: now }).eq('worker_id', w.id!).eq('user_id', userId).is('deleted_at', null),
+    ])
     showToast('Moved to recycle bin 🗑️'); load()
   }
 
