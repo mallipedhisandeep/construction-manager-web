@@ -35,6 +35,39 @@ self.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting()
 })
 
+// ── Web Push: admin notifications (new user / new subscription / new
+// support ticket) ───────────────────────────────────────────────────────────
+self.addEventListener('push', (e) => {
+  let data = { title: 'Construction Manager', body: 'You have a new notification', url: '/admin' }
+  try { if (e.data) data = { ...data, ...e.data.json() } } catch { /* fall back to default text */ }
+
+  e.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: data.tag,
+      data: { url: data.url || '/admin' },
+    })
+  )
+})
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close()
+  const url = e.notification.data?.url || '/admin'
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(url)
+          return client.focus()
+        }
+      }
+      return self.clients.openWindow(url)
+    })
+  )
+})
+
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return
 
