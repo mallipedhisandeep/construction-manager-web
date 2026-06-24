@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
 import { SHIFTS, SHIFT_LABELS } from '@/lib/constants'
+import { ModuleGuide } from '@/components/ModuleGuide'
 import type { Worker } from '@/lib/types'
 
 const DISPLAY_SHIFTS = SHIFTS.filter(s => s !== 'Absent') as string[]
@@ -98,7 +99,8 @@ function WorkersPage() {
   const rateKey = (s:string) => `rate_${s.replace('-','_')}` as keyof Worker
 
   return (
-    <div className="min-h-screen pb-24" style={{background:'rgb(var(--bg))'}}>
+    <ModuleGuide module="workers">
+      <div className="min-h-screen pb-24" style={{background:'rgb(var(--bg))'}}>
       
       <div className="border-b px-4 pt-4 pb-3 sticky top-14 z-30"
         style={{background:'rgb(var(--surface))', borderColor:'rgb(var(--border))'}}>
@@ -324,6 +326,7 @@ function WorkersPage() {
         </div>
       )}
     </div>
+    </ModuleGuide>
   )
 }
 
