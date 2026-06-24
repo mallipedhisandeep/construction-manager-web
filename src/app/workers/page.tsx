@@ -6,6 +6,8 @@ import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
 import { SHIFTS, SHIFT_LABELS } from '@/lib/constants'
 import { ModuleGuide } from '@/components/ModuleGuide'
+import { InteractiveGuide } from '@/components/InteractiveGuide'
+import { WORKERS_GUIDE } from '@/lib/guides'
 import type { Worker } from '@/lib/types'
 
 const DISPLAY_SHIFTS = SHIFTS.filter(s => s !== 'Absent') as string[]
@@ -99,14 +101,14 @@ function WorkersPage() {
   const rateKey = (s:string) => `rate_${s.replace('-','_')}` as keyof Worker
 
   return (
-    <ModuleGuide module="workers">
+    <InteractiveGuide steps={WORKERS_GUIDE}>
       <div className="min-h-screen pb-24" style={{background:'rgb(var(--bg))'}}>
       
       <div className="border-b px-4 pt-4 pb-3 sticky top-14 z-30"
         style={{background:'rgb(var(--surface))', borderColor:'rgb(var(--border))'}}>
         <div className="flex items-center justify-between mb-2.5">
           <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>{ts(lang,'workers')}</h1>
-          <button onClick={() => { setForm(empty()); setModal('add') }} className="btn-primary btn-sm">
+          <button onClick={() => { setForm(empty()); setModal('add') }} className="btn-primary btn-sm" data-testid="add-worker-btn">
             + {ts(lang,'addWorker')}
           </button>
         </div>
@@ -326,7 +328,7 @@ function WorkersPage() {
         </div>
       )}
     </div>
-    </ModuleGuide>
+    </InteractiveGuide>
   )
 }
 
