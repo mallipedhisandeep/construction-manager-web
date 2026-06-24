@@ -4,6 +4,7 @@ import { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { fetchAll } from '@/lib/fetchAll'
+import { ModuleGuide } from '@/components/ModuleGuide'
 
 interface MoneyData {
   siteIncome: number; workerWages: number; workerAdvances: number
@@ -130,7 +131,8 @@ function MoneyPage() {
   const net = data.siteIncome - totalExpenses
 
   return (
-    <div className="page">
+    <ModuleGuide module="money">
+      <div className="page">
       <div className="page-header">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>💰 {te?'డబ్బు':'Money Tracking'}</h1>
@@ -201,6 +203,7 @@ function MoneyPage() {
         )}
       </div>
     </div>
+    </ModuleGuide>
   )
 }
 
