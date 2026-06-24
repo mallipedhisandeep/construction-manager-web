@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
 import { SITE_STATUSES } from '@/lib/constants'
+import { ModuleGuide } from '@/components/ModuleGuide'
 import type { Site } from '@/lib/types'
 
 // FileRow now stores the storage object path (for signing) + a runtime signedUrl
@@ -266,7 +267,8 @@ function SitesPage() {
   const totalReceived = sitePayments.reduce((s,p)=>s+p.amount,0)
 
   return (
-    <div className="page">
+    <ModuleGuide module="sites">
+      <div className="page">
       <input ref={fileRef} type="file" className="hidden" onChange={handleFileSelected}
         accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
 
@@ -551,6 +553,7 @@ function SitesPage() {
         </div>
       )}
     </div>
+    </ModuleGuide>
   )
 }
 
