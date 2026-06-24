@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts, MONTHS } from '@/lib/strings'
 import { SHIFTS, SHIFT_LABELS, PAYMENT_MODES } from '@/lib/constants'
+import { ModuleGuide } from '@/components/ModuleGuide'
 import type { Worker, Attendance, Site } from '@/lib/types'
 
 type Shift = typeof SHIFTS[number]
@@ -284,7 +285,8 @@ function AttendancePage() {
     id ? (sites.find(s => s.id === id)?.site_name ?? null) : null
 
   return (
-    <div className="page" style={{ display:'flex', flexDirection:'column' }}>
+    <ModuleGuide module="attendance">
+      <div className="page" style={{ display:'flex', flexDirection:'column' }}>
       {/* ── Top bar ── */}
       <div className="page-header">
         {view === 'summary' ? (
@@ -789,6 +791,7 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
         </div>
       )}
     </div>
+    </ModuleGuide>
   )
 }
 
