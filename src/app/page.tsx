@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLang, useTheme } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
+import { getOnboardingStatus } from '@/lib/onboarding'
 
 const modules = [
   { en:'Attendance',     te:'హాజరు',              emoji:'📅', href:'/attendance',      color:'#3b82f6' },
@@ -28,9 +29,17 @@ function Dashboard() {
 
   useEffect(() => {
     // Single getUser() call — extract both name and userId from one network request
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       const u = data.user
       if (!u) return
+      
+      // Check if user has completed onboarding
+      const onboarding = await getOnboardingStatus(u.id)
+      if (!onboarding.completed) {
+        router.push('/onboarding')
+        return
+      }
+      
       const raw = u.user_metadata?.full_name ?? u.email?.split('@')[0] ?? ''
       setUser(raw.replace(/[._]/g,' ').replace(/\b\w/g,(c:string)=>c.toUpperCase()) || 'Admin')
       Promise.all([
@@ -40,7 +49,7 @@ function Dashboard() {
         supabase.from('suppliers').select('id',{count:'exact',head:true}).eq('user_id',u.id).is('deleted_at',null),
       ]).then(([w,s,p,su]) => setStats({ workers:w.count??0, sites:s.count??0, contractors:p.count??0, suppliers:su.count??0 }))
     })
-  }, [])
+  }, [router])
 
   const statsData = [
     { v:stats.workers,     l:te?'కార్మికులు':'Workers',         color:'#3b82f6' },
