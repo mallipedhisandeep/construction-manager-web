@@ -4,7 +4,6 @@ import { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { GOODS_UNITS } from '@/lib/constants'
-import { HelpIcon } from '@/components/HelpIcon'
 import type { Supplier, SupplierGoods, SupplierPayment } from '@/lib/types'
 
 type SupplierFull = Supplier & { id: string; balance?: number; goodsCount?: number }
@@ -202,7 +201,6 @@ function SuppliersPage() {
                 <button onClick={() => { setGForm({ unit:'bags' }); setModal('goods') }} className="btn-primary btn-sm" data-testid="demo-supplier-add-item-btn">
                   + {te?'వస్తువు జోడించు':'Add Item'}
                 </button>
-                <HelpIcon textKey="goods.order" />
               </div>
               {goods.length === 0 ? (
                 <div className="text-center py-12 opacity-50"><p className="text-4xl mb-2">📦</p><p style={{color:'rgb(var(--muted))'}}>{te?'వస్తువులు లేవు':'No items added'}</p></div>
@@ -225,7 +223,6 @@ function SuppliersPage() {
                   className="btn-primary btn-sm" data-testid="demo-supplier-add-payment-btn">
                   + {te?'చెల్లింపు జోడించు':'Add Payment'}
                 </button>
-                <HelpIcon textKey="suppliers.supplierPayments" />
               </div>
               {payments.length === 0 ? (
                 <div className="text-center py-12 opacity-50"><p className="text-4xl mb-2">💳</p><p style={{color:'rgb(var(--muted))'}}>{te?'చెల్లింపులు లేవు':'No payments'}</p></div>
@@ -336,9 +333,8 @@ function SuppliersPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>🏪 {te?'సరఫరాదారులు':'Suppliers'}</h1>
-            <HelpIcon textKey="suppliers.add" />
           </div>
-          <button onClick={() => { setSForm({}); setModal('supplier') }} className="btn-primary btn-sm">
+          <button onClick={() => { setSForm({}); setModal('supplier') }} className="btn-primary btn-sm" data-testid="add-supplier-btn">
             + {te?'జోడించు':'Add'}
           </button>
         </div>
@@ -387,7 +383,7 @@ function SuppliersPage() {
       {/* Add supplier modal */}
       {modal === 'supplier' && !selected && (
         <div className="modal-backdrop" onClick={() => setModal(null)}>
-          <div className="modal-box" onClick={e=>e.stopPropagation()}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()} data-testid="supplier-form-modal">
             <div className="modal-header">
               <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{te?'సరఫరాదారు జోడించు':'Add Supplier'}</h2>
               <button onClick={() => setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>

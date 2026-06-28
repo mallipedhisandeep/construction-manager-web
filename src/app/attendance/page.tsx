@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts, MONTHS } from '@/lib/strings'
 import { SHIFTS, SHIFT_LABELS, PAYMENT_MODES } from '@/lib/constants'
-import { HelpIcon } from '@/components/HelpIcon'
 import type { Worker, Attendance, Site } from '@/lib/types'
 
 type Shift = typeof SHIFTS[number]
@@ -350,7 +349,6 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                 💬
               </button>
             )}
-            <HelpIcon textKey="attendance.share" />
           </div>
         ) : (
           <>
@@ -380,7 +378,6 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                 <span className="text-sm font-black" style={{color:'rgb(var(--accent))'}}>
                   📅 {months[month]} {day}, {year}
                 </span>
-                <HelpIcon textKey="attendance.dateSelect" />
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs" style={{color:'rgb(var(--muted))'}}>
@@ -395,7 +392,6 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                     {lang==='te' ? '⚡ అందరినీ గుర్తించు' : '⚡ Mark all'}
                   </button>
                 )}
-                <HelpIcon textKey="attendance.bulkMark" />
               </div>
             </div>
           </>
@@ -645,7 +641,6 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
               <div>
                 <p className="label mb-2 flex items-center gap-1.5">
                   {lang==='te' ? 'షిఫ్ట్ / హాజరు' : 'Shift / Attendance'}
-                  <HelpIcon textKey="attendance.bulkMark" />
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   {SHIFTS.map(s => (
@@ -690,7 +685,6 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
               <div>
                 <label className="label flex items-center gap-1.5">
                   {lang==='te' ? 'అడ్వాన్స్ ₹ ' : 'Advance ₹ '}
-                  <HelpIcon textKey="attendance.advance" />
                 </label>
                 <input type="number" inputMode="decimal"
                   value={advInput} onChange={e => setAdvInput(e.target.value)}

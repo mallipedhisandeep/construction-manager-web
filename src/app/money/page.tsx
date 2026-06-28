@@ -4,7 +4,6 @@ import { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { fetchAll } from '@/lib/fetchAll'
-import { HelpIcon } from '@/components/HelpIcon'
 
 interface MoneyData {
   siteIncome: number; workerWages: number; workerAdvances: number
@@ -136,12 +135,10 @@ function MoneyPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>💰 {te?'డబ్బు':'Money Tracking'}</h1>
-            <HelpIcon textKey="money.profitLoss" />
           </div>
           <div className="flex items-center gap-1.5">
             <button onClick={()=>setPeriod('month')} className={`chip ${period==='month'?'chip-active':'chip-idle'}`} data-testid="money-period-month-btn">{te?'ఈ నెల':'This Month'}</button>
             <button onClick={()=>setPeriod('all')}   className={`chip ${period==='all'  ?'chip-active':'chip-idle'}`} data-testid="money-period-all-btn">{te?'అన్ని సమయాలు':'All Time'}</button>
-            <HelpIcon textKey="money.periodFilter" />
           </div>
         </div>
       </div>

@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
 import { PAYMENT_MODES } from '@/lib/constants'
-import { HelpIcon } from '@/components/HelpIcon'
 import type { PrivateWorker, PrivateWorkerPayment } from '@/lib/types'
 
 function PrivateWorkersPage() {
@@ -118,7 +117,6 @@ function PrivateWorkersPage() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-1.5">
             <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>🔧 {ts(lang,'privateWorkers')}</h1>
-            <HelpIcon textKey="privateWorkers.add" />
           </div>
           <button onClick={()=>{ setForm({name:'',work_type:'',phone:'',notes:''}); setModal('add') }} className="btn-primary btn-sm" data-testid="add-contractor-btn">
             + {ts(lang,'addContractor')}
@@ -170,7 +168,7 @@ function PrivateWorkersPage() {
 
       {(modal==='add'||modal==='edit') && (
         <div className="modal-backdrop" onClick={()=>setModal(null)}>
-          <div className="modal-box" onClick={e=>e.stopPropagation()}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()} data-testid="contractor-form-modal">
             <div className="modal-header">
               <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{modal==='add'?ts(lang,'addContractor'):'Edit Contractor'}</h2>
               <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>

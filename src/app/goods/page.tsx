@@ -4,7 +4,6 @@ import { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { GOODS_UNITS } from '@/lib/constants'
-import { HelpIcon } from '@/components/HelpIcon'
 import type { GoodsOrder, Supplier, SupplierGoods, Site } from '@/lib/types'
 
 const STATUS_STYLE: Record<string,string> = {
@@ -176,7 +175,6 @@ function GoodsPage() {
             <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>
               📦 {te?'వస్తువుల ఆర్డర్లు':'Goods Orders'}
             </h1>
-            <HelpIcon textKey="goods.order" />
           </div>
           <button
             onClick={()=>{ setForm({status:'Pending',delivery_date:new Date().toISOString().split('T')[0],priceStr:'',qtyStr:'',advStr:''}); setCatalog([]); setModal(true) }}
@@ -292,7 +290,7 @@ function GoodsPage() {
       {/* ── New Order Modal ── */}
       {modal && (
         <div className="modal-backdrop" onClick={()=>setModal(false)}>
-          <div className="modal-box" onClick={e=>e.stopPropagation()}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()} data-testid="goods-order-form-modal">
             <div className="modal-header">
               <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>
                 {te?'కొత్త వస్తువుల ఆర్డర్':'New Goods Order'}

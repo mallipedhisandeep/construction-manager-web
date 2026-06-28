@@ -4,7 +4,6 @@ import { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { PRICING } from '@/lib/pricing'
-import { HelpIcon } from '@/components/HelpIcon'
 
 declare global {
   interface Window {
@@ -212,7 +211,6 @@ function SubscribePage() {
 
       {/* Plan toggle */}
       <div className="flex items-center gap-1.5 mb-2">
-        <HelpIcon textKey="subscribe.cycleToggle" />
       </div>
       <div className="flex gap-2 mb-4 p-1 rounded-2xl" style={{ background: 'rgb(var(--surface2))' }}>
         <button onClick={() => setCycle('monthly')}

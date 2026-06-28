@@ -4,7 +4,6 @@ import Image from 'next/image'
 import { useLang, useTheme, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { ts } from '@/lib/strings'
-import { HelpIcon } from '@/components/HelpIcon'
 import { PRICING } from '@/lib/pricing'
 import { useRouter } from 'next/navigation'
 
@@ -485,7 +484,6 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
             <div>
               <p className="text-xs font-bold flex items-center gap-1.5" style={{color:'rgb(var(--text))'}}>
                 🔔 {lang==='te'?'గడువు రిమైండర్‌లు':'Expiry reminders'}
-                <HelpIcon textKey="profile.enableReminders" />
               </p>
               <p className="text-xs" style={{color:'rgb(var(--muted))'}}>
                 {lang==='te'?'గడువుకు 3 రోజుల ముందు నోటిఫికేషన్':'Phone alert 3 days before it ends'}
@@ -530,7 +528,6 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
               className="text-xs font-bold" style={{color:'#dc2626'}}>
               {lang==='te' ? 'సభ్యత్వం రద్దు చేయండి' : 'Cancel subscription'}
             </button>
-            <HelpIcon textKey="profile.cancelSub" />
           </div>
         )}
         {sub.plan === 'pro' && sub.cancelAtPeriodEnd && (
@@ -603,7 +600,6 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
               <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'కార్మికులు, హాజరు, సైట్లు — PDF':'Workers, attendance, sites — saves as PDF'}</p>
             </div>
           </button>
-          <HelpIcon textKey="profile.downloadReport" />
           <span style={{color:'rgb(var(--muted))'}}>›</span>
         </div>
 

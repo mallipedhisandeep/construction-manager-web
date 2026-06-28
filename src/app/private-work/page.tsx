@@ -4,7 +4,6 @@ import { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
-import { HelpIcon } from '@/components/HelpIcon'
 import type { PrivateWork, PrivateWorker, Site } from '@/lib/types'
 
 function PrivateWorkPage() {
@@ -98,7 +97,6 @@ function PrivateWorkPage() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-1.5">
             <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>📝 {ts(lang,'privateWork')}</h1>
-            <HelpIcon textKey="privateWork.assign" />
           </div>
           <button onClick={()=>{
             setForm({status:'Active',price_charged:0,amount_paid:0,work_date:new Date().toISOString().split('T')[0]})
@@ -169,7 +167,7 @@ function PrivateWorkPage() {
 
       {modal && (
         <div className="modal-backdrop" onClick={()=>setModal(null)}>
-          <div className="modal-box" onClick={e=>e.stopPropagation()}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()} data-testid="contract-work-form-modal">
             <div className="modal-header">
               <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{modal==='add'?ts(lang,'addWork'):'Edit Work'}</h2>
               <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>

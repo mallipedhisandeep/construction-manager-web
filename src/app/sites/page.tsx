@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
 import { SITE_STATUSES } from '@/lib/constants'
-import { HelpIcon } from '@/components/HelpIcon'
 import type { Site } from '@/lib/types'
 
 // FileRow now stores the storage object path (for signing) + a runtime signedUrl
@@ -275,14 +274,12 @@ function SitesPage() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-1.5">
             <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>🏗️ {t('sites')}</h1>
-            <HelpIcon textKey="sites.siteCard" />
           </div>
           <div className="flex items-center gap-1.5">
             <button onClick={()=>{ setForm({status:'Active',floors_count:1,budget:0}); setSelected(null); setModal('add') }}
               className="btn-primary btn-sm" data-testid="add-site-btn">
               + {t('addSite')}
             </button>
-            <HelpIcon textKey="sites.addSite" />
           </div>
         </div>
         <div className="flex gap-2 flex-wrap mb-2.5">
@@ -334,7 +331,7 @@ function SitesPage() {
       {/* Add/Edit modal */}
       {(modal==='add'||modal==='edit') && (
         <div className="modal-backdrop" onClick={()=>setModal(null)}>
-          <div className="modal-box" onClick={e=>e.stopPropagation()}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()} data-testid="site-form-modal">
             <div className="modal-header">
               <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{modal==='add'?t('addSite'):'Edit Site'}</h2>
               <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
@@ -554,7 +551,6 @@ function SitesPage() {
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={savePayment} className="btn-green btn-full">Save Payment</button>
-                <HelpIcon textKey="sites.payment" />
               </div>
             </div>
           </div>
@@ -580,7 +576,6 @@ function DocSection({ title, color, files, uploading, onUpload, onDelete }:
           <button onClick={onUpload} disabled={uploading} className="btn-primary btn-sm disabled:opacity-50">
             {uploading?'⏳':'+ Upload'}
           </button>
-          <HelpIcon textKey="sites.uploadDoc" />
         </div>
       </div>
       {files.length===0 ? (

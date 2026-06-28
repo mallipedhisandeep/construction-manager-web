@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
 import { SHIFTS, SHIFT_LABELS } from '@/lib/constants'
-import { HelpIcon } from '@/components/HelpIcon'
 import type { Worker } from '@/lib/types'
 
 const DISPLAY_SHIFTS = SHIFTS.filter(s => s !== 'Absent') as string[]
@@ -106,13 +105,11 @@ function WorkersPage() {
         <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-1.5">
             <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>{ts(lang,'workers')}</h1>
-            <HelpIcon textKey="workers.workerCard" />
           </div>
           <div className="flex items-center gap-1.5">
             <button onClick={() => { setForm(empty()); setModal('add') }} className="btn-primary btn-sm" data-testid="add-worker-btn">
               + {ts(lang,'addWorker')}
             </button>
-            <HelpIcon textKey="workers.addWorker" />
           </div>
         </div>
         <input value={search} onChange={e=>setSearch(e.target.value)}
@@ -227,7 +224,7 @@ function WorkersPage() {
 
       {(modal==='add'||modal==='edit') && (
         <div className="modal-backdrop" onClick={() => setModal(null)}>
-          <div className="modal-box" onClick={e=>e.stopPropagation()}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()} data-testid="worker-form-modal">
             <div className="modal-header">
               <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{modal==='add'?ts(lang,'addWorker'):ts(lang,'editWorker')}</h2>
               <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
@@ -248,7 +245,6 @@ function WorkersPage() {
               <div>
                 <p className="text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{color:'rgb(var(--muted))'}}>
                   💰 {ts(lang,'wageRates')}
-                  <HelpIcon textKey="workers.recordPayment" />
                 </p>
                 <div className="space-y-2">
                   {DISPLAY_SHIFTS.map(s => (
