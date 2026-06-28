@@ -1,12 +1,13 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useLang } from '@/components/AppShell'
+import { useRouter } from 'next/navigation'
+import { useLang, useTheme } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
-import { HelpIcon } from '@/components/HelpIcon'
 
 function Dashboard() {
   const { lang } = useLang()
   const te = lang === 'te'
+  const router = useRouter()
   const [user, setUser] = useState('Admin')
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({ workers: 0, sites: 0, attendance: 0, suppliers: 0, contractors: 0 })
@@ -25,12 +26,12 @@ function Dashboard() {
         supabase.from('attendance').select('id', { count: 'exact', head: true }).eq('user_id', u.id),
         supabase.from('suppliers').select('id', { count: 'exact', head: true }).eq('user_id', u.id).is('deleted_at', null),
         supabase.from('private_workers').select('id', { count: 'exact', head: true }).eq('user_id', u.id).is('deleted_at', null),
-      ]).then(([w, s, a, su, pw]) => {
+      ]).then(([w, s, a, su, pw]) =>
         setStats({ workers: w.count ?? 0, sites: s.count ?? 0, attendance: a.count ?? 0, suppliers: su.count ?? 0, contractors: pw.count ?? 0 })
-        setLoading(false)
-      })
+      )
+      setLoading(false)
     })
-  }, [])
+  }, [router])
 
   return (
     <div className="page">
@@ -55,13 +56,6 @@ function Dashboard() {
         </div>
       )}
 
-      <div className="flex items-center gap-1.5 mb-2">
-        <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'rgb(var(--muted))' }}>
-          {te ? 'త్వరిత లింకులు' : 'Quick Links'}
-        </p>
-        <HelpIcon textKey="workers.workerCard" />
-      </div>
-
       <div className="space-y-2">
         <QuickLink href="/workers" icon="👷" label={te ? 'కార్మికులను నిర్వహించండి' : 'Manage Workers'} />
         <QuickLink href="/sites" icon="🏗️" label={te ? 'సైట్‌లను నిర్వహించండి' : 'Manage Sites'} />
@@ -73,7 +67,7 @@ function Dashboard() {
 }
 
 const DashCard = ({ icon, label, value }: { icon: string; label: string; value: number }) => (
-  <div className="card p-4 text-center" style={{ background: 'rgb(var(--surface2))' }}>
+  <div className="card p-4 text-center cursor-pointer hover:opacity-75 transition" style={{ background: 'rgb(var(--surface2))' }}>
     <div className="text-3xl mb-1">{icon}</div>
     <p className="text-xs opacity-70">{label}</p>
     <p className="text-xl font-black">{value}</p>
@@ -81,14 +75,14 @@ const DashCard = ({ icon, label, value }: { icon: string; label: string; value: 
 )
 
 const QuickLink = ({ href, icon, label }: { href: string; icon: string; label: string }) => (
-  <a
-    href={href}
+  <button
+    onClick={() => window.location.href = href}
     className="card w-full p-4 flex items-center gap-3 hover:opacity-75 transition"
     style={{ background: 'rgb(var(--surface2))' }}>
     <span className="text-2xl">{icon}</span>
     <span className="font-bold text-sm flex-1 text-left">{label}</span>
     <span className="opacity-50">→</span>
-  </a>
+  </button>
 )
 
 export default function Home() {
