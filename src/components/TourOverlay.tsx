@@ -32,7 +32,8 @@ import { seedTourDemoData, cleanupTourDemoData, type DemoRowRefs } from '@/lib/t
 interface Rect { top: number; left: number; width: number; height: number }
 
 const POLL_INTERVAL_MS = 100
-const POLL_TIMEOUT_MS = 5000   // give up waiting for an element after this long and skip to the next step
+const POLL_TIMEOUT_MS = 12000  // give up waiting for an element after this long and skip to the next step — generous because the destination page must finish its own Supabase fetch (loading spinner → real content) before the target element exists at all, not just finish navigating
+const NAV_SETTLE_MS = 600      // brief pause after pathname changes before we even start polling — pathname updates the instant Next.js begins the transition, well before the new page's data has loaded, so polling immediately would just waste timeout budget on a guaranteed-empty page
 const SCROLL_SETTLE_MS = 700   // how long the user must be still (no scroll/touch) before the countdown resumes
 
 export function TourOverlay({ onDone }: { onDone: () => void }) {
@@ -129,8 +130,18 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
   }, [stepIndex, step, pathname, router, seeding, tourLang])
 
   // Detect that navigation actually landed (pathname now matches route).
+  // Note: pathname updates the moment Next.js STARTS the transition, not
+  // when the destination page has actually finished loading its own data
+  // — every page here fetches from Supabase on mount and shows a loading
+  // spinner first. Without this delay, the polling effect below would
+  // start searching for the target element while the destination page is
+  // still just a spinner, burn through its timeout, and skip to the next
+  // step before the real page ever rendered — which is exactly the
+  // "buffering then jumping ahead" behavior this fixes.
   useEffect(() => {
-    if (step && pathname === step.route) setNavigating(false)
+    if (!step || pathname !== step.route) return
+    const t = setTimeout(() => setNavigating(false), NAV_SETTLE_MS)
+    return () => clearTimeout(t)
   }, [pathname, step])
 
   // The main per-step lifecycle: optionally pre-click something, find the
