@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
 import { PAYMENT_MODES } from '@/lib/constants'
+import { HelpIcon } from '@/components/HelpIcon'
 import type { PrivateWorker, PrivateWorkerPayment } from '@/lib/types'
 
 function PrivateWorkersPage() {
@@ -115,7 +116,10 @@ function PrivateWorkersPage() {
 
       <div className="page-header">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>🔧 {ts(lang,'privateWorkers')}</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>🔧 {ts(lang,'privateWorkers')}</h1>
+            <HelpIcon textKey="privateWorkers.add" />
+          </div>
           <button onClick={()=>{ setForm({name:'',work_type:'',phone:'',notes:''}); setModal('add') }} className="btn-primary btn-sm">
             + {ts(lang,'addContractor')}
           </button>

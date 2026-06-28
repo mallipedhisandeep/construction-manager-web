@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
 import { SITE_STATUSES } from '@/lib/constants'
-import { ModuleGuide } from '@/components/ModuleGuide'
+import { HelpIcon } from '@/components/HelpIcon'
 import type { Site } from '@/lib/types'
 
 // FileRow now stores the storage object path (for signing) + a runtime signedUrl
@@ -267,18 +267,23 @@ function SitesPage() {
   const totalReceived = sitePayments.reduce((s,p)=>s+p.amount,0)
 
   return (
-    <ModuleGuide module="sites">
-      <div className="page">
+    <div className="page">
       <input ref={fileRef} type="file" className="hidden" onChange={handleFileSelected}
         accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
 
       <div className="page-header">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>🏗️ {t('sites')}</h1>
-          <button onClick={()=>{ setForm({status:'Active',floors_count:1,budget:0}); setSelected(null); setModal('add') }}
-            className="btn-primary btn-sm">
-            + {t('addSite')}
-          </button>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>🏗️ {t('sites')}</h1>
+            <HelpIcon textKey="sites.siteCard" />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button onClick={()=>{ setForm({status:'Active',floors_count:1,budget:0}); setSelected(null); setModal('add') }}
+              className="btn-primary btn-sm">
+              + {t('addSite')}
+            </button>
+            <HelpIcon textKey="sites.addSite" />
+          </div>
         </div>
         <div className="flex gap-2 flex-wrap mb-2.5">
           {(['All','Active','On Hold','Completed'] as const).map(f=>(
@@ -547,13 +552,15 @@ function SitesPage() {
                     onChange={e=>setPForm(f=>({...f,payment_date:e.target.value}))} className="input"/>
                 </div>
               </div>
-              <button onClick={savePayment} className="btn-green btn-full">Save Payment</button>
+              <div className="flex items-center gap-2">
+                <button onClick={savePayment} className="btn-green btn-full">Save Payment</button>
+                <HelpIcon textKey="sites.payment" />
+              </div>
             </div>
           </div>
         </div>
       )}
     </div>
-    </ModuleGuide>
   )
 }
 
@@ -569,9 +576,12 @@ function DocSection({ title, color, files, uploading, onUpload, onDelete }:
           <p className="font-bold text-sm" style={{color:'rgb(var(--text))'}}>{title.split(' ').slice(1).join(' ')}</p>
           {files.length>0 && <span className="badge-gray">{files.length}</span>}
         </div>
-        <button onClick={onUpload} disabled={uploading} className="btn-primary btn-sm disabled:opacity-50">
-          {uploading?'⏳':'+ Upload'}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button onClick={onUpload} disabled={uploading} className="btn-primary btn-sm disabled:opacity-50">
+            {uploading?'⏳':'+ Upload'}
+          </button>
+          <HelpIcon textKey="sites.uploadDoc" />
+        </div>
       </div>
       {files.length===0 ? (
         <div className="rounded-xl p-4 text-center border-2 border-dashed text-sm"

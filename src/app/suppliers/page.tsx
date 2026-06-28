@@ -4,6 +4,7 @@ import { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { GOODS_UNITS } from '@/lib/constants'
+import { HelpIcon } from '@/components/HelpIcon'
 import type { Supplier, SupplierGoods, SupplierPayment } from '@/lib/types'
 
 type SupplierFull = Supplier & { id: string; balance?: number; goodsCount?: number }
@@ -196,9 +197,12 @@ function SuppliersPage() {
         <div className="px-4 pt-4 pb-24">
           {tab === 'goods' && (
             <>
-              <button onClick={() => { setGForm({ unit:'bags' }); setModal('goods') }} className="btn-primary btn-sm mb-3">
-                + {te?'వస్తువు జోడించు':'Add Item'}
-              </button>
+              <div className="flex items-center gap-1.5 mb-3">
+                <button onClick={() => { setGForm({ unit:'bags' }); setModal('goods') }} className="btn-primary btn-sm">
+                  + {te?'వస్తువు జోడించు':'Add Item'}
+                </button>
+                <HelpIcon textKey="goods.order" />
+              </div>
               {goods.length === 0 ? (
                 <div className="text-center py-12 opacity-50"><p className="text-4xl mb-2">📦</p><p style={{color:'rgb(var(--muted))'}}>{te?'వస్తువులు లేవు':'No items added'}</p></div>
               ) : goods.map(g => (
@@ -215,10 +219,13 @@ function SuppliersPage() {
 
           {tab === 'payments' && (
             <>
-              <button onClick={() => { setPForm({ payment_type:'payment', mode:'Cash', payment_date: new Date().toISOString().split('T')[0] }); setModal('payment') }}
-                className="btn-primary btn-sm mb-3">
-                + {te?'చెల్లింపు జోడించు':'Add Payment'}
-              </button>
+              <div className="flex items-center gap-1.5 mb-3">
+                <button onClick={() => { setPForm({ payment_type:'payment', mode:'Cash', payment_date: new Date().toISOString().split('T')[0] }); setModal('payment') }}
+                  className="btn-primary btn-sm">
+                  + {te?'చెల్లింపు జోడించు':'Add Payment'}
+                </button>
+                <HelpIcon textKey="suppliers.supplierPayments" />
+              </div>
               {payments.length === 0 ? (
                 <div className="text-center py-12 opacity-50"><p className="text-4xl mb-2">💳</p><p style={{color:'rgb(var(--muted))'}}>{te?'చెల్లింపులు లేవు':'No payments'}</p></div>
               ) : payments.map(p => (
@@ -326,7 +333,10 @@ function SuppliersPage() {
     <div className="page">
       <div className="page-header">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>🏪 {te?'సరఫరాదారులు':'Suppliers'}</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>🏪 {te?'సరఫరాదారులు':'Suppliers'}</h1>
+            <HelpIcon textKey="suppliers.add" />
+          </div>
           <button onClick={() => { setSForm({}); setModal('supplier') }} className="btn-primary btn-sm">
             + {te?'జోడించు':'Add'}
           </button>

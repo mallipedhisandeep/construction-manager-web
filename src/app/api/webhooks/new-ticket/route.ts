@@ -11,8 +11,14 @@
 
 import { NextResponse } from 'next/server'
 import { notifyAdmin, claimWebhookEvent } from '@/lib/push'
+import { rateLimit, clientIp } from '@/lib/rateLimit'
 
 export async function POST(req: Request) {
+  const limit = rateLimit(`webhook-new-ticket:${clientIp(req)}`, 30, 60_000)
+  if (!limit.allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const secret = req.headers.get('x-webhook-secret')
   if (!process.env.WEBHOOK_SECRET || secret !== process.env.WEBHOOK_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

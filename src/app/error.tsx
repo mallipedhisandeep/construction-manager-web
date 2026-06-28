@@ -3,6 +3,7 @@
 // Shows a friendly retry screen instead of a blank white page
 
 import { useEffect } from 'react'
+import { logError } from '@/lib/logger'
 
 export default function GlobalError({
   error,
@@ -12,8 +13,7 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    // Log to console in dev; swap with Sentry/LogRocket in production
-    console.error('[CM Error]', error)
+    logError(error, { route: 'global-error-boundary', digest: error?.digest })
   }, [error])
 
   return (

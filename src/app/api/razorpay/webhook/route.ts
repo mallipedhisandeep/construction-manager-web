@@ -18,10 +18,23 @@ import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { createAdminClient } from '@/lib/supabaseAdmin'
 import { claimWebhookEvent, notifyUser, notifyAdmin } from '@/lib/push'
+import { rateLimit, clientIp } from '@/lib/rateLimit'
+import { sendEmail, subscriptionConfirmedEmail } from '@/lib/email'
+import { logError, logEvent } from '@/lib/logger'
+import { PRICING, type BillingCycle } from '@/lib/pricing'
 
 const CYCLE_DAYS: Record<string, number> = { monthly: 30, yearly: 365 }
 
 export async function POST(req: Request) {
+  // Generous limit — this endpoint receives real, legitimate traffic from
+  // Razorpay's own servers (every charge, every renewal). The limit exists
+  // only to stop someone spamming the URL directly, not to throttle
+  // Razorpay itself.
+  const limit = rateLimit(`razorpay-webhook:${clientIp(req)}`, 120, 60_000)
+  if (!limit.allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const rawBody = await req.text()
   const signature = req.headers.get('x-razorpay-signature') ?? ''
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET
@@ -32,8 +45,20 @@ export async function POST(req: Request) {
   }
 
   const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex')
-  if (expected !== signature) {
-    console.warn('[razorpay-webhook] Signature mismatch')
+
+  // Timing-safe comparison — a plain !== leaks timing information about
+  // how many leading characters matched, which in theory helps an attacker
+  // forge a valid signature byte-by-byte. timingSafeEqual takes the same
+  // time regardless of where the mismatch occurs. Buffers must be equal
+  // length first, or timingSafeEqual itself throws.
+  const expectedBuf = Buffer.from(expected, 'hex')
+  const signatureBuf = Buffer.from(signature, 'hex')
+  const signatureValid =
+    expectedBuf.length === signatureBuf.length &&
+    crypto.timingSafeEqual(expectedBuf, signatureBuf)
+
+  if (!signatureValid) {
+    logEvent('Razorpay webhook signature mismatch', { route: 'razorpay-webhook', ip: clientIp(req) })
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
@@ -76,12 +101,19 @@ export async function POST(req: Request) {
         updated_at:           new Date().toISOString(),
       }, { onConflict: 'user_id' })
 
+      const userEmail = sub.notes?.email as string | undefined
+      if (userEmail) {
+        const billingCycle = (cycle as BillingCycle) in PRICING ? (cycle as BillingCycle) : 'monthly'
+        const { subject, html } = subscriptionConfirmedEmail(billingCycle, PRICING[billingCycle].amountRupees)
+        sendEmail({ to: userEmail, subject, html }).catch(e => logError(e, { route: 'razorpay-webhook', event, userId }))
+      }
+
       notifyAdmin({
         title: '💰 New subscription',
         body:  `User just subscribed (${cycle})`,
         url:   '/admin?tab=subs',
         tag:   'new-subscription',
-      }).catch(e => console.error(e))
+      }).catch(e => logError(e, { route: 'razorpay-webhook', event, userId }))
       break
     }
 
@@ -130,7 +162,7 @@ export async function POST(req: Request) {
           body:  'We could not renew your subscription. Please update your payment method to keep access.',
           url:   '/subscribe',
           tag:   'payment-failed',
-        }).catch(e => console.error(e))
+        }).catch(e => logError(e, { route: 'razorpay-webhook', event, userId }))
       }
       break
     }

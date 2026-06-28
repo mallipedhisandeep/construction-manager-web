@@ -6,10 +6,16 @@
 
 import { NextResponse } from 'next/server'
 import { getUserFromRequest, createAdminClient } from '@/lib/supabaseAdmin'
+import { rateLimit } from '@/lib/rateLimit'
 
 export async function POST(req: Request) {
   const user = await getUserFromRequest(req)
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+
+  const limit = rateLimit(`push-subscribe:${user.id}`, 10, 60_000)
+  if (!limit.allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
 
   const body = await req.json().catch(() => null)
   const sub = body?.subscription

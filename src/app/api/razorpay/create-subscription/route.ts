@@ -8,16 +8,22 @@
 
 import { NextResponse } from 'next/server'
 import { getUserFromRequest } from '@/lib/supabaseAdmin'
-
-const PLAN_IDS: Record<'monthly' | 'yearly', string> = {
-  monthly: 'plan_T51AEj1AjNUiRd', // ₹240/month
-  yearly:  'plan_T51Bjgb2DUSNCB', // ₹2500/year
-}
+import { PRICING, type BillingCycle } from '@/lib/pricing'
+import { rateLimit } from '@/lib/rateLimit'
 
 export async function POST(req: Request) {
   try {
     const user = await getUserFromRequest(req)
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // Keyed by user, not IP — this prevents one account from spamming
+    // Razorpay subscription-creation calls (each one is a real API call
+    // against your Razorpay account and could rack up rate-limit issues
+    // or look like abuse from Razorpay's side too).
+    const limit = rateLimit(`create-subscription:${user.id}`, 5, 60_000)
+    if (!limit.allowed) {
+      return NextResponse.json({ error: `Too many attempts. Try again in ${limit.retryAfterSeconds}s.` }, { status: 429 })
+    }
 
     const keyId     = process.env.RAZORPAY_KEY_ID
     const keySecret = process.env.RAZORPAY_KEY_SECRET
@@ -26,11 +32,11 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => null)
-    const cycle = body?.cycle as 'monthly' | 'yearly' | undefined
-    if (!cycle || !PLAN_IDS[cycle]) {
+    const cycle = body?.cycle as BillingCycle | undefined
+    if (!cycle || !PRICING[cycle]) {
       return NextResponse.json({ error: 'Invalid or missing billing cycle' }, { status: 400 })
     }
-    const planId = PLAN_IDS[cycle]
+    const planId = PRICING[cycle].planId
 
     const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64')
 

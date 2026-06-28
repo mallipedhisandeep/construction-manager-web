@@ -4,6 +4,7 @@ import { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { GOODS_UNITS } from '@/lib/constants'
+import { HelpIcon } from '@/components/HelpIcon'
 import type { GoodsOrder, Supplier, SupplierGoods, Site } from '@/lib/types'
 
 const STATUS_STYLE: Record<string,string> = {
@@ -171,9 +172,12 @@ function GoodsPage() {
 
       <div className="page-header">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>
-            📦 {te?'వస్తువుల ఆర్డర్లు':'Goods Orders'}
-          </h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>
+              📦 {te?'వస్తువుల ఆర్డర్లు':'Goods Orders'}
+            </h1>
+            <HelpIcon textKey="goods.order" />
+          </div>
           <button
             onClick={()=>{ setForm({status:'Pending',delivery_date:new Date().toISOString().split('T')[0],priceStr:'',qtyStr:'',advStr:''}); setCatalog([]); setModal(true) }}
             className="btn-primary btn-sm">

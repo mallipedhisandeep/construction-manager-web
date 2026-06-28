@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { useLang } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { PRICING } from '@/lib/pricing'
+import { HelpIcon } from '@/components/HelpIcon'
 
 declare global {
   interface Window {
@@ -112,7 +114,7 @@ function SubscribePage() {
         key:              keyId,
         subscription_id:  subscriptionId,
         name:             'Construction Manager',
-        description:      cycle === 'monthly' ? '₹240/month — All Features' : '₹2500/year — All Features',
+        description:      cycle === 'monthly' ? `₹${PRICING.monthly.amountRupees}/month — All Features` : `₹${PRICING.yearly.amountRupees}/year — All Features`,
         prefill:          { name: userInfo?.name ?? '', email: userInfo?.email ?? '' },
         theme:            { color: '#d48c28' },
 
@@ -209,6 +211,9 @@ function SubscribePage() {
       </div>
 
       {/* Plan toggle */}
+      <div className="flex items-center gap-1.5 mb-2">
+        <HelpIcon textKey="subscribe.cycleToggle" />
+      </div>
       <div className="flex gap-2 mb-4 p-1 rounded-2xl" style={{ background: 'rgb(var(--surface2))' }}>
         <button onClick={() => setCycle('monthly')}
           className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
@@ -239,7 +244,7 @@ function SubscribePage() {
         </p>
         <div className="flex items-end justify-center gap-1 mb-1">
           <span className="text-4xl font-black" style={{ color: 'rgb(var(--text))' }}>
-            {cycle === 'monthly' ? '₹240' : '₹2500'}
+            {cycle === 'monthly' ? `₹${PRICING.monthly.amountRupees}` : `₹${PRICING.yearly.amountRupees}`}
           </span>
           <span className="text-sm mb-1.5" style={{ color: 'rgb(var(--muted))' }}>
             /{cycle === 'monthly' ? (te ? 'నెల' : 'month') : (te ? 'సంవత్సరం' : 'year')}
@@ -286,8 +291,8 @@ function SubscribePage() {
         {loading
           ? (te ? '⏳ ప్రాసెస్ అవుతోంది...' : '⏳ Processing...')
           : (te
-              ? `⭐ ఇప్పుడు సభ్యత్వం పొందండి — ${cycle === 'monthly' ? '₹240/నెల' : '₹2500/సంవత్సరం'}`
-              : `⭐ Subscribe Now — ${cycle === 'monthly' ? '₹240/month' : '₹2500/year'}`)}
+              ? `⭐ ఇప్పుడు సభ్యత్వం పొందండి — ${cycle === 'monthly' ? `₹${PRICING.monthly.amountRupees}/నెల` : `₹${PRICING.yearly.amountRupees}/సంవత్సరం`}`
+              : `⭐ Subscribe Now — ${cycle === 'monthly' ? `₹${PRICING.monthly.amountRupees}/month` : `₹${PRICING.yearly.amountRupees}/year`}`)}
       </button>
 
       {userInfo?.email && (

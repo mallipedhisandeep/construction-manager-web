@@ -2,6 +2,7 @@
 import { useState, useEffect, createContext, useContext, useCallback, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { PRICING } from '@/lib/pricing'
 import Nav from './Nav'
 import type { Lang } from '@/lib/strings'
 
@@ -46,7 +47,17 @@ async function getSubStatus(userId: string): Promise<SubStatus> {
     if (!data) return 'unknown'
 
     if (data.plan === 'lifetime') return 'lifetime'
-    if (data.plan === 'pro' && data.status === 'active') return 'active'
+
+    // 'pro' must ALSO have a current_period_end in the future — this is
+    // what makes cancellation/non-renewal actually take effect once the
+    // paid period ends, instead of 'active' alone granting access forever.
+    // Mirrors public.has_active_access() in supabase_security_fix.sql —
+    // if you change one, change both.
+    if (data.plan === 'pro' && data.status === 'active') {
+      if (data.current_period_end && new Date(data.current_period_end) > new Date()) return 'active'
+      return 'expired'
+    }
+
     if (data.trial_ends_at && new Date(data.trial_ends_at) > new Date()) return 'trialing'
     if (data.trial_ends_at && new Date(data.trial_ends_at) <= new Date()) return 'expired'
     return 'unknown'
@@ -71,9 +82,11 @@ function PaywallScreen({ lang, onGoToProfile }: { lang: Lang; onGoToProfile: () 
           : 'Your 30-day free trial has ended. Subscribe to continue using the app.'}
       </p>
       <div className="w-full max-w-xs card p-5 mb-4 text-center">
-        <p className="text-3xl font-black mb-1" style={{ color:'rgb(var(--accent))' }}>₹200</p>
+        <p className="text-2xl font-black mb-1" style={{ color:'rgb(var(--accent))' }}>
+          {PRICING.monthly.label_en} <span className="text-sm font-medium" style={{ color:'rgb(var(--muted))' }}>{te ? 'లేదా' : 'or'}</span> {PRICING.yearly.label_en}
+        </p>
         <p className="text-sm mb-3" style={{ color:'rgb(var(--muted))' }}>
-          {te ? 'నెలకు · అన్ని ఫీచర్లు' : 'per month · all features'}
+          {te ? 'అన్ని ఫీచర్లు' : 'all features included'}
         </p>
         <button onClick={onGoToProfile} className="btn-primary w-full py-3 text-base font-black">
           {te ? '⭐ సభ్యత్వం పొందండి' : '⭐ Subscribe Now'}

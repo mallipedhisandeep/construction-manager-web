@@ -12,7 +12,9 @@
     "react": "^19",
     "react-dom": "^19",
     "@supabase/supabase-js": "^2.45.0",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "@sentry/nextjs": "^8",
+    "resend": "^4.0.0"
   },
   "devDependencies": {
     "typescript": "^5",

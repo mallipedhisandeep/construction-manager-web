@@ -3,6 +3,7 @@ import './globals.css'
 import AppShell from '@/components/AppShell'
 
 const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://construction-manager-web.vercel.app'
 
 export const viewport: Viewport = {
   themeColor:    '#0c0c0e',
@@ -15,11 +16,35 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title:       'Construction Manager',
-  description: 'Site and worker management',
+  description: 'Site and worker management for construction businesses — track workers, attendance, payments, and site expenses in one app.',
   manifest:    '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'CM App' },
   formatDetection: { telephone: false },
+  // This app sits entirely behind a login wall, so Open Graph tags mainly
+  // matter for the rare case someone shares the /login link in a chat app
+  // that generates a preview card — they're not meant to drive organic
+  // search traffic (see robots.ts / sitemap.ts for why crawling is
+  // intentionally disallowed past /login).
+  openGraph: {
+    title: 'Construction Manager',
+    description: 'Site and worker management for construction businesses.',
+    url: SITE_URL,
+    siteName: 'Construction Manager',
+    locale: 'en_IN',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Construction Manager',
+    description: 'Site and worker management for construction businesses.',
+  },
+  robots: {
+    // Mirrors robots.ts — keep both in sync if this policy ever changes.
+    index: false,
+    follow: false,
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

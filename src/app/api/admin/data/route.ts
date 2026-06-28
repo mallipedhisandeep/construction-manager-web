@@ -45,7 +45,7 @@ export async function GET(req: Request) {
     { data: pwaInstalls, error: pwaErr },
     { data: tickets, error: ticketsErr },
   ] = await Promise.all([
-    fetchAll(() => admin.from('subscriptions').select('user_id,plan,status,trial_ends_at,current_period_end')),
+    fetchAll(() => admin.from('subscriptions').select('user_id,plan,status,trial_ends_at,current_period_end,billing_cycle')),
     fetchAll(() => admin.from('workers').select('user_id,created_at')),
     fetchAll(() => admin.from('sites').select('user_id,created_at')),
     fetchAll(() => admin.from('attendance').select('user_id,date')),

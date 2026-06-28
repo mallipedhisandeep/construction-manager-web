@@ -1,3 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: { ignoreBuildErrors: true },
@@ -17,4 +19,17 @@ const nextConfig = {
     ]
   },
 }
-export default nextConfig
+
+// withSentryConfig is safe to apply even before Sentry is configured — it
+// only actually uploads source maps and wraps build output when
+// SENTRY_AUTH_TOKEN/SENTRY_ORG/SENTRY_PROJECT are present (CI/build-time
+// env vars, separate from the runtime SENTRY_DSN). Without those, this is
+// effectively a no-op wrapper.
+export default withSentryConfig(nextConfig, {
+  org:     process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent:  true, // suppresses Sentry's build-time console output when not configured
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+})

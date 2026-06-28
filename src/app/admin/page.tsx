@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTheme } from '@/components/AppShell'
+import { PRICING, monthlyEquivalent } from '@/lib/pricing'
 
 interface UserRow {
   id: string
@@ -16,6 +17,7 @@ interface SubRow {
   status: string
   trial_ends_at: string | null
   current_period_end: string | null
+  billing_cycle: 'monthly' | 'yearly' | null
 }
 interface Metrics {
   totalUsers: number
@@ -178,6 +180,12 @@ function AdminPage() {
       const freeUsers         = subsData.filter(s => s.plan === 'free' && !s.trial_ends_at).length
       const trialUsers        = subsData.filter(s => s.trial_ends_at && new Date(s.trial_ends_at) > now).length
       const proUsers          = subsData.filter(s => s.plan === 'pro' && s.status === 'active').length
+      // Cycle-aware MRR: a yearly subscriber contributes ₹2500/12 per month,
+      // not the full monthly price — summing per-user instead of a flat
+      // "proUsers * monthlyPrice" keeps this accurate once both plans exist.
+      const mrrEstimate = subsData
+        .filter(s => s.plan === 'pro' && s.status === 'active')
+        .reduce((sum, s) => sum + monthlyEquivalent(s.billing_cycle), 0)
       const lifetimeUsers     = subsData.filter(s => s.plan === 'lifetime').length
       const expiredTrials     = subsData.filter(s => s.trial_ends_at && new Date(s.trial_ends_at) <= now && s.plan === 'free').length
 
@@ -189,7 +197,7 @@ function AdminPage() {
         totalSites:      json.sites?.length      ?? 0,
         totalAttendance: json.attendance?.length ?? 0,
         pwaInstalls:     json.pwaInstalls?.length ?? 0,
-        mrrEstimate:     proUsers * 200,
+        mrrEstimate,
       })
       setLastRefresh(new Date())
     } catch (e) {
@@ -413,7 +421,7 @@ function AdminPage() {
 
           <p className="text-xs font-black uppercase tracking-widest pt-2" style={{color:t.muted}}>Revenue</p>
           <div className="grid grid-cols-2 gap-3">
-            {card('MRR (est.)', metrics ? `₹${metrics.mrrEstimate.toLocaleString()}` : '—', 'Pro × ₹200', 'text-green-400')}
+            {card('MRR (est.)', metrics ? `₹${metrics.mrrEstimate.toLocaleString()}` : '—', 'Pro users, cycle-weighted', 'text-green-400')}
             {card('Pro Users',  metrics?.proUsers ?? '—', 'Paying', 'text-amber-400')}
           </div>
 
@@ -507,7 +515,7 @@ function AdminPage() {
           <div className="space-y-2">
             {row('MRR (estimated)',   metrics ? `₹${metrics.mrrEstimate.toLocaleString()}` : '—', 'text-green-400')}
             {row('ARR (estimated)',   metrics ? `₹${(metrics.mrrEstimate * 12).toLocaleString()}` : '—', 'text-green-400')}
-            {row('ARPU',             metrics?.proUsers ? '₹200/mo' : '—', 'text-amber-400')}
+            {row('ARPU',             metrics?.proUsers ? `₹${Math.round(metrics.mrrEstimate / metrics.proUsers).toLocaleString()}/mo` : '—', 'text-amber-400')}
             {row('Expired trials (churn risk)', metrics?.expiredTrials ?? '—', 'text-red-400')}
           </div>
         </>)}
@@ -611,7 +619,7 @@ function AdminPage() {
               { label: 'Database',    val: 'Supabase (PostgreSQL)' },
               { label: 'Auth',        val: 'Google OAuth (PKCE)' },
               { label: 'Hosting',     val: 'Vercel' },
-              { label: 'Pricing',     val: '₹200/mo · 30-day free trial' },
+              { label: 'Pricing',     val: `${PRICING.monthly.label_en} or ${PRICING.yearly.label_en} · 30-day free trial` },
             ].map(({ label, val }) => row(label, val))}
           </div>
         )}

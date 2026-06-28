@@ -4,6 +4,7 @@ import { useLang, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/auth'
 import { ts } from '@/lib/strings'
+import { HelpIcon } from '@/components/HelpIcon'
 import type { PrivateWork, PrivateWorker, Site } from '@/lib/types'
 
 function PrivateWorkPage() {
@@ -95,7 +96,10 @@ function PrivateWorkPage() {
 
       <div className="page-header">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>📝 {ts(lang,'privateWork')}</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>📝 {ts(lang,'privateWork')}</h1>
+            <HelpIcon textKey="privateWork.assign" />
+          </div>
           <button onClick={()=>{
             setForm({status:'Active',price_charged:0,amount_paid:0,work_date:new Date().toISOString().split('T')[0]})
             setPriceStr(''); setPaidStr(''); setModal('add')

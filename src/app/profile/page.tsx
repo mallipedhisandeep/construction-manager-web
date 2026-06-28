@@ -1,8 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { useLang, useTheme, useToast } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 import { ts } from '@/lib/strings'
+import { HelpIcon } from '@/components/HelpIcon'
+import { PRICING } from '@/lib/pricing'
 import { useRouter } from 'next/navigation'
 
 interface Stats {
@@ -107,12 +110,12 @@ function ProfilePage() {
         headers: { Authorization: `Bearer ${session?.access_token ?? ''}` },
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) { showToast(json.error ?? 'Could not cancel', false); return }
+      if (!res.ok) { showToast(json.error ?? 'Could not cancel', 'err'); return }
       setSub(s => ({ ...s, cancelAtPeriodEnd: true }))
       setShowCancelConfirm(false)
       showToast(lang==='te' ? 'రద్దు చేయబడింది' : 'Subscription will not renew')
     } catch {
-      showToast(lang==='te' ? 'నెట్‌వర్క్ లోపం' : 'Network error', false)
+      showToast(lang==='te' ? 'నెట్‌వర్క్ లోపం' : 'Network error', 'err')
     } finally {
       setCancelling(false)
     }
@@ -163,7 +166,7 @@ function ProfilePage() {
       setPushStatus('subscribed')
       showToast(lang==='te' ? 'రిమైండర్‌లు ఆన్ చేయబడ్డాయి' : 'Reminders enabled')
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Could not enable reminders', false)
+      showToast(e instanceof Error ? e.message : 'Could not enable reminders', 'err')
     } finally {
       setPushBusy(false)
     }
@@ -377,9 +380,11 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
         <div className="flex items-center gap-4">
           {/* Google avatar or initials fallback */}
           {user?.avatar ? (
-            <img
+            <Image
               src={user.avatar.replace(/=s\d+-c$/, '=s128-c')}
               alt={user.name}
+              width={64}
+              height={64}
               referrerPolicy="no-referrer"
               className="w-16 h-16 rounded-2xl object-cover flex-shrink-0"
               onError={e => {
@@ -478,8 +483,9 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
           <div className="mx-4 mb-4 px-4 py-3 rounded-xl flex items-center justify-between gap-3"
             style={{background:'rgb(var(--surface2))'}}>
             <div>
-              <p className="text-xs font-bold" style={{color:'rgb(var(--text))'}}>
+              <p className="text-xs font-bold flex items-center gap-1.5" style={{color:'rgb(var(--text))'}}>
                 🔔 {lang==='te'?'గడువు రిమైండర్‌లు':'Expiry reminders'}
+                <HelpIcon textKey="profile.enableReminders" />
               </p>
               <p className="text-xs" style={{color:'rgb(var(--muted))'}}>
                 {lang==='te'?'గడువుకు 3 రోజుల ముందు నోటిఫికేషన్':'Phone alert 3 days before it ends'}
@@ -508,21 +514,22 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
               {lang==='te'?'ప్రో ప్లాన్ ధర':'Pro plan pricing'}
             </p>
             <p className="text-sm font-black text-right" style={{color:'rgb(var(--text))'}}>
-              ₹240<span className="text-xs font-medium" style={{color:'rgb(var(--muted))'}}>/{lang==='te'?'నెల':'mo'}</span>
+              ₹{PRICING.monthly.amountRupees}<span className="text-xs font-medium" style={{color:'rgb(var(--muted))'}}>/{lang==='te'?'నెల':'mo'}</span>
               <span className="text-xs font-medium mx-1" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'లేదా':'or'}</span>
-              ₹2500<span className="text-xs font-medium" style={{color:'rgb(var(--muted))'}}>/{lang==='te'?'సంవత్సరం':'yr'}</span>
+              ₹{PRICING.yearly.amountRupees}<span className="text-xs font-medium" style={{color:'rgb(var(--muted))'}}>/{lang==='te'?'సంవత్సరం':'yr'}</span>
             </p>
           </div>
         )}
 
         {/* Cancel / manage subscription */}
         {sub.plan === 'pro' && !sub.cancelAtPeriodEnd && (
-          <div className="px-4 py-3 border-t" style={{borderColor:'rgb(var(--border))'}}>
+          <div className="px-4 py-3 border-t flex items-center gap-1.5" style={{borderColor:'rgb(var(--border))'}}>
             <button
               onClick={() => setShowCancelConfirm(true)}
               className="text-xs font-bold" style={{color:'#dc2626'}}>
               {lang==='te' ? 'సభ్యత్వం రద్దు చేయండి' : 'Cancel subscription'}
             </button>
+            <HelpIcon textKey="profile.cancelSub" />
           </div>
         )}
         {sub.plan === 'pro' && sub.cancelAtPeriodEnd && (
@@ -585,16 +592,19 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
         </button>
 
         {/* Export / Backup */}
-        <button onClick={exportData}
-          className="w-full flex items-center gap-3 px-4 py-3.5 border-b transition hover:opacity-80"
-          style={{borderColor:'rgb(var(--border))'}}>
-          <span className="text-xl">💾</span>
-          <div className="flex-1 text-left">
-            <p className="text-sm font-semibold" style={{color:'rgb(var(--text))'}}>{lang==='te'?'రిపోర్ట్ డౌన్‌లోడ్':'Download Report'}</p>
-            <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'కార్మికులు, హాజరు, సైట్లు — PDF':'Workers, attendance, sites — saves as PDF'}</p>
-          </div>
+        <div className="w-full flex items-center gap-3 px-4 py-3.5 border-b" style={{borderColor:'rgb(var(--border))'}}>
+          <button onClick={exportData} className="flex-1 flex items-center gap-3 text-left transition hover:opacity-80">
+            <span className="text-xl">💾</span>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-semibold" style={{color:'rgb(var(--text))'}}>
+                {lang==='te'?'రిపోర్ట్ డౌన్‌లోడ్':'Download Report'}
+              </p>
+              <p className="text-xs" style={{color:'rgb(var(--muted))'}}>{lang==='te'?'కార్మికులు, హాజరు, సైట్లు — PDF':'Workers, attendance, sites — saves as PDF'}</p>
+            </div>
+          </button>
+          <HelpIcon textKey="profile.downloadReport" />
           <span style={{color:'rgb(var(--muted))'}}>›</span>
-        </button>
+        </div>
 
         {/* Help & Support */}
         <button onClick={() => router.push('/support')}

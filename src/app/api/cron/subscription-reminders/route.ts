@@ -12,6 +12,8 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabaseAdmin'
 import { notifyUser } from '@/lib/push'
+import { sendEmail, trialEndingEmail } from '@/lib/email'
+import { logError } from '@/lib/logger'
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization') ?? ''
@@ -35,7 +37,7 @@ export async function GET(req: Request) {
     .or(`and(plan.eq.trial,trial_ends_at.lte.${in3Days},trial_ends_at.gt.${now}),and(plan.eq.pro,current_period_end.lte.${in3Days},current_period_end.gt.${now})`)
 
   if (error) {
-    console.error('[cron/subscription-reminders] Query failed:', error.message)
+    logError(error, { route: 'cron/subscription-reminders' })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
@@ -55,6 +57,21 @@ export async function GET(req: Request) {
       url:   '/subscribe',
       tag:   'expiry-reminder',
     })
+
+    // Email is a best-effort companion to the push notification, not a
+    // hard dependency — if it fails (or isn't configured yet), the push
+    // above has already gone out, and the loop should keep going for the
+    // remaining users rather than abort on one email failure.
+    try {
+      const { data: userData } = await admin.auth.admin.getUserById(row.user_id)
+      const email = userData?.user?.email
+      if (email) {
+        const { subject, html } = trialEndingEmail(daysLeft)
+        await sendEmail({ to: email, subject, html })
+      }
+    } catch (e) {
+      logError(e, { route: 'cron/subscription-reminders', userId: row.user_id })
+    }
 
     await admin.from('subscriptions')
       .update({ last_reminder_sent_at: today })
