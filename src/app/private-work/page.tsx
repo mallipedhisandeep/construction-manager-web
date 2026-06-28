@@ -103,7 +103,7 @@ function PrivateWorkPage() {
           <button onClick={()=>{
             setForm({status:'Active',price_charged:0,amount_paid:0,work_date:new Date().toISOString().split('T')[0]})
             setPriceStr(''); setPaidStr(''); setModal('add')
-          }} className="btn-primary btn-sm">+ {ts(lang,'addWork')}</button>
+          }} className="btn-primary btn-sm" data-testid="add-contract-work-btn">+ {ts(lang,'addWork')}</button>
         </div>
         {totalPending>0 && (
           <div className="flex items-center gap-2 rounded-xl px-3 py-2 mb-3 text-sm font-semibold"
@@ -142,8 +142,8 @@ function PrivateWorkPage() {
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
                   <button onClick={()=>{ setForm({...w}); setPriceStr(w.price_charged?.toString()??''); setPaidStr(w.amount_paid?.toString()??''); setModal('edit') }}
-                    className="p-1.5 rounded-lg" style={{color:'rgb(var(--accent))'}}>✏️</button>
-                  <button onClick={()=>del(w)} className="p-1.5 text-red-500 rounded-lg">🗑️</button>
+                    className="p-1.5 rounded-lg" style={{color:'rgb(var(--accent))'}} data-testid={w.worker_name === 'Demo Contractor' ? 'demo-contract-work-edit-btn' : undefined}>✏️</button>
+                  <button onClick={()=>del(w)} className="p-1.5 text-red-500 rounded-lg" data-testid={w.worker_name === 'Demo Contractor' ? 'demo-contract-work-delete-btn' : undefined}>🗑️</button>
                 </div>
               </div>
               <div className="flex gap-2 mt-3">

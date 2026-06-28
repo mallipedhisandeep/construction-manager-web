@@ -168,8 +168,8 @@ function SuppliersPage() {
             </div>
             <div className="flex gap-1">
               <button onClick={() => { setSForm({name:selected.name,phone:selected.phone,shop_name:selected.shop_name,notes:selected.notes}); setModal('supplier') }}
-                className="btn-ghost btn-sm">✏️</button>
-              <button onClick={deleteSup} className="btn-danger btn-sm">🗑️</button>
+                className="btn-ghost btn-sm" data-testid="demo-supplier-edit-btn">✏️</button>
+              <button onClick={deleteSup} className="btn-danger btn-sm" data-testid="demo-supplier-delete-btn">🗑️</button>
             </div>
           </div>
           {/* Balance banner */}
@@ -187,7 +187,8 @@ function SuppliersPage() {
             {(['goods','payments'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
                 className="flex-1 py-2 rounded-xl text-sm font-bold transition"
-                style={{background: tab===t?'rgb(var(--accent))':'rgb(var(--surface2))', color: tab===t?'#fff':'rgb(var(--muted))'}}>
+                style={{background: tab===t?'rgb(var(--accent))':'rgb(var(--surface2))', color: tab===t?'#fff':'rgb(var(--muted))'}}
+                data-testid={`demo-supplier-tab-${t}`}>
                 {t === 'goods' ? (te?'వస్తువులు':'Goods') : (te?'చెల్లింపులు':'Payments')}
               </button>
             ))}
@@ -198,7 +199,7 @@ function SuppliersPage() {
           {tab === 'goods' && (
             <>
               <div className="flex items-center gap-1.5 mb-3">
-                <button onClick={() => { setGForm({ unit:'bags' }); setModal('goods') }} className="btn-primary btn-sm">
+                <button onClick={() => { setGForm({ unit:'bags' }); setModal('goods') }} className="btn-primary btn-sm" data-testid="demo-supplier-add-item-btn">
                   + {te?'వస్తువు జోడించు':'Add Item'}
                 </button>
                 <HelpIcon textKey="goods.order" />
@@ -221,7 +222,7 @@ function SuppliersPage() {
             <>
               <div className="flex items-center gap-1.5 mb-3">
                 <button onClick={() => { setPForm({ payment_type:'payment', mode:'Cash', payment_date: new Date().toISOString().split('T')[0] }); setModal('payment') }}
-                  className="btn-primary btn-sm">
+                  className="btn-primary btn-sm" data-testid="demo-supplier-add-payment-btn">
                   + {te?'చెల్లింపు జోడించు':'Add Payment'}
                 </button>
                 <HelpIcon textKey="suppliers.supplierPayments" />
@@ -361,7 +362,7 @@ function SuppliersPage() {
           ).map(sup => {
           const bal = sup.balance ?? 0
           return (
-            <div key={sup.id} className="card mb-3 p-4 cursor-pointer" onClick={() => loadDetail(sup)}>
+            <div key={sup.id} className="card mb-3 p-4 cursor-pointer" onClick={() => loadDetail(sup)} data-testid={sup.name === 'Demo Supplier' ? 'demo-supplier-card' : undefined}>
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-lg flex-shrink-0"
                   style={{background:'rgba(212,140,40,0.12)', color:'rgb(var(--accent))'}}>

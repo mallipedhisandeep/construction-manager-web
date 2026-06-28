@@ -13,6 +13,7 @@
 
 import { Resend } from 'resend'
 import { logError } from '@/lib/logger'
+import { PRICING } from '@/lib/pricing'
 
 let client: Resend | null = null
 function getClient(): Resend | null {
@@ -88,7 +89,7 @@ export function trialEndingEmail(daysLeft: number): { subject: string; html: str
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
         <h2>${daysLeft <= 0 ? 'Your trial ends today' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left in your trial`}</h2>
-        <p>Subscribe now to keep using Construction Manager without interruption — ₹240/month or ₹2500/year.</p>
+        <p>Subscribe now to keep using Construction Manager without interruption — ${PRICING.monthly.label_en} or ${PRICING.yearly.label_en}.</p>
         <p style="color:#888;font-size:13px;margin-top:32px">— Construction Manager</p>
       </div>
     `,

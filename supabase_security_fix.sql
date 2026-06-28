@@ -1,36 +1,46 @@
 -- ============================================================
--- Fixes Supabase Security Advisor warning:
---   "Signed-In Users Can Execute SECURITY DEFINER Functions"
---   on public.has_active_access(p_user_id uuid)
--- ============================================================
+-- REVERTS the previous version of this file, which broke production.
 --
--- WHY THIS WARNING FIRED, AND WHY THE NAIVE FIX IS WRONG:
+-- WHAT WENT WRONG:
+-- The previous version of this file revoked EXECUTE on
+-- has_active_access() from the `authenticated` role, reasoning that
+-- SECURITY DEFINER meant RLS policy evaluation wouldn't need that grant.
+-- That reasoning was incorrect. In Postgres, EXECUTE permission is
+-- checked against the role that is CALLING the function — and when a
+-- RESTRICTIVE RLS policy on workers/sites/suppliers/etc invokes
+-- has_active_access(auth.uid()), it does so as the `authenticated` role
+-- (the role your actual logged-in users connect as via Supabase). 
+-- SECURITY DEFINER only changes whose privileges the function body runs
+-- WITH once execution starts — it does not waive the EXECUTE check that
+-- happens before the function is allowed to run at all.
 --
--- has_active_access() is SECURITY DEFINER on purpose — it's called from
--- inside RESTRICTIVE RLS policies on workers/sites/attendance/etc (see
--- supabase_paywall_enforcement.sql), and those policy checks need to read
--- the subscriptions table regardless of the calling user's own RLS on
--- that table. Switching this to SECURITY INVOKER (a common "fix" for this
--- exact advisor warning) would make the function run with the CALLER's
--- privileges instead — which breaks paywall enforcement entirely, because
--- the RLS check would then try to apply the caller's own subscriptions
--- RLS recursively while evaluating the caller's own access. Do not change
--- this to SECURITY INVOKER.
+-- Revoking EXECUTE from `authenticated` therefore made every RLS policy
+-- that calls this function fail with "permission denied for function
+-- has_active_access" — which is exactly the save failures you saw across
+-- workers, sites, suppliers, and contractors immediately after that
+-- migration ran. This file undoes that mistake.
 --
--- THE ACTUAL ISSUE:
--- Every real call site passes auth.uid() — the caller's own ID. But
--- because the function was GRANTed to `authenticated` broadly, any
--- logged-in user could also call it directly via the Supabase client
--- with someone ELSE's UUID:
---   supabase.rpc('has_active_access', { p_user_id: 'someone-elses-uuid' })
--- and learn whether that stranger has an active subscription. It's a
--- minor information leak (a boolean, not their actual data — RLS on
--- subscriptions itself still blocks reading their row directly) but it's
--- real and the fix is straightforward: revoke direct EXECUTE access from
--- `authenticated` and `public`, while leaving it callable from inside RLS
--- policy evaluation (which runs as the table owner / postgres role, not
--- as `authenticated`, so revoking from `authenticated` does not break the
--- paywall policies that depend on it).
+-- THE ORIGINAL SUPABASE ADVISOR WARNING:
+-- "Signed-In Users Can Execute SECURITY DEFINER Functions" — this fires
+-- because any logged-in user COULD call has_active_access() directly via
+-- supabase.rpc() with someone else's UUID and learn whether that stranger
+-- has an active subscription (a boolean, not their actual data — RLS on
+-- the subscriptions table itself still blocks reading their real row).
+-- This is a real but minor information disclosure. It is NOT worth
+-- breaking every paywalled save in the app to close, and there is no
+-- grant-based fix that closes it without also breaking RLS policy
+-- evaluation, because both paths (a user's direct .rpc() call, and an RLS
+-- policy's internal call) go through the exact same `authenticated` role
+-- and Postgres cannot distinguish between them at the GRANT level.
+--
+-- If you want to close this specific advisory finding properly in the
+-- future, the correct approach is to move has_active_access() out of the
+-- public/exposed schema (e.g. into a separate, non-API-exposed schema)
+-- so PostgREST never lists it as directly callable, while RLS policies
+-- (which reference functions by schema-qualified name, not through the
+-- API) continue to call it normally. That is a bigger structural change
+-- and is intentionally NOT done here — this file's only job is to
+-- restore working saves immediately.
 --
 -- Safe to run multiple times.
 -- ============================================================
@@ -59,13 +69,9 @@ AS $$
   OR NOT EXISTS (SELECT 1 FROM public.subscriptions WHERE user_id = p_user_id);
 $$;
 
--- Revoke broad execute access — this is the actual fix for the advisor
--- warning. RLS policies that call this function still work after this,
--- because policy evaluation does not go through the `authenticated` role's
--- own grants the way a direct .rpc() call from the browser does.
-REVOKE EXECUTE ON FUNCTION public.has_active_access(UUID) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.has_active_access(UUID) FROM authenticated;
-
--- service_role (used only by trusted server-side API routes, never the
--- browser) can still call it directly if a future feature needs to.
+-- This is the actual fix: restore EXECUTE to authenticated, which RLS
+-- policy evaluation requires. Without this grant, every INSERT/UPDATE on
+-- workers, sites, suppliers, attendance, goods_orders, private_workers,
+-- private_work, and every other paywall-gated table fails.
+GRANT EXECUTE ON FUNCTION public.has_active_access(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.has_active_access(UUID) TO service_role;

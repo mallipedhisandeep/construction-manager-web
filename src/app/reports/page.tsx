@@ -201,13 +201,14 @@ function ReportsPage() {
       <div className="page-header">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>📊 {te?'నివేదికలు':'Reports'}</h1>
-          <button onClick={handlePrint} className="btn-ghost btn-sm">🖨️ {te?'PDF':'Export PDF'}</button>
+          <button onClick={handlePrint} className="btn-ghost btn-sm" data-testid="export-pdf-btn">🖨️ {te?'PDF':'Export PDF'}</button>
         </div>
         <div className="flex gap-1 overflow-x-auto" style={{scrollbarWidth:'none'}}>
           {tabs.map(([t,l]) => (
             <button key={t} onClick={() => setTab(t as typeof tab)}
               className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold transition"
-              style={{background: tab===t?'rgb(var(--accent))':'rgb(var(--surface2))', color: tab===t?'#fff':'rgb(var(--muted))'}}>
+              style={{background: tab===t?'rgb(var(--accent))':'rgb(var(--surface2))', color: tab===t?'#fff':'rgb(var(--muted))'}}
+              data-testid={`reports-tab-${t}`}>
               {l}
             </button>
           ))}

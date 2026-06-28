@@ -180,7 +180,7 @@ function AdminPage() {
       const freeUsers         = subsData.filter(s => s.plan === 'free' && !s.trial_ends_at).length
       const trialUsers        = subsData.filter(s => s.trial_ends_at && new Date(s.trial_ends_at) > now).length
       const proUsers          = subsData.filter(s => s.plan === 'pro' && s.status === 'active').length
-      // Cycle-aware MRR: a yearly subscriber contributes ₹2500/12 per month,
+      // Cycle-aware MRR: a yearly subscriber contributes ₹2600/12 per month,
       // not the full monthly price — summing per-user instead of a flat
       // "proUsers * monthlyPrice" keeps this accurate once both plans exist.
       const mrrEstimate = subsData

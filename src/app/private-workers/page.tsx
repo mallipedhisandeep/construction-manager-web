@@ -120,7 +120,7 @@ function PrivateWorkersPage() {
             <h1 className="text-xl font-black" style={{color:'rgb(var(--text))'}}>🔧 {ts(lang,'privateWorkers')}</h1>
             <HelpIcon textKey="privateWorkers.add" />
           </div>
-          <button onClick={()=>{ setForm({name:'',work_type:'',phone:'',notes:''}); setModal('add') }} className="btn-primary btn-sm">
+          <button onClick={()=>{ setForm({name:'',work_type:'',phone:'',notes:''}); setModal('add') }} className="btn-primary btn-sm" data-testid="add-contractor-btn">
             + {ts(lang,'addContractor')}
           </button>
         </div>
@@ -158,10 +158,10 @@ function PrivateWorkersPage() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t" style={{borderColor:'rgb(var(--border))'}}>
-                <button onClick={()=>{ setSelected(w); setPayForm({amount:'',direction:'dad_to_worker',mode:'Cash',notes:''}); setModal('pay') }} className="btn-green btn-sm">💳 {ts(lang,'addPayment')}</button>
-                <button onClick={async()=>{ setSelected(w); await loadHist(w.id!); setModal('hist') }} className="btn-ghost btn-sm">📜 {ts(lang,'history')}</button>
-                <button onClick={()=>{ setSelected(w); setForm({name:w.name,work_type:w.work_type,phone:w.phone,notes:w.notes??''}); setModal('edit') }} className="btn-ghost btn-sm" style={{color:'rgb(var(--accent))'}}>✏️ {ts(lang,'edit')}</button>
-                <button onClick={()=>del(w)} className="btn-danger btn-sm">🗑️ {ts(lang,'delete')}</button>
+                <button onClick={()=>{ setSelected(w); setPayForm({amount:'',direction:'dad_to_worker',mode:'Cash',notes:''}); setModal('pay') }} className="btn-green btn-sm" data-testid={w.name === 'Demo Contractor' ? 'demo-contractor-pay-btn' : undefined}>💳 {ts(lang,'addPayment')}</button>
+                <button onClick={async()=>{ setSelected(w); await loadHist(w.id!); setModal('hist') }} className="btn-ghost btn-sm" data-testid={w.name === 'Demo Contractor' ? 'demo-contractor-history-btn' : undefined}>📜 {ts(lang,'history')}</button>
+                <button onClick={()=>{ setSelected(w); setForm({name:w.name,work_type:w.work_type,phone:w.phone,notes:w.notes??''}); setModal('edit') }} className="btn-ghost btn-sm" style={{color:'rgb(var(--accent))'}} data-testid={w.name === 'Demo Contractor' ? 'demo-contractor-edit-btn' : undefined}>✏️ {ts(lang,'edit')}</button>
+                <button onClick={()=>del(w)} className="btn-danger btn-sm" data-testid={w.name === 'Demo Contractor' ? 'demo-contractor-delete-btn' : undefined}>🗑️ {ts(lang,'delete')}</button>
               </div>
             </div>
           )

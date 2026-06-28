@@ -139,15 +139,15 @@ function MoneyPage() {
             <HelpIcon textKey="money.profitLoss" />
           </div>
           <div className="flex items-center gap-1.5">
-            <button onClick={()=>setPeriod('month')} className={`chip ${period==='month'?'chip-active':'chip-idle'}`}>{te?'ఈ నెల':'This Month'}</button>
-            <button onClick={()=>setPeriod('all')}   className={`chip ${period==='all'  ?'chip-active':'chip-idle'}`}>{te?'అన్ని సమయాలు':'All Time'}</button>
+            <button onClick={()=>setPeriod('month')} className={`chip ${period==='month'?'chip-active':'chip-idle'}`} data-testid="money-period-month-btn">{te?'ఈ నెల':'This Month'}</button>
+            <button onClick={()=>setPeriod('all')}   className={`chip ${period==='all'  ?'chip-active':'chip-idle'}`} data-testid="money-period-all-btn">{te?'అన్ని సమయాలు':'All Time'}</button>
             <HelpIcon textKey="money.periodFilter" />
           </div>
         </div>
       </div>
 
       <div className="px-4 pt-4 space-y-4">
-        <div className={`rounded-2xl p-5 text-center ${net>=0?'bg-green-600':'bg-red-600'}`}>
+        <div className={`rounded-2xl p-5 text-center ${net>=0?'bg-green-600':'bg-red-600'}`} data-testid="net-position-card">
           <p className="text-white/70 text-xs font-bold uppercase tracking-wide mb-1">
             {te?'నికర స్థానం':'Net Position'} ({period==='month'?(te?'ఈ నెల':'This Month'):(te?'అన్ని సమయాలు':'All Time')})
           </p>

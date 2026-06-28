@@ -279,7 +279,7 @@ function SitesPage() {
           </div>
           <div className="flex items-center gap-1.5">
             <button onClick={()=>{ setForm({status:'Active',floors_count:1,budget:0}); setSelected(null); setModal('add') }}
-              className="btn-primary btn-sm">
+              className="btn-primary btn-sm" data-testid="add-site-btn">
               + {t('addSite')}
             </button>
             <HelpIcon textKey="sites.addSite" />
@@ -307,7 +307,7 @@ function SitesPage() {
             <p style={{color:'rgb(var(--muted))'}}>No sites</p>
           </div>
         ) : filtered.map(s=>(
-          <div key={s.id} className="card-hover mb-3" onClick={()=>openDetail(s)}>
+          <div key={s.id} className="card-hover mb-3" onClick={()=>openDetail(s)} data-testid={s.site_name === 'Demo Site' ? 'demo-site-card' : undefined}>
             <div className="p-4">
               <div className="flex items-start gap-3">
                 <div className="text-2xl flex-shrink-0">🏗️</div>
@@ -403,7 +403,7 @@ function SitesPage() {
                 {selected.location && <p className="text-xs mt-0.5" style={{color:'rgb(var(--muted))'}}>📍 {selected.location}</p>}
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={()=>{ setForm({...selected}); setModal('edit') }} className="btn-ghost btn-sm">✏️</button>
+                <button onClick={()=>{ setForm({...selected}); setModal('edit') }} className="btn-ghost btn-sm" data-testid="demo-site-edit-btn">✏️</button>
                 <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
               </div>
             </div>
@@ -440,7 +440,7 @@ function SitesPage() {
                     {selected.notes}
                   </div>
                 )}
-                <button onClick={()=>del(selected)} className="btn-danger btn-full">🗑️ Delete Site</button>
+                <button onClick={()=>del(selected)} className="btn-danger btn-full" data-testid="demo-site-delete-btn">🗑️ Delete Site</button>
               </div>
             )}
 

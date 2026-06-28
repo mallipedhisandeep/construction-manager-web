@@ -498,7 +498,8 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
             ) : (
               <button onClick={enableReminders} disabled={pushBusy}
                 className="px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-50"
-                style={{background:'rgb(var(--accent))', color:'#fff'}}>
+                style={{background:'rgb(var(--accent))', color:'#fff'}}
+                data-testid="enable-reminders-btn">
                 {pushBusy ? '...' : (lang==='te'?'ఆన్ చేయండి':'Turn on')}
               </button>
             )}
@@ -593,7 +594,7 @@ ${goodsRows ? `<table><thead><tr><th>Date</th><th>Goods</th><th>Supplier</th><th
 
         {/* Export / Backup */}
         <div className="w-full flex items-center gap-3 px-4 py-3.5 border-b" style={{borderColor:'rgb(var(--border))'}}>
-          <button onClick={exportData} className="flex-1 flex items-center gap-3 text-left transition hover:opacity-80">
+          <button onClick={exportData} className="flex-1 flex items-center gap-3 text-left transition hover:opacity-80" data-testid="download-report-btn">
             <span className="text-xl">💾</span>
             <div className="flex-1 text-left">
               <p className="text-sm font-semibold" style={{color:'rgb(var(--text))'}}>

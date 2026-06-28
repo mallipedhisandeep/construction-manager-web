@@ -206,13 +206,15 @@ function TrashPage() {
               <button
                 onClick={() => restore(item)}
                 disabled={actioning !== null}
-                className="btn-ghost btn-sm text-green-500 disabled:opacity-50">
+                className="btn-ghost btn-sm text-green-500 disabled:opacity-50"
+                data-testid={item.label === 'Demo Deleted Worker' ? 'demo-trash-restore-btn' : undefined}>
                 {actioning === item.id ? '⏳' : `↩ ${ts(lang,'restore')}`}
               </button>
               <button
                 onClick={() => setConfirmItem(item)}
                 disabled={actioning !== null}
-                className="btn-danger btn-sm disabled:opacity-50">
+                className="btn-danger btn-sm disabled:opacity-50"
+                data-testid={item.label === 'Demo Deleted Worker' ? 'demo-trash-delete-forever-btn' : undefined}>
                 🗑️
               </button>
             </div>

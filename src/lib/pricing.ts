@@ -2,7 +2,7 @@
 //
 // SINGLE SOURCE OF TRUTH for subscription pricing. Every place in the app
 // that displays or calculates a price must import from here — never hardcode
-// ₹240, ₹2500, etc. directly. This file existing is what prevents the "five
+// ₹240, ₹2600, etc. directly. This file existing is what prevents the "five
 // different stale prices in five different files" problem.
 //
 // If you ever change pricing, this is the only file that needs to change
@@ -17,10 +17,10 @@ export const PRICING = {
     label_te: '₹240/నెల',
   },
   yearly: {
-    amountRupees: 2500,
+    amountRupees: 2600,
     planId: 'plan_T51Bjgb2DUSNCB',
-    label_en: '₹2500/year',
-    label_te: '₹2500/సంవత్సరం',
+    label_en: '₹2600/year',
+    label_te: '₹2600/సంవత్సరం',
   },
 } as const
 

@@ -180,7 +180,7 @@ function GoodsPage() {
           </div>
           <button
             onClick={()=>{ setForm({status:'Pending',delivery_date:new Date().toISOString().split('T')[0],priceStr:'',qtyStr:'',advStr:''}); setCatalog([]); setModal(true) }}
-            className="btn-primary btn-sm">
+            className="btn-primary btn-sm" data-testid="add-goods-order-btn">
             + {te?'కొత్త ఆర్డర్':'New Order'}
           </button>
         </div>
@@ -261,7 +261,8 @@ function GoodsPage() {
             <div className="border-t flex" style={{borderColor:'rgb(var(--border))'}}>
               {o.status==='Pending' && (
                 <button onClick={()=>updateStatus(o.id!,'Delivered')}
-                  className="flex-1 py-2 text-xs font-bold text-green-500 hover:bg-green-500/10 transition">
+                  className="flex-1 py-2 text-xs font-bold text-green-500 hover:bg-green-500/10 transition"
+                  data-testid={o.goods_name === 'Demo Cement Order' ? 'demo-order-delivered-btn' : undefined}>
                   ✓ {te?'డెలివరీ గుర్తించు':'Mark Delivered'}
                 </button>
               )}
@@ -271,14 +272,16 @@ function GoodsPage() {
               {o.status!=='Cancelled' && (
                 <button onClick={()=>updateStatus(o.id!,'Cancelled')}
                   className="flex-1 py-2 text-xs font-bold transition"
-                  style={{color:'rgb(var(--muted))'}}>
+                  style={{color:'rgb(var(--muted))'}}
+                  data-testid={o.goods_name === 'Demo Cement Order' ? 'demo-order-cancel-btn' : undefined}>
                   ✕ {te?'రద్దు చేయి':'Cancel'}
                 </button>
               )}
               <div className="w-px" style={{background:'rgb(var(--border))'}}/>
           
               <button onClick={()=>delOrder(o.id!)}
-                className="px-4 py-2 text-xs font-bold text-red-400 hover:bg-red-500/10 transition">
+                className="px-4 py-2 text-xs font-bold text-red-400 hover:bg-red-500/10 transition"
+                data-testid={o.goods_name === 'Demo Cement Order' ? 'demo-order-delete-btn' : undefined}>
                 🗑️
               </button>
             </div>

@@ -214,9 +214,9 @@ function WorkersPage() {
                   </div>
                   <div className="flex gap-0.5">
                     {w.phone && <a href={`tel:${w.phone}`} className="p-1.5 text-green-500 rounded-lg">📞</a>}
-                    <button onClick={() => { setForm({...w}); setModal('view') }} className="p-1.5 rounded-lg" style={{color:'rgb(var(--info))'}}>👁️</button>
-                    <button onClick={() => { setForm({...w}); setModal('edit') }} className="p-1.5 rounded-lg" style={{color:'rgb(var(--accent))'}}>✏️</button>
-                    <button onClick={() => del(w)} className="p-1.5 rounded-lg" style={{color:'rgb(var(--danger))'}}>🗑️</button>
+                    <button onClick={() => { setForm({...w}); setModal('view') }} className="p-1.5 rounded-lg" style={{color:'rgb(var(--info))'}} data-testid={w.name === 'Demo Worker' ? 'demo-worker-view-btn' : undefined}>👁️</button>
+                    <button onClick={() => { setForm({...w}); setModal('edit') }} className="p-1.5 rounded-lg" style={{color:'rgb(var(--accent))'}} data-testid={w.name === 'Demo Worker' ? 'demo-worker-edit-btn' : undefined}>✏️</button>
+                    <button onClick={() => del(w)} className="p-1.5 rounded-lg" style={{color:'rgb(var(--danger))'}} data-testid={w.name === 'Demo Worker' ? 'demo-worker-delete-btn' : undefined}>🗑️</button>
                   </div>
                 </div>
               </div>

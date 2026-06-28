@@ -390,7 +390,8 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                   <button
                     onClick={() => { setBulkShift('6-6'); setBulkSite(''); setShowBulk(true) }}
                     className="text-xs font-bold px-2.5 py-1 rounded-lg"
-                    style={{background:'rgb(var(--accent))', color:'#fff'}}>
+                    style={{background:'rgb(var(--accent))', color:'#fff'}}
+                    data-testid="mark-all-btn">
                     {lang==='te' ? '⚡ అందరినీ గుర్తించు' : '⚡ Mark all'}
                   </button>
                 )}
@@ -592,7 +593,8 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                           <div className="flex gap-1 flex-shrink-0">
                             <button onClick={() => openSummary(w)}
                               className="p-1.5 rounded-lg text-sm"
-                              style={{color:'#2563eb', background:'rgba(37,99,235,0.08)'}}>
+                              style={{color:'#2563eb', background:'rgba(37,99,235,0.08)'}}
+                              data-testid={w.name === 'Demo Worker' ? 'demo-worker-attendance-history-btn' : undefined}>
                               📊
                             </button>
                             <button onClick={() => openModal(w)}
@@ -600,7 +602,8 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                               style={{
                                 color:       att ? 'rgb(var(--accent))' : '#16a34a',
                                 background:  att ? 'rgba(var(--accent),0.1)' : 'rgba(22,163,74,0.1)',
-                              }}>
+                              }}
+                              data-testid={w.name === 'Demo Worker' ? 'demo-worker-mark-attendance-btn' : undefined}>
                               {att ? '✏️' : '➕'}
                             </button>
                           </div>
