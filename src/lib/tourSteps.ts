@@ -8,28 +8,20 @@
 // it. This file is the single place to add/reorder/edit tour steps;
 // TourOverlay.tsx just plays whatever sequence is defined here.
 //
-// ORDER: Home (module cards, in the same order as below) → Workers →
-// Sites → Attendance → Contractors → Contract Work → Suppliers → Goods
-// Orders → Money → Reports → Profile → Recycle Bin. The tour fully
-// finishes explaining one module — every meaningfully different action
-// inside it — before moving to the next, rather than jumping between
-// modules and back.
+// FLOW: for each module, the tour returns to Home, spotlights that
+// module's tile, then navigates INTO the real module page and explains
+// every meaningfully different action there, before going back to Home
+// for the next module's tile. It never explains a module while still
+// sitting on Home — every explanation happens on the real page itself.
+// Order: Workers → Sites → Attendance → Contractors → Contract Work →
+// Suppliers → Goods Orders → Money → Reports, then Profile and Recycle
+// Bin (which aren't on the Home grid, reached via the bottom nav).
 //
 // PACING: durationMs values are intentionally generous — long enough to
 // read a two-sentence caption in either English or Telugu without
 // feeling rushed. The engine also PAUSES this countdown entirely while
 // the user is scrolling, so these numbers represent genuine idle reading
 // time, not a hard ceiling that fights against someone exploring.
-//
-// COVERAGE: every module — Home, Workers, Sites, Attendance, Contractors,
-// Contract Work, Suppliers, Goods Orders, Money, Reports, Profile,
-// Recycle Bin — and every meaningfully different action within each
-// (Add, Edit, Delete, Pay, Filter, Restore, Export, etc). "Add" steps
-// actually open the real Add form (via preClickSelector targeting the
-// real Add button) so the person sees the real fields, not just a
-// pointer at a button. One seeded "Demo ..." row per module gives
-// Edit/Delete/Pay steps something real to act on even on a brand-new
-// account.
 //
 // MODAL CLEANUP: any step whose preClickSelector opens a modal MUST set
 // postStepCloseSelector to that modal's close button, or the modal stays
@@ -63,101 +55,17 @@ export interface TourStep {
 }
 
 export const TOUR_STEPS: TourStep[] = [
-  // ── HOME ──────────────────────────────────────────────────────────────
-  // Same order as the module grid on the home screen, and the same order
-  // the detailed per-module tour below follows.
+  // ── WORKERS ───────────────────────────────────────────────────────────
   {
     route: '/',
     selector: '[data-testid="module-card-workers"]',
     title_en: 'Workers',
     title_te: 'కార్మికులు',
-    body_en: 'Add your workers here — track attendance, wages, and payments for each one.',
-    body_te: 'మీ కార్మికులను ఇక్కడ జోడించండి — ప్రతి ఒక్కరి హాజరు, వేతనాలు, చెల్లింపులను ట్రాక్ చేయండి.',
-    durationMs: 7000,
+    body_en: 'Let\'s look at Workers — where you add your team and track attendance, wages, and payments.',
+    body_te: 'కార్మికులను చూద్దాం — మీ టీమ్‌ను జోడించి హాజరు, వేతనాలు, చెల్లింపులను ట్రాక్ చేసే చోటు.',
+    durationMs: 6500,
     placement: 'bottom',
   },
-  {
-    route: '/',
-    selector: '[data-testid="module-card-sites"]',
-    title_en: 'Sites',
-    title_te: 'సైట్లు',
-    body_en: 'Each construction project gets its own Site — track its budget, documents, and payments separately.',
-    body_te: 'ప్రతి నిర్మాణ ప్రాజెక్ట్‌కు దాని స్వంత సైట్ ఉంటుంది.',
-    durationMs: 7000,
-    placement: 'bottom',
-  },
-  {
-    route: '/',
-    selector: '[data-testid="module-card-attendance"]',
-    title_en: 'Attendance',
-    title_te: 'హాజరు',
-    body_en: 'Mark daily attendance by shift and automatically calculate wages.',
-    body_te: 'షిఫ్ట్ ద్వారా దైనిక హాజరును గుర్తించండి మరియు వేతనాలను స్వయంచాలకంగా లెక్కించండి.',
-    durationMs: 7000,
-    placement: 'bottom',
-  },
-  {
-    route: '/',
-    selector: '[data-testid="module-card-private-workers"]',
-    title_en: 'Contractors',
-    title_te: 'కాంట్రాక్టర్లు',
-    body_en: 'Manage subcontractors who are paid by the job, separately from your daily-wage workers.',
-    body_te: 'రోజువారీ కార్మికుల నుండి విడిగా, పని ద్వారా చెల్లించే సబ్‌కాంట్రాక్టర్లను నిర్వహించండి.',
-    durationMs: 7000,
-    placement: 'bottom',
-  },
-  {
-    route: '/',
-    selector: '[data-testid="module-card-private-work"]',
-    title_en: 'Contract Work',
-    title_te: 'కాంట్రాక్టు పని',
-    body_en: 'Assign specific jobs to contractors with an agreed price, and track how much has been paid.',
-    body_te: 'అంగీకరించిన ధరతో కాంట్రాక్టర్లకు నిర్దిష్ట పనులను కేటాయించండి.',
-    durationMs: 7000,
-    placement: 'bottom',
-  },
-  {
-    route: '/',
-    selector: '[data-testid="module-card-suppliers"]',
-    title_en: 'Suppliers',
-    title_te: 'సరఫరాదారులు',
-    body_en: 'Track materials suppliers — what you\'ve ordered and what you owe them.',
-    body_te: 'వస్తువుల సరఫరాదారులను ట్రాక్ చేయండి — మీరు ఆర్డర్ చేసినది మరియు బకాయి.',
-    durationMs: 7000,
-    placement: 'bottom',
-  },
-  {
-    route: '/',
-    selector: '[data-testid="module-card-goods"]',
-    title_en: 'Goods Orders',
-    title_te: 'వస్తువుల ఆర్డర్లు',
-    body_en: 'Place and track material orders linked to a site and supplier, with delivery status.',
-    body_te: 'సైట్ మరియు సరఫరాదారుతో అనుసంధానించబడిన పదార్థాల ఆర్డర్‌లను ఉంచండి మరియు ట్రాక్ చేయండి.',
-    durationMs: 7000,
-    placement: 'bottom',
-  },
-  {
-    route: '/',
-    selector: '[data-testid="module-card-money"]',
-    title_en: 'Money Tracking',
-    title_te: 'డబ్బు ట్రాకింగ్',
-    body_en: 'See exactly how much you\'ve earned versus spent — your real profit or loss, always up to date.',
-    body_te: 'మీరు సంపాదించినది వర్సెస్ ఖర్చు చేసినది ఖచ్చితంగా చూడండి.',
-    durationMs: 7000,
-    placement: 'bottom',
-  },
-  {
-    route: '/',
-    selector: '[data-testid="module-card-reports"]',
-    title_en: 'Reports',
-    title_te: 'నివేదికలు',
-    body_en: 'Get a full breakdown by site or by worker, and export anything as a PDF.',
-    body_te: 'సైట్ లేదా కార్మికుని వారీగా పూర్తి విభజన పొందండి, PDFగా ఎక్స్‌పోర్ట్ చేయండి.',
-    durationMs: 7000,
-    placement: 'bottom',
-  },
-
-  // ── WORKERS ───────────────────────────────────────────────────────────
   {
     route: '/workers',
     preClickSelector: '[data-testid="add-worker-btn"]',
@@ -203,6 +111,16 @@ export const TOUR_STEPS: TourStep[] = [
 
   // ── SITES ─────────────────────────────────────────────────────────────
   {
+    route: '/',
+    selector: '[data-testid="module-card-sites"]',
+    title_en: 'Sites',
+    title_te: 'సైట్లు',
+    body_en: 'Next, Sites — each construction project gets its own Site with a budget, documents, and payments.',
+    body_te: 'తర్వాత, సైట్లు — ప్రతి నిర్మాణ ప్రాజెక్ట్‌కు దాని స్వంత సైట్ ఉంటుంది.',
+    durationMs: 6500,
+    placement: 'bottom',
+  },
+  {
     route: '/sites',
     preClickSelector: '[data-testid="add-site-btn"]',
     selector: '[data-testid="site-form-modal"]',
@@ -239,6 +157,16 @@ export const TOUR_STEPS: TourStep[] = [
 
   // ── ATTENDANCE ────────────────────────────────────────────────────────
   {
+    route: '/',
+    selector: '[data-testid="module-card-attendance"]',
+    title_en: 'Attendance',
+    title_te: 'హాజరు',
+    body_en: 'Now Attendance — mark who worked each day, by shift, and wages calculate automatically.',
+    body_te: 'ఇప్పుడు హాజరు — ప్రతి రోజు ఎవరు పనిచేశారో, షిఫ్ట్ ద్వారా గుర్తించండి.',
+    durationMs: 6500,
+    placement: 'bottom',
+  },
+  {
     route: '/attendance',
     selector: '[data-testid="demo-worker-mark-attendance-btn"]',
     title_en: 'Mark Attendance',
@@ -270,6 +198,16 @@ export const TOUR_STEPS: TourStep[] = [
   },
 
   // ── CONTRACTORS (private-workers) ─────────────────────────────────────
+  {
+    route: '/',
+    selector: '[data-testid="module-card-private-workers"]',
+    title_en: 'Contractors',
+    title_te: 'కాంట్రాక్టర్లు',
+    body_en: 'Next, Contractors — for subcontractors paid by the job, separate from daily-wage workers.',
+    body_te: 'తర్వాత, కాంట్రాక్టర్లు — పని ద్వారా చెల్లించే సబ్‌కాంట్రాక్టర్ల కోసం.',
+    durationMs: 6500,
+    placement: 'bottom',
+  },
   {
     route: '/private-workers',
     preClickSelector: '[data-testid="add-contractor-btn"]',
@@ -315,6 +253,16 @@ export const TOUR_STEPS: TourStep[] = [
 
   // ── CONTRACT WORK (private-work) ──────────────────────────────────────
   {
+    route: '/',
+    selector: '[data-testid="module-card-private-work"]',
+    title_en: 'Contract Work',
+    title_te: 'కాంట్రాక్టు పని',
+    body_en: 'Now Contract Work — assign specific jobs to a contractor with an agreed price.',
+    body_te: 'ఇప్పుడు కాంట్రాక్టు పని — అంగీకరించిన ధరతో కాంట్రాక్టర్‌కు నిర్దిష్ట పనిని కేటాయించండి.',
+    durationMs: 6500,
+    placement: 'bottom',
+  },
+  {
     route: '/private-work',
     preClickSelector: '[data-testid="add-contract-work-btn"]',
     selector: '[data-testid="contract-work-form-modal"]',
@@ -338,6 +286,16 @@ export const TOUR_STEPS: TourStep[] = [
   },
 
   // ── SUPPLIERS ─────────────────────────────────────────────────────────
+  {
+    route: '/',
+    selector: '[data-testid="module-card-suppliers"]',
+    title_en: 'Suppliers',
+    title_te: 'సరఫరాదారులు',
+    body_en: 'Next, Suppliers — track your materials suppliers and what you owe them.',
+    body_te: 'తర్వాత, సరఫరాదారులు — మీ వస్తువుల సరఫరాదారులను మరియు బకాయిని ట్రాక్ చేయండి.',
+    durationMs: 6500,
+    placement: 'bottom',
+  },
   {
     route: '/suppliers',
     preClickSelector: '[data-testid="add-supplier-btn"]',
@@ -394,6 +352,16 @@ export const TOUR_STEPS: TourStep[] = [
 
   // ── GOODS ORDERS ──────────────────────────────────────────────────────
   {
+    route: '/',
+    selector: '[data-testid="module-card-goods"]',
+    title_en: 'Goods Orders',
+    title_te: 'వస్తువుల ఆర్డర్లు',
+    body_en: 'Now Goods Orders — place and track material orders linked to a site and supplier.',
+    body_te: 'ఇప్పుడు వస్తువుల ఆర్డర్లు — సైట్ మరియు సరఫరాదారుతో అనుసంధానించబడిన ఆర్డర్‌లను ఉంచండి.',
+    durationMs: 6500,
+    placement: 'bottom',
+  },
+  {
     route: '/goods',
     preClickSelector: '[data-testid="add-goods-order-btn"]',
     selector: '[data-testid="goods-order-form-modal"]',
@@ -428,6 +396,16 @@ export const TOUR_STEPS: TourStep[] = [
 
   // ── MONEY ─────────────────────────────────────────────────────────────
   {
+    route: '/',
+    selector: '[data-testid="module-card-money"]',
+    title_en: 'Money Tracking',
+    title_te: 'డబ్బు ట్రాకింగ్',
+    body_en: 'Next, Money Tracking — your real profit or loss, always up to date.',
+    body_te: 'తర్వాత, డబ్బు ట్రాకింగ్ — మీ నిజమైన లాభం లేదా నష్టం.',
+    durationMs: 6500,
+    placement: 'bottom',
+  },
+  {
     route: '/money',
     selector: '[data-testid="net-position-card"]',
     title_en: 'Your Real Profit',
@@ -450,6 +428,16 @@ export const TOUR_STEPS: TourStep[] = [
 
   // ── REPORTS ───────────────────────────────────────────────────────────
   {
+    route: '/',
+    selector: '[data-testid="module-card-reports"]',
+    title_en: 'Reports',
+    title_te: 'నివేదికలు',
+    body_en: 'Finally on Home, Reports — a full breakdown by site or worker, exportable as a PDF.',
+    body_te: 'చివరిగా, నివేదికలు — సైట్ లేదా కార్మికుని వారీగా పూర్తి విభజన, PDFగా ఎక్స్‌పోర్ట్ చేయవచ్చు.',
+    durationMs: 6500,
+    placement: 'bottom',
+  },
+  {
     route: '/reports',
     selector: '[data-testid="reports-tab-outstanding"]',
     title_en: 'Outstanding Balances',
@@ -471,6 +459,8 @@ export const TOUR_STEPS: TourStep[] = [
   },
 
   // ── PROFILE ───────────────────────────────────────────────────────────
+  // Not on the Home grid — reached via the bottom nav, so no Home-tile
+  // step precedes this one.
   {
     route: '/profile',
     selector: '[data-testid="enable-reminders-btn"]',
@@ -493,6 +483,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
 
   // ── RECYCLE BIN (trash) ───────────────────────────────────────────────
+  // Also not on the Home grid — reached via the bottom nav.
   {
     route: '/trash',
     selector: '[data-testid="demo-trash-restore-btn"]',
