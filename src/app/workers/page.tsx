@@ -227,7 +227,7 @@ function WorkersPage() {
           <div className="modal-box" onClick={e=>e.stopPropagation()} data-testid="worker-form-modal">
             <div className="modal-header">
               <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{modal==='add'?ts(lang,'addWorker'):ts(lang,'editWorker')}</h2>
-              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
+              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}} data-testid="worker-form-modal-close">✕</button>
             </div>
             <div className="p-5 space-y-4">
               <div className="space-y-3">

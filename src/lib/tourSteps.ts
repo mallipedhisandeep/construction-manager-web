@@ -39,6 +39,7 @@ export interface TourStep {
   selector: string          // CSS selector, normally `[data-testid="..."]`, of the element to spotlight
   preClickSelector?: string // if set, this element is clicked first (e.g. open a demo row's detail view, or the page's real Add button), THEN selector is waited for and spotlighted
   preClickWaitMs?: number   // how long to wait after the pre-click before polling for `selector` (default 450ms — covers a typical modal/detail-view render)
+  postStepCloseSelector?: string // if set, this element (typically a modal's ✕ close button) is clicked right before advancing to the next step — REQUIRED whenever preClickSelector opens a modal, or that modal is left open and blocks every subsequent step on the same page from finding its target
   title_en: string
   title_te: string
   body_en: string
@@ -105,6 +106,7 @@ export const TOUR_STEPS: TourStep[] = [
     route: '/workers',
     preClickSelector: '[data-testid="add-worker-btn"]',
     selector: '[data-testid="worker-form-modal"]',
+    postStepCloseSelector: '[data-testid="worker-form-modal-close"]',
     title_en: 'Adding a Worker',
     title_te: 'కార్మికుడిని జోడించడం',
     body_en: 'This is the Add Worker form — fill in name, phone, gender, role, and the wage rate for each shift type.',
@@ -148,6 +150,7 @@ export const TOUR_STEPS: TourStep[] = [
     route: '/sites',
     preClickSelector: '[data-testid="add-site-btn"]',
     selector: '[data-testid="site-form-modal"]',
+    postStepCloseSelector: '[data-testid="site-form-modal-close"]',
     title_en: 'Adding a Site',
     title_te: 'సైట్‌ను జోడించడం',
     body_en: 'This is the Add Site form — give it a name, location, budget, and number of floors.',
@@ -169,6 +172,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     route: '/sites',
     selector: '[data-testid="demo-site-delete-btn"]',
+    postStepCloseSelector: '[data-testid="demo-site-detail-close"]',
     title_en: 'Delete a Site',
     title_te: 'సైట్‌ను తొలగించండి',
     body_en: 'Inside the site, scroll down to find Delete — it also moves to the Recycle Bin, never lost instantly.',
@@ -214,6 +218,7 @@ export const TOUR_STEPS: TourStep[] = [
     route: '/suppliers',
     preClickSelector: '[data-testid="add-supplier-btn"]',
     selector: '[data-testid="supplier-form-modal"]',
+    postStepCloseSelector: '[data-testid="supplier-form-modal-close"]',
     title_en: 'Adding a Supplier',
     title_te: 'సరఫరాదారుని జోడించడం',
     body_en: 'This is the Add Supplier form — name, phone, and shop name. That\'s all it takes.',
@@ -268,6 +273,7 @@ export const TOUR_STEPS: TourStep[] = [
     route: '/goods',
     preClickSelector: '[data-testid="add-goods-order-btn"]',
     selector: '[data-testid="goods-order-form-modal"]',
+    postStepCloseSelector: '[data-testid="goods-order-form-modal-close"]',
     title_en: 'Placing an Order',
     title_te: 'ఆర్డర్ చేయడం',
     body_en: 'This is the order form — pick a supplier, what you\'re ordering, quantity, price, and any advance paid.',
@@ -323,6 +329,7 @@ export const TOUR_STEPS: TourStep[] = [
     route: '/private-workers',
     preClickSelector: '[data-testid="add-contractor-btn"]',
     selector: '[data-testid="contractor-form-modal"]',
+    postStepCloseSelector: '[data-testid="contractor-form-modal-close"]',
     title_en: 'Adding a Contractor',
     title_te: 'కాంట్రాక్టర్‌ను జోడించడం',
     body_en: 'Name, work type, and phone — for freelance or per-job workers paid by the job, not daily wages.',
@@ -366,6 +373,7 @@ export const TOUR_STEPS: TourStep[] = [
     route: '/private-work',
     preClickSelector: '[data-testid="add-contract-work-btn"]',
     selector: '[data-testid="contract-work-form-modal"]',
+    postStepCloseSelector: '[data-testid="contract-work-form-modal-close"]',
     title_en: 'Assigning Contract Work',
     title_te: 'కాంట్రాక్ట్ పనిని కేటాయించడం',
     body_en: 'Pick a contractor, a site, the type of work, and the agreed price — all in one form.',

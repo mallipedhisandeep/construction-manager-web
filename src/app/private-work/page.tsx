@@ -170,7 +170,7 @@ function PrivateWorkPage() {
           <div className="modal-box" onClick={e=>e.stopPropagation()} data-testid="contract-work-form-modal">
             <div className="modal-header">
               <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{modal==='add'?ts(lang,'addWork'):'Edit Work'}</h2>
-              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
+              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}} data-testid="contract-work-form-modal-close">✕</button>
             </div>
             <div className="p-5 space-y-3">
               <div>

@@ -171,7 +171,7 @@ function PrivateWorkersPage() {
           <div className="modal-box" onClick={e=>e.stopPropagation()} data-testid="contractor-form-modal">
             <div className="modal-header">
               <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{modal==='add'?ts(lang,'addContractor'):'Edit Contractor'}</h2>
-              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
+              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}} data-testid="contractor-form-modal-close">✕</button>
             </div>
             <div className="p-5 space-y-3">
               <div><label className="label">{ts(lang,'name')}</label><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} className="input"/></div>

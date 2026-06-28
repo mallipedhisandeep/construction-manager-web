@@ -19,10 +19,10 @@ export default function GlobalError({
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-8 text-center"
-      style={{ background: 'rgb(12,12,14)' }}>
+      style={{ background: 'rgb(var(--bg))' }}>
       <div className="text-6xl mb-4">⚙️</div>
-      <h1 className="text-xl font-black text-white mb-2">Something went wrong</h1>
-      <p className="text-sm mb-6 max-w-xs" style={{ color: '#7a7870' }}>
+      <h1 className="text-xl font-black mb-2" style={{ color: 'rgb(var(--text))' }}>Something went wrong</h1>
+      <p className="text-sm mb-6 max-w-xs" style={{ color: 'rgb(var(--muted))' }}>
         {error?.message?.includes('fetch')
           ? 'Network error — check your connection and try again.'
           : 'An unexpected error occurred. Your data is safe.'}
@@ -31,18 +31,18 @@ export default function GlobalError({
         <button
           onClick={reset}
           className="px-5 py-2.5 rounded-xl font-bold text-sm text-white"
-          style={{ background: '#d48c28' }}>
+          style={{ background: 'rgb(var(--accent))' }}>
           🔄 Try Again
         </button>
         <button
           onClick={() => window.location.href = '/'}
           className="px-5 py-2.5 rounded-xl font-bold text-sm"
-          style={{ background: 'rgba(255,255,255,0.08)', color: '#dedad2' }}>
+          style={{ background: 'rgb(var(--surface2))', color: 'rgb(var(--text))' }}>
           🏠 Go Home
         </button>
       </div>
       {error?.digest && (
-        <p className="text-[10px] mt-6 font-mono" style={{ color: '#4a4a48' }}>
+        <p className="text-[10px] mt-6 font-mono" style={{ color: 'rgb(var(--muted))' }}>
           Error ID: {error.digest}
         </p>
       )}

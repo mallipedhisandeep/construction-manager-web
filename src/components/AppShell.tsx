@@ -15,7 +15,7 @@ interface AppCtx   extends LangCtx, ThemeCtx, ToastCtx {}
 
 const Ctx = createContext<AppCtx>({
   lang: 'en', toggleLang: () => {},
-  theme: 'dark', toggleTheme: () => {},
+  theme: 'light', toggleTheme: () => {},
   showToast: () => {},
 })
 
@@ -104,9 +104,13 @@ function getInitialTheme(): Theme {
   try {
     const saved = localStorage.getItem('theme') as Theme | null
     if (saved === 'light' || saved === 'dark') return saved
-    if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light'
   } catch {}
-  return 'dark'
+  // Default is light mode — deliberately NOT following the device's
+  // system dark-mode preference, so every new user sees the same
+  // consistent light UI on first visit regardless of their phone's
+  // theme setting. They can still switch to dark anytime via the
+  // toggle, and that choice is what gets remembered above.
+  return 'light'
 }
 
 function getInitialLang(): Lang {

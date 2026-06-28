@@ -334,7 +334,7 @@ function SitesPage() {
           <div className="modal-box" onClick={e=>e.stopPropagation()} data-testid="site-form-modal">
             <div className="modal-header">
               <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>{modal==='add'?t('addSite'):'Edit Site'}</h2>
-              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
+              <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}} data-testid="site-form-modal-close">✕</button>
             </div>
             <div className="p-5 space-y-3">
               {[
@@ -401,7 +401,7 @@ function SitesPage() {
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={()=>{ setForm({...selected}); setModal('edit') }} className="btn-ghost btn-sm" data-testid="demo-site-edit-btn">✏️</button>
-                <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
+                <button onClick={()=>setModal(null)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}} data-testid="demo-site-detail-close">✕</button>
               </div>
             </div>
 

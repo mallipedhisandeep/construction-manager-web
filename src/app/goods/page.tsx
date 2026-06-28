@@ -295,7 +295,7 @@ function GoodsPage() {
               <h2 className="font-black text-lg" style={{color:'rgb(var(--text))'}}>
                 {te?'కొత్త వస్తువుల ఆర్డర్':'New Goods Order'}
               </h2>
-              <button onClick={()=>setModal(false)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
+              <button onClick={()=>setModal(false)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}} data-testid="goods-order-form-modal-close">✕</button>
             </div>
             <div className="p-5 space-y-3">
               <div>

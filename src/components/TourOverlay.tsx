@@ -100,6 +100,18 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
     scrollTimerRef.current = null
   }, [])
 
+  // Closes whatever modal a step's preClickSelector opened, BEFORE moving
+  // to the next step. This is what prevents the tour from getting stuck:
+  // without this, a step that opens an Add form (e.g. Workers → Add
+  // Worker) leaves that modal sitting open on screen forever, and every
+  // later step on the same page fails to find its real target because
+  // the modal backdrop is covering it.
+  const closeModalIfNeeded = useCallback((s: typeof step) => {
+    if (!s?.postStepCloseSelector) return
+    const closeEl = document.querySelector(s.postStepCloseSelector) as HTMLElement | null
+    closeEl?.click()
+  }, [])
+
   // Navigate to this step's route if we're not already there. Waits for a
   // language choice AND demo-data seeding to finish first, since early
   // steps may depend on the demo worker/site/supplier/contractor already
@@ -157,6 +169,7 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
         }
 
         if (remainingMsRef.current <= 0) {
+          closeModalIfNeeded(step)
           if (isLast) finish()
           else setStepIndex(i => i + 1)
           return
@@ -185,6 +198,7 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
         if (Date.now() - start > POLL_TIMEOUT_MS) {
           if (pollRef.current) clearInterval(pollRef.current)
           pollRef.current = null
+          closeModalIfNeeded(step)
           if (isLast) finish()
           else setStepIndex(i => i + 1)
         }
@@ -328,7 +342,7 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
             <p className="font-black text-sm" style={{ color: 'rgb(var(--accent))' }}>
               {te ? step.title_te : step.title_en}
             </p>
-            <button onClick={finish} className="text-xs font-bold flex-shrink-0 ml-3" style={{ color: 'rgb(var(--muted))' }}>
+            <button onClick={() => { closeModalIfNeeded(step); finish() }} className="text-xs font-bold flex-shrink-0 ml-3" style={{ color: 'rgb(var(--muted))' }}>
               {te ? 'దాటవేయండి ✕' : 'Skip tour ✕'}
             </button>
           </div>
@@ -350,7 +364,7 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
               ))}
             </div>
             <button
-              onClick={() => { if (isLast) finish(); else setStepIndex(i => i + 1) }}
+              onClick={() => { closeModalIfNeeded(step); if (isLast) finish(); else setStepIndex(i => i + 1) }}
               className="text-xs font-bold flex-shrink-0 px-2 py-1 rounded-lg"
               style={{ background: 'rgba(var(--accent),0.12)', color: 'rgb(var(--accent))' }}>
               {te ? 'తదుపరి ›' : 'Next ›'}

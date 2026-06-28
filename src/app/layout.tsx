@@ -6,7 +6,7 @@ const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://construction-manager-web.vercel.app'
 
 export const viewport: Viewport = {
-  themeColor:    '#0c0c0e',
+  themeColor:    '#f8f9fa',
   width:         'device-width',
   initialScale:  1,
   maximumScale:  1,
