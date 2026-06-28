@@ -5,9 +5,9 @@ import { useLang, useTheme } from '@/components/AppShell'
 import { supabase } from '@/lib/supabase'
 
 const modules = [
-  { en:'Attendance',     te:'హాజరు',              emoji:'📅', href:'/attendance',      color:'#3b82f6' },
   { en:'Workers',        te:'కార్మికులు',           emoji:'👷', href:'/workers',         color:'#10b981' },
   { en:'Sites',          te:'సైట్లు',              emoji:'🏗️', href:'/sites',           color:'#f59e0b' },
+  { en:'Attendance',     te:'హాజరు',              emoji:'📅', href:'/attendance',      color:'#3b82f6' },
   { en:'Contractors',    te:'కాంట్రాక్టర్లు',       emoji:'🔧', href:'/private-workers', color:'#8b5cf6' },
   { en:'Contract Work',  te:'కాంట్రాక్టు పని',      emoji:'📝', href:'/private-work',   color:'#06b6d4' },
   { en:'Suppliers',      te:'సరఫరాదారులు',          emoji:'🏪', href:'/suppliers',       color:'#ec4899' },

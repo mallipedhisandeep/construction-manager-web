@@ -8,21 +8,35 @@
 // it. This file is the single place to add/reorder/edit tour steps;
 // TourOverlay.tsx just plays whatever sequence is defined here.
 //
+// ORDER: Home (module cards, in the same order as below) → Workers →
+// Sites → Attendance → Contractors → Contract Work → Suppliers → Goods
+// Orders → Money → Reports → Profile → Recycle Bin. The tour fully
+// finishes explaining one module — every meaningfully different action
+// inside it — before moving to the next, rather than jumping between
+// modules and back.
+//
 // PACING: durationMs values are intentionally generous — long enough to
 // read a two-sentence caption in either English or Telugu without
 // feeling rushed. The engine also PAUSES this countdown entirely while
 // the user is scrolling, so these numbers represent genuine idle reading
 // time, not a hard ceiling that fights against someone exploring.
 //
-// COVERAGE: every module — Home, Workers, Sites, Attendance, Suppliers,
-// Goods Orders, Money, Contractors, Contract Work, Reports, Profile,
+// COVERAGE: every module — Home, Workers, Sites, Attendance, Contractors,
+// Contract Work, Suppliers, Goods Orders, Money, Reports, Profile,
 // Recycle Bin — and every meaningfully different action within each
-// (Add, Edit, Delete, Pay, Filter, Restore, Export, etc). "Add" steps now
+// (Add, Edit, Delete, Pay, Filter, Restore, Export, etc). "Add" steps
 // actually open the real Add form (via preClickSelector targeting the
 // real Add button) so the person sees the real fields, not just a
 // pointer at a button. One seeded "Demo ..." row per module gives
 // Edit/Delete/Pay steps something real to act on even on a brand-new
 // account.
+//
+// MODAL CLEANUP: any step whose preClickSelector opens a modal MUST set
+// postStepCloseSelector to that modal's close button, or the modal stays
+// open and blocks every later step on the same page from finding its
+// target. Steps that share one already-open modal across multiple steps
+// (e.g. Sites Edit → Sites Delete, both inside the same site detail
+// view) only close it on the LAST step that needs it.
 //
 // DELIBERATELY NOT included, even though the buttons are real:
 // - Trash → "Empty All" (destructive, irreversible, too risky to spotlight
@@ -50,6 +64,8 @@ export interface TourStep {
 
 export const TOUR_STEPS: TourStep[] = [
   // ── HOME ──────────────────────────────────────────────────────────────
+  // Same order as the module grid on the home screen, and the same order
+  // the detailed per-module tour below follows.
   {
     route: '/',
     selector: '[data-testid="module-card-workers"]',
@@ -72,11 +88,51 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     route: '/',
+    selector: '[data-testid="module-card-attendance"]',
+    title_en: 'Attendance',
+    title_te: 'హాజరు',
+    body_en: 'Mark daily attendance by shift and automatically calculate wages.',
+    body_te: 'షిఫ్ట్ ద్వారా దైనిక హాజరును గుర్తించండి మరియు వేతనాలను స్వయంచాలకంగా లెక్కించండి.',
+    durationMs: 7000,
+    placement: 'bottom',
+  },
+  {
+    route: '/',
+    selector: '[data-testid="module-card-private-workers"]',
+    title_en: 'Contractors',
+    title_te: 'కాంట్రాక్టర్లు',
+    body_en: 'Manage subcontractors who are paid by the job, separately from your daily-wage workers.',
+    body_te: 'రోజువారీ కార్మికుల నుండి విడిగా, పని ద్వారా చెల్లించే సబ్‌కాంట్రాక్టర్లను నిర్వహించండి.',
+    durationMs: 7000,
+    placement: 'bottom',
+  },
+  {
+    route: '/',
+    selector: '[data-testid="module-card-private-work"]',
+    title_en: 'Contract Work',
+    title_te: 'కాంట్రాక్టు పని',
+    body_en: 'Assign specific jobs to contractors with an agreed price, and track how much has been paid.',
+    body_te: 'అంగీకరించిన ధరతో కాంట్రాక్టర్లకు నిర్దిష్ట పనులను కేటాయించండి.',
+    durationMs: 7000,
+    placement: 'bottom',
+  },
+  {
+    route: '/',
     selector: '[data-testid="module-card-suppliers"]',
     title_en: 'Suppliers',
     title_te: 'సరఫరాదారులు',
     body_en: 'Track materials suppliers — what you\'ve ordered and what you owe them.',
     body_te: 'వస్తువుల సరఫరాదారులను ట్రాక్ చేయండి — మీరు ఆర్డర్ చేసినది మరియు బకాయి.',
+    durationMs: 7000,
+    placement: 'bottom',
+  },
+  {
+    route: '/',
+    selector: '[data-testid="module-card-goods"]',
+    title_en: 'Goods Orders',
+    title_te: 'వస్తువుల ఆర్డర్లు',
+    body_en: 'Place and track material orders linked to a site and supplier, with delivery status.',
+    body_te: 'సైట్ మరియు సరఫరాదారుతో అనుసంధానించబడిన పదార్థాల ఆర్డర్‌లను ఉంచండి మరియు ట్రాక్ చేయండి.',
     durationMs: 7000,
     placement: 'bottom',
   },
@@ -213,6 +269,74 @@ export const TOUR_STEPS: TourStep[] = [
     placement: 'bottom',
   },
 
+  // ── CONTRACTORS (private-workers) ─────────────────────────────────────
+  {
+    route: '/private-workers',
+    preClickSelector: '[data-testid="add-contractor-btn"]',
+    selector: '[data-testid="contractor-form-modal"]',
+    postStepCloseSelector: '[data-testid="contractor-form-modal-close"]',
+    title_en: 'Adding a Contractor',
+    title_te: 'కాంట్రాక్టర్‌ను జోడించడం',
+    body_en: 'Name, work type, and phone — for freelance or per-job workers paid by the job, not daily wages.',
+    body_te: 'పేరు, పని రకం, ఫోన్ — పని ద్వారా చెల్లించే ఫ్రీలాన్స్ కార్మికుల కోసం.',
+    durationMs: 7500,
+    placement: 'bottom',
+  },
+  {
+    route: '/private-workers',
+    selector: '[data-testid="demo-contractor-pay-btn"]',
+    title_en: 'Pay a Contractor',
+    title_te: 'కాంట్రాక్టర్‌కు చెల్లించండి',
+    body_en: 'Record a payment in either direction — what you paid them, or what they returned.',
+    body_te: 'ఏ దిశలోనైనా చెల్లింపును నమోదు చేయండి — మీరు చెల్లించినది లేదా వారు తిరిగి ఇచ్చినది.',
+    durationMs: 7000,
+    placement: 'top',
+  },
+  {
+    route: '/private-workers',
+    selector: '[data-testid="demo-contractor-history-btn"]',
+    title_en: 'Payment History',
+    title_te: 'చెల్లింపు చరిత్ర',
+    body_en: 'See every payment and every job assigned to this contractor, in one timeline.',
+    body_te: 'ఈ కాంట్రాక్టర్‌కు కేటాయించిన ప్రతి చెల్లింపు మరియు ప్రతి పనిని ఒక టైమ్‌లైన్‌లో చూడండి.',
+    durationMs: 6500,
+    placement: 'top',
+  },
+  {
+    route: '/private-workers',
+    selector: '[data-testid="demo-contractor-edit-btn"]',
+    title_en: 'Edit or Delete',
+    title_te: 'సవరించండి లేదా తొలగించండి',
+    body_en: 'Update their details, or delete them — like everywhere else, deleted items go to the Recycle Bin first.',
+    body_te: 'వారి వివరాలను నవీకరించండి, లేదా తొలగించండి — తొలగించినవి మొదట రీసైకిల్ బిన్‌కు వెళ్తాయి.',
+    durationMs: 7000,
+    placement: 'top',
+  },
+
+  // ── CONTRACT WORK (private-work) ──────────────────────────────────────
+  {
+    route: '/private-work',
+    preClickSelector: '[data-testid="add-contract-work-btn"]',
+    selector: '[data-testid="contract-work-form-modal"]',
+    postStepCloseSelector: '[data-testid="contract-work-form-modal-close"]',
+    title_en: 'Assigning Contract Work',
+    title_te: 'కాంట్రాక్ట్ పనిని కేటాయించడం',
+    body_en: 'Pick a contractor, a site, the type of work, and the agreed price — all in one form.',
+    body_te: 'కాంట్రాక్టర్, సైట్, పని రకం, మరియు అంగీకరించిన ధరను ఎంచుకోండి.',
+    durationMs: 8000,
+    placement: 'bottom',
+  },
+  {
+    route: '/private-work',
+    selector: '[data-testid="demo-contract-work-edit-btn"]',
+    title_en: 'Update Progress or Payment',
+    title_te: 'పురోగతి లేదా చెల్లింపును నవీకరించండి',
+    body_en: 'Edit anytime to update how much has been paid, or mark the job Completed.',
+    body_te: 'ఎంత చెల్లించారో నవీకరించడానికి లేదా పనిని పూర్తి చేసినట్లు గుర్తించడానికి ఎప్పుడైనా సవరించండి.',
+    durationMs: 7000,
+    placement: 'top',
+  },
+
   // ── SUPPLIERS ─────────────────────────────────────────────────────────
   {
     route: '/suppliers',
@@ -321,74 +445,6 @@ export const TOUR_STEPS: TourStep[] = [
     body_en: 'Switch between this month\'s numbers and your totals since you started using the app.',
     body_te: 'ఈ నెల సంఖ్యలు మరియు యాప్‌ను ఉపయోగించడం ప్రారంభించినప్పటి నుండి మొత్తాల మధ్య మారండి.',
     durationMs: 6500,
-    placement: 'top',
-  },
-
-  // ── CONTRACTORS (private-workers) ─────────────────────────────────────
-  {
-    route: '/private-workers',
-    preClickSelector: '[data-testid="add-contractor-btn"]',
-    selector: '[data-testid="contractor-form-modal"]',
-    postStepCloseSelector: '[data-testid="contractor-form-modal-close"]',
-    title_en: 'Adding a Contractor',
-    title_te: 'కాంట్రాక్టర్‌ను జోడించడం',
-    body_en: 'Name, work type, and phone — for freelance or per-job workers paid by the job, not daily wages.',
-    body_te: 'పేరు, పని రకం, ఫోన్ — పని ద్వారా చెల్లించే ఫ్రీలాన్స్ కార్మికుల కోసం.',
-    durationMs: 7500,
-    placement: 'bottom',
-  },
-  {
-    route: '/private-workers',
-    selector: '[data-testid="demo-contractor-pay-btn"]',
-    title_en: 'Pay a Contractor',
-    title_te: 'కాంట్రాక్టర్‌కు చెల్లించండి',
-    body_en: 'Record a payment in either direction — what you paid them, or what they returned.',
-    body_te: 'ఏ దిశలోనైనా చెల్లింపును నమోదు చేయండి — మీరు చెల్లించినది లేదా వారు తిరిగి ఇచ్చినది.',
-    durationMs: 7000,
-    placement: 'top',
-  },
-  {
-    route: '/private-workers',
-    selector: '[data-testid="demo-contractor-history-btn"]',
-    title_en: 'Payment History',
-    title_te: 'చెల్లింపు చరిత్ర',
-    body_en: 'See every payment and every job assigned to this contractor, in one timeline.',
-    body_te: 'ఈ కాంట్రాక్టర్‌కు కేటాయించిన ప్రతి చెల్లింపు మరియు ప్రతి పనిని ఒక టైమ్‌లైన్‌లో చూడండి.',
-    durationMs: 6500,
-    placement: 'top',
-  },
-  {
-    route: '/private-workers',
-    selector: '[data-testid="demo-contractor-edit-btn"]',
-    title_en: 'Edit or Delete',
-    title_te: 'సవరించండి లేదా తొలగించండి',
-    body_en: 'Update their details, or delete them — like everywhere else, deleted items go to the Recycle Bin first.',
-    body_te: 'వారి వివరాలను నవీకరించండి, లేదా తొలగించండి — తొలగించినవి మొదట రీసైకిల్ బిన్‌కు వెళ్తాయి.',
-    durationMs: 7000,
-    placement: 'top',
-  },
-
-  // ── CONTRACT WORK (private-work) ──────────────────────────────────────
-  {
-    route: '/private-work',
-    preClickSelector: '[data-testid="add-contract-work-btn"]',
-    selector: '[data-testid="contract-work-form-modal"]',
-    postStepCloseSelector: '[data-testid="contract-work-form-modal-close"]',
-    title_en: 'Assigning Contract Work',
-    title_te: 'కాంట్రాక్ట్ పనిని కేటాయించడం',
-    body_en: 'Pick a contractor, a site, the type of work, and the agreed price — all in one form.',
-    body_te: 'కాంట్రాక్టర్, సైట్, పని రకం, మరియు అంగీకరించిన ధరను ఎంచుకోండి.',
-    durationMs: 8000,
-    placement: 'bottom',
-  },
-  {
-    route: '/private-work',
-    selector: '[data-testid="demo-contract-work-edit-btn"]',
-    title_en: 'Update Progress or Payment',
-    title_te: 'పురోగతి లేదా చెల్లింపును నవీకరించండి',
-    body_en: 'Edit anytime to update how much has been paid, or mark the job Completed.',
-    body_te: 'ఎంత చెల్లించారో నవీకరించడానికి లేదా పనిని పూర్తి చేసినట్లు గుర్తించడానికి ఎప్పుడైనా సవరించండి.',
-    durationMs: 7000,
     placement: 'top',
   },
 
