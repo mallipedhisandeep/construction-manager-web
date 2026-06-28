@@ -124,25 +124,38 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
     elRef.current = null
     if (pathname !== step.route) {
       router.push(step.route)
-    } else {
-      setNavigating(false)
     }
+    // NOTE: deliberately no `else` branch here anymore. Even when the next
+    // step stays on the SAME page (e.g. "Adding a Worker" → "View
+    // Profile", both on /workers), the PREVIOUS step's
+    // closeModalIfNeeded() may have just clicked a modal's close button —
+    // that's a state update in the page component, not instant. Setting
+    // navigating=false synchronously here used to start the next step's
+    // polling before that close had actually re-rendered, which is
+    // exactly why "Add Worker" would show but the next step ("demo
+    // worker" button) sometimes wouldn't be found. The settle-delay
+    // effect below now handles BOTH the same-page and cross-page cases
+    // uniformly, so there's always a brief pause first.
   }, [stepIndex, step, pathname, router, seeding, tourLang])
 
-  // Detect that navigation actually landed (pathname now matches route).
-  // Note: pathname updates the moment Next.js STARTS the transition, not
-  // when the destination page has actually finished loading its own data
-  // — every page here fetches from Supabase on mount and shows a loading
-  // spinner first. Without this delay, the polling effect below would
-  // start searching for the target element while the destination page is
-  // still just a spinner, burn through its timeout, and skip to the next
-  // step before the real page ever rendered — which is exactly the
-  // "buffering then jumping ahead" behavior this fixes.
+  // Detect that we're on the right route (either because navigation
+  // landed, or because we never left) and, after a short settle delay,
+  // allow polling to begin. The delay matters for two different reasons
+  // depending on the case:
+  //  - Cross-page: pathname updates the moment Next.js STARTS the
+  //    transition, well before the destination page's own Supabase fetch
+  //    has resolved and the real content has replaced its loading spinner.
+  //  - Same-page: the previous step may have just clicked a modal's close
+  //    button, and that state update needs a moment to actually re-render
+  //    before we go looking for what's now visible underneath.
+  // Without this delay in EITHER case, polling starts against a page that
+  // hasn't caught up yet, burns through the timeout, and skips ahead —
+  // the "shows the first thing but not the next" symptom this fixes.
   useEffect(() => {
     if (!step || pathname !== step.route) return
     const t = setTimeout(() => setNavigating(false), NAV_SETTLE_MS)
     return () => clearTimeout(t)
-  }, [pathname, step])
+  }, [pathname, step, stepIndex])
 
   // The main per-step lifecycle: optionally pre-click something, find the
   // real spotlight target, then continuously track its live position and
