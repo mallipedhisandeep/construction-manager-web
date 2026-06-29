@@ -169,43 +169,6 @@ function AttendancePage() {
     } finally { setSaving(false) }
   }
 
-  // ── Bulk mark all workers same shift ──────────────────────────────────────
-  const [bulkSaving,  setBulkSaving]  = useState(false)
-  const [bulkShift,   setBulkShift]   = useState<Shift>('6-6')
-  const [showBulk,    setShowBulk]    = useState(false)
-  const [bulkSite,    setBulkSite]    = useState('')
-
-  const bulkMarkAll = async () => {
-    if (workers.length === 0) return
-    setBulkSaving(true)
-    try {
-      const userId = await uid()
-      if (!userId) return
-      // Only mark workers NOT already marked today
-      const unmarked = workers.filter(w => !attMap[w.id!])
-      if (unmarked.length === 0) { showToast(lang==='te'?'అందరూ ఇప్పటికే గుర్తించారు':'All already marked'); setBulkSaving(false); setShowBulk(false); return }
-      const inserts = unmarked.map(w => {
-        const w2 = bulkShift === 'Absent' ? 0 : wage(w, bulkShift)
-        return {
-          worker_id: w.id!, date_key: dKey,
-          date: new Date(year, month, day).toISOString(),
-          attendance_type: bulkShift, wage: w2, advance: 0,
-          // balance_after is recomputed server-side by a trigger right after
-          // this insert (see supabase_attendance_balance_trigger.sql)
-          payment_mode: 'Cash', balance_after: 0,
-          site_id: bulkSite || null, user_id: userId,
-        }
-      })
-      const { error } = await supabase.from('attendance').insert(inserts)
-      if (error) throw error
-      setShowBulk(false)
-      await loadDay(); await loadMonthMarks()
-      showToast(lang==='te'?`${unmarked.length} మంది గుర్తించారు`:`${unmarked.length} workers marked`)
-    } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : 'Bulk mark failed', false)
-    } finally { setBulkSaving(false) }
-  }
-
   // ── Recalculate all balances for a worker ───────────────────────────────────
   // Balances are now kept correct automatically by a DB trigger on every
   // write (see supabase_attendance_balance_trigger.sql). This button is a
@@ -383,15 +346,6 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
                 <span className="text-xs" style={{color:'rgb(var(--muted))'}}>
                   {Object.keys(attMap).length}/{workers.length} {lang==='te' ? 'గుర్తించారు' : 'marked'}
                 </span>
-                {Object.keys(attMap).length < workers.length && (
-                  <button
-                    onClick={() => { setBulkShift('6-6'); setBulkSite(''); setShowBulk(true) }}
-                    className="text-xs font-bold px-2.5 py-1 rounded-lg"
-                    style={{background:'rgb(var(--accent))', color:'#fff'}}
-                    data-testid="mark-all-btn">
-                    {lang==='te' ? '⚡ అందరినీ గుర్తించు' : '⚡ Mark all'}
-                  </button>
-                )}
               </div>
             </div>
           </>
@@ -737,66 +691,6 @@ ${bal > 0 ? `🔴 You Owe Worker: ₹${Math.abs(bal)}` : bal < 0 ? `🟢 Worker 
         </div>
       )}
 
-      {showBulk && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center"
-          style={{background:'rgba(0,0,0,0.6)', backdropFilter:'blur(4px)'}}
-          onClick={() => setShowBulk(false)}>
-          <div className="w-full max-w-lg rounded-t-3xl shadow-2xl"
-            style={{background:'rgb(var(--surface))'}}
-            onClick={e => e.stopPropagation()}>
-
-            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b"
-              style={{borderColor:'rgb(var(--border))'}}>
-              <div>
-                <p className="font-black text-base" style={{color:'rgb(var(--text))'}}>
-                  {lang==='te' ? 'అందరినీ గుర్తించు' : 'Mark all unmarked workers'}
-                </p>
-                <p className="text-xs" style={{color:'rgb(var(--muted))'}}>
-                  {months[month]} {day}, {year} · {workers.filter(w => !attMap[w.id!]).length} {lang==='te' ? 'మంది మిగిలారు' : 'remaining'}
-                </p>
-              </div>
-              <button onClick={() => setShowBulk(false)} className="text-2xl leading-none" style={{color:'rgb(var(--muted))'}}>✕</button>
-            </div>
-
-            <div className="p-5 space-y-4">
-              <div>
-                <p className="label mb-2">{lang==='te' ? 'షిఫ్ట్ / హాజరు' : 'Shift / Attendance'}</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {SHIFTS.map(s => (
-                    <button key={s} onClick={() => setBulkShift(s)}
-                      className="py-2.5 rounded-xl text-xs font-bold transition-all"
-                      style={{
-                        background: bulkShift===s ? SHIFT_BG[s] : 'rgb(var(--surface2))',
-                        color:      bulkShift===s ? '#fff' : 'rgb(var(--muted))',
-                        border:     bulkShift===s ? `1px solid ${SHIFT_BG[s]}` : '1px solid rgb(var(--border))',
-                      }}>
-                      {SHIFT_LABEL[s]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <p className="label mb-2">{lang==='te' ? 'సైట్ (ఐచ్ఛికం)' : 'Site (optional)'}</p>
-                <select value={bulkSite} onChange={e => setBulkSite(e.target.value)} className="input">
-                  <option value="">{lang==='te' ? '— ఏదీ లేదు —' : '— None —'}</option>
-                  {sites.map(s => <option key={s.id} value={s.id}>{s.site_name}</option>)}
-                </select>
-              </div>
-
-              <p className="text-xs" style={{color:'rgb(var(--muted))'}}>
-                {lang==='te'
-                  ? 'ఇప్పటికే గుర్తించిన వారిని ఇది మార్చదు — మిగిలిన వారిని మాత్రమే గుర్తిస్తుంది.'
-                  : "This won't change anyone already marked today — only the remaining workers get this shift."}
-              </p>
-
-              <button onClick={bulkMarkAll} disabled={bulkSaving} className="btn-primary btn-full py-3">
-                {bulkSaving ? '⏳...' : (lang==='te' ? '⚡ గుర్తించు' : '⚡ Mark all remaining')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

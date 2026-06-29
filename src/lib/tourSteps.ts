@@ -186,16 +186,6 @@ export const TOUR_STEPS: TourStep[] = [
     durationMs: 6500,
     placement: 'bottom',
   },
-  {
-    route: '/attendance',
-    selector: '[data-testid="mark-all-btn"]',
-    title_en: 'Mark Everyone at Once',
-    title_te: 'అందరినీ ఒకేసారి గుర్తించండి',
-    body_en: 'On busy days, mark everyone present at once instead of one by one.',
-    body_te: 'రద్దీగా ఉన్న రోజుల్లో, అందరినీ ఒకేసారి హాజరుగా గుర్తించండి.',
-    durationMs: 7000,
-    placement: 'bottom',
-  },
 
   // ── CONTRACTORS (private-workers) ─────────────────────────────────────
   {
