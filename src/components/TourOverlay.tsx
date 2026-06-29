@@ -34,6 +34,7 @@ interface Rect { top: number; left: number; width: number; height: number }
 const POLL_INTERVAL_MS = 100
 const POLL_TIMEOUT_MS = 12000  // give up waiting for an element after this long and skip to the next step — generous because the destination page must finish its own Supabase fetch (loading spinner → real content) before the target element exists at all, not just finish navigating
 const NAV_SETTLE_MS = 600      // brief pause after pathname changes before we even start polling — pathname updates the instant Next.js begins the transition, well before the new page's data has loaded, so polling immediately would just waste timeout budget on a guaranteed-empty page
+const SEEDING_TIMEOUT_MS = 8000 // hard backstop on demo-data seeding (up to 7 sequential Supabase round-trips) — if it hasn't finished by here, proceed without demo data rather than risk an indefinite hang
 const SCROLL_SETTLE_MS = 700   // how long the user must be still (no scroll/touch) before the countdown resumes
 
 export function TourOverlay({ onDone }: { onDone: () => void }) {
@@ -67,16 +68,45 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
   // that spotlight Edit/Delete/Pay (which only render for an existing
   // item) have something real to act on even on a brand-new account.
   // Only runs once a language has actually been picked.
+  //
+  // Guarded two ways against ever hanging indefinitely:
+  //  1. try/catch — if any insert throws (network blip, RLS denial, a
+  //     leftover unique-ish row from an earlier interrupted tour, etc),
+  //     we still call setSeeding(false) instead of leaving the person
+  //     stuck on a spinner forever with no way out except closing the app.
+  //  2. A hard SEEDING_TIMEOUT_MS backstop — if seeding genuinely takes
+  //     too long (slow connection, several sequential round-trips), we
+  //     give up waiting and proceed without demo data rather than block
+  //     the whole tour. Steps that needed a demo row simply skip via
+  //     their own existing "element never appeared" timeout.
   useEffect(() => {
     if (!tourLang) return
     let mounted = true
-    supabase.auth.getUser().then(async ({ data }) => {
-      const userId = data.user?.id
-      if (!userId) { if (mounted) setSeeding(false); return }
-      const refs = await seedTourDemoData(userId)
-      if (mounted) { demoRefs.current = refs; setSeeding(false) }
-    })
-    return () => { mounted = false }
+    let settled = false
+
+    const finishSeeding = (refs: DemoRowRefs) => {
+      if (!mounted || settled) return
+      settled = true
+      demoRefs.current = refs
+      setSeeding(false)
+    }
+
+    const timeoutId = setTimeout(() => finishSeeding({}), SEEDING_TIMEOUT_MS)
+
+    supabase.auth.getUser()
+      .then(async ({ data }) => {
+        const userId = data.user?.id
+        if (!userId) { finishSeeding({}); return }
+        const refs = await seedTourDemoData(userId)
+        finishSeeding(refs)
+      })
+      .catch((err) => {
+        console.warn('[TourOverlay] Demo data seeding failed, continuing without it:', err)
+        finishSeeding({})
+      })
+      .finally(() => clearTimeout(timeoutId))
+
+    return () => { mounted = false; clearTimeout(timeoutId) }
   }, [tourLang])
 
   const finish = useCallback(async () => {
@@ -397,12 +427,21 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
         </div>
       )}
 
-      {/* Loading state while navigating between pages / waiting for the element */}
+      {/* Loading state while seeding demo data / navigating between pages /
+          waiting for the element. Always shows real text, not just a bare
+          spinner — a spinner with no label is what makes a few seconds of
+          genuine, expected waiting (e.g. seeding demo rows on first start)
+          feel like the app has frozen. */}
       {!rect && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center pointer-events-none"
+        <div className="fixed inset-0 z-[90] flex flex-col items-center justify-center gap-3 pointer-events-none"
           style={{ background: 'rgba(0,0,0,0.4)' }}>
           <div className="w-8 h-8 border-4 rounded-full animate-spin"
             style={{ borderColor: 'rgb(var(--accent))', borderTopColor: 'transparent' }} />
+          <p className="text-xs font-bold text-white px-4 text-center">
+            {seeding
+              ? (te ? 'టూర్‌ను సెటప్ చేస్తోంది...' : 'Setting things up...')
+              : (te ? 'లోడ్ అవుతోంది...' : 'Loading...')}
+          </p>
         </div>
       )}
     </>
