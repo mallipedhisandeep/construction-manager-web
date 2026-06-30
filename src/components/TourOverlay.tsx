@@ -32,10 +32,12 @@ import { seedTourDemoData, cleanupTourDemoData, type DemoRowRefs } from '@/lib/t
 interface Rect { top: number; left: number; width: number; height: number }
 
 const POLL_INTERVAL_MS = 100
-const POLL_TIMEOUT_MS = 12000  // give up waiting for an element after this long and skip to the next step — generous because the destination page must finish its own Supabase fetch (loading spinner → real content) before the target element exists at all, not just finish navigating
-const NAV_SETTLE_MS = 600      // brief pause after pathname changes before we even start polling — pathname updates the instant Next.js begins the transition, well before the new page's data has loaded, so polling immediately would just waste timeout budget on a guaranteed-empty page
+const POLL_TIMEOUT_MS = 12000   // give up waiting for an element after this long and skip to the next step — generous because the destination page must finish its own Supabase fetch (loading spinner → real content) before the target element exists at all, not just finish navigating
+const NAV_SETTLE_MS = 600       // pause after a REAL cross-page navigation, before polling — pathname updates the instant Next.js begins the transition, well before the new page's data has loaded
+const SAME_PAGE_SETTLE_MS = 150 // much shorter pause when the next step stays on the same page — still enough time for a just-clicked modal-close to re-render, but without paying the full cross-page wait when nothing is actually loading
 const SEEDING_TIMEOUT_MS = 8000 // hard backstop on demo-data seeding (up to 7 sequential Supabase round-trips) — if it hasn't finished by here, proceed without demo data rather than risk an indefinite hang
-const SCROLL_SETTLE_MS = 700   // how long the user must be still (no scroll/touch) before the countdown resumes
+const SCROLL_SETTLE_MS = 700    // how long the user must be still (no scroll/touch) before the countdown resumes
+const POST_SCROLL_SETTLE_MS = 200 // brief wait after scrollIntoView before starting the countdown — only needs to cover the scroll animation settling, not a fixed "just in case" pause
 
 export function TourOverlay({ onDone }: { onDone: () => void }) {
   const router = useRouter()
@@ -56,6 +58,7 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const rafRef = useRef<number | null>(null)
   const elRef = useRef<Element | null>(null)
+  const didNavigateRef = useRef(false)
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isScrollingRef = useRef(false)
   const remainingMsRef = useRef(0)
@@ -152,6 +155,7 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
     setNavigating(true)
     setRect(null)
     elRef.current = null
+    didNavigateRef.current = pathname !== step.route
     if (pathname !== step.route) {
       router.push(step.route)
     }
@@ -170,20 +174,21 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
 
   // Detect that we're on the right route (either because navigation
   // landed, or because we never left) and, after a short settle delay,
-  // allow polling to begin. The delay matters for two different reasons
-  // depending on the case:
+  // allow polling to begin. How long that delay is depends on whether a
+  // REAL cross-page navigation just happened (tracked above):
   //  - Cross-page: pathname updates the moment Next.js STARTS the
   //    transition, well before the destination page's own Supabase fetch
-  //    has resolved and the real content has replaced its loading spinner.
-  //  - Same-page: the previous step may have just clicked a modal's close
-  //    button, and that state update needs a moment to actually re-render
-  //    before we go looking for what's now visible underneath.
-  // Without this delay in EITHER case, polling starts against a page that
-  // hasn't caught up yet, burns through the timeout, and skips ahead —
-  // the "shows the first thing but not the next" symptom this fixes.
+  //    has resolved and the real content has replaced its loading
+  //    spinner — needs the longer NAV_SETTLE_MS.
+  //  - Same-page: nothing is actually loading; the only thing that might
+  //    still be settling is a just-clicked modal-close re-render, which
+  //    is much faster — SAME_PAGE_SETTLE_MS is enough and avoids paying
+  //    the full cross-page wait on every step for no reason, which is
+  //    what made the tour feel sluggish between steps.
   useEffect(() => {
     if (!step || pathname !== step.route) return
-    const t = setTimeout(() => setNavigating(false), NAV_SETTLE_MS)
+    const delay = didNavigateRef.current ? NAV_SETTLE_MS : SAME_PAGE_SETTLE_MS
+    const t = setTimeout(() => setNavigating(false), delay)
     return () => clearTimeout(t)
   }, [pathname, step, stepIndex])
 
@@ -246,7 +251,7 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
           // spotlight is actually visible — then start tracking/counting
           // shortly after, giving the smooth-scroll animation time to settle.
           el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          setTimeout(() => { if (!cancelled) trackAndCountdown(el) }, 350)
+          setTimeout(() => { if (!cancelled) trackAndCountdown(el) }, POST_SCROLL_SETTLE_MS)
           return
         }
         if (Date.now() - start > POLL_TIMEOUT_MS) {
