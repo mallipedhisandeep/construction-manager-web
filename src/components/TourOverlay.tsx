@@ -257,6 +257,11 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
         if (Date.now() - start > POLL_TIMEOUT_MS) {
           if (pollRef.current) clearInterval(pollRef.current)
           pollRef.current = null
+          console.warn(
+            `[Tour] Gave up waiting for "${step.selector}" on route "${step.route}" after ${POLL_TIMEOUT_MS}ms. ` +
+            `Current pathname: "${pathname}". Element exists in DOM: ${!!document.querySelector(step.selector)}. ` +
+            `Step index: ${stepIndex}.`
+          )
           closeModalIfNeeded(step)
           if (isLast) finish()
           else setStepIndex(i => i + 1)
@@ -281,6 +286,10 @@ export function TourOverlay({ onDone }: { onDone: () => void }) {
         }
         if (Date.now() - clickStart > POLL_TIMEOUT_MS) {
           clearInterval(clickPoll)
+          console.warn(
+            `[Tour] Gave up waiting for preClickSelector "${step.preClickSelector}" on route "${step.route}" after ${POLL_TIMEOUT_MS}ms. ` +
+            `Current pathname: "${pathname}". Step index: ${stepIndex}.`
+          )
           beginPolling()
         }
       }, POLL_INTERVAL_MS)
