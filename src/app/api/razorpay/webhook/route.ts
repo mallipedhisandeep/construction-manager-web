@@ -129,6 +129,13 @@ export async function POST(req: Request) {
         last_reminder_sent_at: null, // reset so next cycle's reminders can fire again
         updated_at:          new Date().toISOString(),
       }).eq('razorpay_sub_id', subId)
+
+      notifyAdmin({
+        title: '💰 Renewal payment received',
+        body:  `A subscription renewed (${cycle})`,
+        url:   '/admin?tab=subs',
+        tag:   'renewal-payment',
+      }).catch(e => logError(e, { route: 'razorpay-webhook', event, userId }))
       break
     }
 
@@ -142,6 +149,15 @@ export async function POST(req: Request) {
         cancel_at_period_end: true,
         updated_at:           new Date().toISOString(),
       }).eq('razorpay_sub_id', subId)
+
+      notifyAdmin({
+        title: '🚫 Subscription cancelled',
+        body:  event === 'subscription.completed'
+          ? 'A subscription ran out of billing cycles'
+          : 'A user cancelled their subscription',
+        url:   '/admin?tab=subs',
+        tag:   'subscription-cancelled',
+      }).catch(e => logError(e, { route: 'razorpay-webhook', event, userId }))
       break
     }
 
@@ -164,6 +180,13 @@ export async function POST(req: Request) {
           tag:   'payment-failed',
         }).catch(e => logError(e, { route: 'razorpay-webhook', event, userId }))
       }
+
+      notifyAdmin({
+        title: '⚠️ Renewal payment failed',
+        body:  'A customer renewal payment failed and could not be recovered',
+        url:   '/admin?tab=subs',
+        tag:   'payment-failed-admin',
+      }).catch(e => logError(e, { route: 'razorpay-webhook', event, userId }))
       break
     }
 
