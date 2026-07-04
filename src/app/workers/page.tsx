@@ -73,16 +73,16 @@ function WorkersPage() {
       const duplicateExists = modal === 'add'
         ? (existing && existing.length > 0)
         : (existing && existing.some(w => w.id !== form.id))
-      if (duplicateExists) {
-        showToast('A worker with this phone number already exists','err')
-        setSaving(false); return
-      }
       const { error } = modal==='add'
         ? await supabase.from('workers').insert({ ...form, user_id: userId })
         : await supabase.from('workers').update(form).eq('id', form.id!)
       if (error) throw error
       setModal(null); load()
-      showToast(modal==='add' ? ts(lang,'workerAdded') : ts(lang,'workerUpdated'))
+      if (duplicateExists) {
+        showToast('Saved. Note: another worker already uses this phone number.')
+      } else {
+        showToast(modal==='add' ? ts(lang,'workerAdded') : ts(lang,'workerUpdated'))
+      }
     } catch(e:unknown) {
       showToast(e instanceof Error ? e.message : 'Save failed','err')
     } finally { setSaving(false) }
