@@ -3,7 +3,6 @@ import { useState, useEffect, createContext, useContext, useCallback, useRef } f
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { PRICING } from '@/lib/pricing'
-import { TourOverlay } from '@/components/TourOverlay'
 import Nav from './Nav'
 import type { Lang } from '@/lib/strings'
 
@@ -127,7 +126,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState]  = useState<'checking'|'authed'|'unauthed'>('checking')
   const [subStatus, setSubStatus]  = useState<SubStatus>('unknown')
   const [hydrated,  setHydrated]   = useState(false)
-  const [showTour,  setShowTour]   = useState(false)
 
   const [toast,    setToast]    = useState<{msg:string; type:'ok'|'err'} | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -170,12 +168,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           getSubStatus(session.user.id).then(status => {
             if (mounted) setSubStatus(status)
           })
-          // First-login tour: only ever plays if no row exists yet for this
-          // user. A missing row means "never seen it" — once the tour
-          // finishes or is skipped, TourOverlay inserts the row itself, so
-          // this check naturally becomes false forever after that.
-          supabase.from('user_tour_status').select('user_id').eq('user_id', session.user.id).maybeSingle()
-            .then(({ data }) => { if (mounted && !data) setShowTour(true) })
         } else {
           setAuthState('unauthed')
           if (!isPublicPath) router.replace('/login')
@@ -265,9 +257,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <Ctx.Provider value={{ lang, toggleLang, theme, toggleTheme, showToast }}>
       <Nav />
       {toastEl}
-      {showTour && !isPaywalled && (
-        <TourOverlay onDone={() => setShowTour(false)} />
-      )}
       {isPaywalled ? (
         <PaywallScreen lang={lang} onGoToProfile={() => router.push('/profile')} />
       ) : (
